@@ -6,6 +6,8 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM5NjA3MzAsImV4cCI6MjA1OTUzNjczMH0.xt4SY2kPl_uRqNn-aSBpKmGfbfVZ5NNxMBp9heMsxCc'
 )
 
+const GROQ_KEY = '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'
+
 const STATUS_COLORS = {
   'Not Contacted': '#64748b',
   'Contacted': '#3b82f6',
@@ -287,20 +289,11 @@ const styles = {
     cursor: 'pointer',
     fontFamily: '"DM Mono", monospace',
     whiteSpace: 'nowrap',
-    letterSpacing: '0.5px',
   },
   lookupRow: {
     display: 'flex',
     gap: '8px',
     alignItems: 'flex-end',
-  },
-  importBox: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '2px dashed rgba(255,255,255,0.12)',
-    borderRadius: '12px',
-    padding: '20px',
-    marginBottom: '24px',
-    textAlign: 'center',
   },
 }
 
@@ -320,24 +313,30 @@ function Modal({ sponsor, onClose, onSave }) {
     if (!form.company.trim()) return
     setLooking(true)
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_KEY}`,
+        },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-          system: `You are a research assistant helping an FRC robotics team find sponsorship contact info for companies. 
-Given a company name, search for their sponsorship, donations, or community outreach contact email and phone number.
-Respond ONLY with a JSON object (no markdown, no backticks) with keys: email, phone, notes.
-- email: best sponsorship/donations/outreach contact email found, or "" if not found
-- phone: main or donations phone number, or "" if not found  
-- notes: 1 sentence about their sponsorship/donation program if any info found, or ""`,
-          messages: [{ role: 'user', content: `Find sponsorship contact info for: ${form.company}` }]
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a research assistant helping an FRC robotics team find sponsorship contact info for companies. Given a company name, provide their sponsorship, donations, or community outreach contact email and phone number. Respond ONLY with a valid JSON object with keys: email, phone, notes. No markdown, no backticks, just raw JSON.`
+            },
+            {
+              role: 'user',
+              content: `Find sponsorship contact info for: ${form.company}`
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 300,
         })
       })
       const data = await res.json()
-      const text = data.content?.filter(b => b.type === 'text').map(b => b.text).join('') || ''
+      const text = data.choices?.[0]?.message?.content || ''
       const clean = text.replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(clean)
       setForm(f => ({
@@ -453,17 +452,10 @@ function ImportModal({ onClose, onImport }) {
           Upload a CSV file with columns: <strong style={{ color: '#e2e8f0' }}>company, email, phone, notes, status</strong><br />
           Column names are flexible — it'll auto-detect them.
         </p>
-
         <div style={styles.field}>
           <label style={styles.label}>UPLOAD CSV FILE</label>
-          <input
-            type="file"
-            accept=".csv"
-            onChange={handleFile}
-            style={{ ...styles.modalInput, padding: '8px', cursor: 'pointer' }}
-          />
+          <input type="file" accept=".csv" onChange={handleFile} style={{ ...styles.modalInput, padding: '8px', cursor: 'pointer' }} />
         </div>
-
         <div style={styles.field}>
           <label style={styles.label}>OR PASTE CSV TEXT</label>
           <textarea
@@ -473,7 +465,6 @@ function ImportModal({ onClose, onImport }) {
             placeholder={'company,email,phone\nMicro Center,donations@microcenter.com,800-634-3478'}
           />
         </div>
-
         {preview.length > 0 && (
           <div style={{ marginBottom: '14px' }}>
             <div style={styles.label}>PREVIEW ({parse(csv).length} companies detected)</div>
@@ -487,7 +478,6 @@ function ImportModal({ onClose, onImport }) {
             {parse(csv).length > 3 && <div style={{ fontSize: '11px', color: '#475569', marginTop: '4px' }}>...and {parse(csv).length - 3} more</div>}
           </div>
         )}
-
         <div style={styles.modalActions}>
           <button style={styles.btn} onClick={doImport} disabled={!preview.length}>
             IMPORT {parse(csv).length > 0 ? `${parse(csv).length} SPONSORS` : ''}
@@ -653,7 +643,6 @@ export default function App() {
                       background: color + '15',
                     }}>{s.status}</div>
                   </div>
-
                   {s.email && (
                     <div style={styles.fieldRow}>
                       <span>📧</span>
@@ -674,7 +663,6 @@ export default function App() {
                       <span style={{ color: '#94a3b8', lineHeight: '1.5' }}>{s.notes}</span>
                     </div>
                   )}
-
                   <div style={{ marginTop: '12px' }}>
                     <label style={styles.label}>STATUS</label>
                     <select
@@ -685,7 +673,6 @@ export default function App() {
                       {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   </div>
-
                   <div style={styles.cardActions}>
                     <button style={styles.editBtn} onClick={() => setModal(s)}>EDIT</button>
                     <button style={styles.deleteBtn} onClick={() => remove(s.id)}>DEL</button>
