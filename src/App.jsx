@@ -417,8 +417,8 @@ export default function App() {
                     <div style={styles.company}>{s.company}</div>
                     <div style={{ ...styles.statusBadge, color, borderColor: color + '50', background: color + '15' }}>{s.status}</div>
                   </div>
-                  {s.email && <div style={styles.fieldRow}><span>📧</span><span style={{ flex: 1, color: '#cbd5e1' }}>{s.email}</span><button style={styles.copyBtn} onClick={() => copy(s.email)}>COPY</button></div>}
-                  {s.phone && <div style={styles.fieldRow}><span>📞</span><span style={{ flex: 1, color: '#cbd5e1' }}>{s.phone}</span><button style={styles.copyBtn} onClick={() => copy(s.phone)}>COPY</button></div>}
+                  {s.email && <div style={styles.fieldRow}><span>📧</span><a href={`mailto:${s.email}`} style={{ flex: 1, color: '#93c5fd', textDecoration: 'none', cursor: 'pointer' }}>{s.email}</a><button style={styles.copyBtn} onClick={() => copy(s.email)}>COPY</button></div>}
+                  {s.phone && <div style={styles.fieldRow}><span>📞</span><a href={`tel:${s.phone}`} style={{ flex: 1, color: '#93c5fd', textDecoration: 'none', cursor: 'pointer' }}>{s.phone}</a><button style={styles.copyBtn} onClick={() => copy(s.phone)}>COPY</button></div>}
                   {s.notes && <div style={{ ...styles.fieldRow, alignItems: 'flex-start' }}><span>📝</span><span style={{ color: '#94a3b8', lineHeight: '1.5' }}>{s.notes}</span></div>}
                   <div style={{ marginTop: '12px' }}>
                     <label style={styles.label}>STATUS</label>
