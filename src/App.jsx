@@ -401,7 +401,7 @@ export default function App() {
             <option value="All">All Statuses</option>
             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button style={styles.btn} onClick={() => setShowImport(true)}>📥 IMPORT CSV</button>
+          <button style={styles.btn} onClick={() => setShowImport(true)}>📥 IMPORT SPONSORS</button>
           <button style={styles.btn} onClick={lookupAll} disabled={lookingUp}>🔍 {lookingUp ? `LOOKING UP ${lookupProgress.current}/${lookupProgress.total}...` : 'LOOKUP ALL MISSING'}</button>
           <button style={styles.btn} onClick={() => setModal({})}>+ ADD SPONSOR</button>
         </div>
