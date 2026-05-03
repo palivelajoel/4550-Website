@@ -120,6 +120,8 @@ function Modal({ sponsor, onClose, onSave }) {
 
 function ImportModal({ onClose, onImport }) {
   const [csv, setCsv] = useState('')
+  const [extracting, setExtracting] = useState(false)
+  const [imageNames, setImageNames] = useState([])
 
   const parse = (text) => {
     const lines = text.trim().split('\n').filter(Boolean)
@@ -139,8 +141,6 @@ function ImportModal({ onClose, onImport }) {
     }).filter(r => r.company)
   }
 
-  const handleText = (text) => setCsv(text)
-
   const handleFile = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -149,37 +149,77 @@ function ImportModal({ onClose, onImport }) {
     reader.readAsText(file)
   }
 
-  const rows = parse(csv)
+  const handleImage = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setExtracting(true)
+    const reader = new FileReader()
+    reader.onload = async (ev) => {
+      const base64 = ev.target.result.split(',')[1]
+      try {
+        const res = await fetch('/api/extract-brands', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64, mimeType: file.type })
+        })
+        const data = await res.json()
+        setImageNames(data.brands || [])
+      } catch (e) { console.error(e) }
+      setExtracting(false)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const csvRows = parse(csv)
+  const imageRows = imageNames.map(name => ({ company: name, email: '', phone: '', notes: '', status: 'Not Contacted' }))
+  const allRows = [...csvRows, ...imageRows.filter(r => !csvRows.find(c => c.company === r.company))]
 
   return (
     <div style={styles.modal} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ ...styles.modalBox, maxWidth: '560px' }}>
-        <div style={styles.modalTitle}>📥 IMPORT FROM CSV</div>
-        <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: 0 }}>
-          Upload a CSV with columns: <strong style={{ color: '#e2e8f0' }}>company, email, phone, notes, status</strong>
-        </p>
+        <div style={styles.modalTitle}>📥 IMPORT SPONSORS</div>
+
         <div style={styles.field}>
-          <label style={styles.label}>UPLOAD CSV FILE</label>
+          <label style={styles.label}>📄 UPLOAD CSV FILE</label>
           <input type="file" accept=".csv" onChange={handleFile} style={{ ...styles.modalInput, padding: '8px', cursor: 'pointer' }} />
         </div>
         <div style={styles.field}>
           <label style={styles.label}>OR PASTE CSV TEXT</label>
-          <textarea style={{ ...styles.modalInput, height: '120px', resize: 'vertical' }} value={csv} onChange={e => handleText(e.target.value)} placeholder={'company,email,phone\nMicro Center,donations@microcenter.com,800-634-3478'} />
+          <textarea style={{ ...styles.modalInput, height: '90px', resize: 'vertical' }} value={csv} onChange={e => setCsv(e.target.value)} placeholder={'company,email,phone\nMicro Center,donations@microcenter.com,800-634-3478'} />
         </div>
-        {rows.length > 0 && (
+
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '16px 0' }} />
+
+        <div style={styles.field}>
+          <label style={styles.label}>📸 SCAN IMAGE FOR BRANDS</label>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 8px' }}>Upload a photo of a sponsor list, flyer, or signage — AI will extract brand names automatically.</p>
+          <input type="file" accept="image/*" onChange={handleImage} style={{ ...styles.modalInput, padding: '8px', cursor: 'pointer' }} />
+          {extracting && <div style={{ fontSize: '11px', color: '#a78bfa', marginTop: '6px' }}>🔍 Scanning image for brands...</div>}
+          {imageNames.length > 0 && (
+            <div style={{ marginTop: '10px' }}>
+              <div style={styles.label}>{imageNames.length} BRANDS DETECTED FROM IMAGE</div>
+              {imageNames.map((n, i) => (
+                <div key={i} style={{ fontSize: '11px', color: '#e2e8f0', padding: '3px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>{n}</div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {allRows.length > 0 && (
           <div style={{ marginBottom: '14px' }}>
-            <div style={styles.label}>PREVIEW ({rows.length} companies detected)</div>
-            {rows.slice(0, 3).map((r, i) => (
+            <div style={styles.label}>TOTAL PREVIEW ({allRows.length} companies)</div>
+            {allRows.slice(0, 4).map((r, i) => (
               <div key={i} style={{ fontSize: '11px', color: '#94a3b8', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <span style={{ color: '#e2e8f0' }}>{r.company}</span>
                 {r.email && <span> · {r.email}</span>}
               </div>
             ))}
-            {rows.length > 3 && <div style={{ fontSize: '11px', color: '#475569', marginTop: '4px' }}>...and {rows.length - 3} more</div>}
+            {allRows.length > 4 && <div style={{ fontSize: '11px', color: '#475569', marginTop: '4px' }}>...and {allRows.length - 4} more</div>}
           </div>
         )}
+
         <div style={styles.modalActions}>
-          <button style={styles.btn} onClick={() => onImport(rows)} disabled={!rows.length}>IMPORT {rows.length > 0 ? `${rows.length} SPONSORS` : ''}</button>
+          <button style={styles.btn} onClick={() => onImport(allRows)} disabled={!allRows.length}>IMPORT {allRows.length > 0 ? `${allRows.length} SPONSORS` : ''}</button>
           <button style={{ ...styles.editBtn, flex: 'none' }} onClick={onClose}>CANCEL</button>
         </div>
       </div>
