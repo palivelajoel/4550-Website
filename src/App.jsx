@@ -162,7 +162,7 @@ function ImportModal({ onClose, onImport }) {
     let cur = "", inQuotes = false
     for (let i = 0; i < line.length; i++) {
       const ch = line[i]
-      if (ch === """) { inQuotes = !inQuotes }
+      if (ch === '"') { inQuotes = !inQuotes }
       else if (ch === "," && !inQuotes) { result.push(cur.trim()); cur = "" }
       else { cur += ch }
     }
@@ -178,8 +178,6 @@ function ImportModal({ onClose, onImport }) {
       const company = (vals[0] || "").replace(/["\']/g, "").trim()
       return { company, email: "", phone: "", notes: "", status: "Not Contacted" }
     }).filter(r => r.company && r.company.length > 0)
-  }
-
   }
 
   const handleFile = (e) => {
