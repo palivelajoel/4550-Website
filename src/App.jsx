@@ -270,7 +270,7 @@ export default function App() {
         select option { background: #0d1b3e; }
       `}</style>
       <div style={styles.header}>
-        <h1 style={styles.title}>⚙️ FRC 4550 — SPONSOR TRACKER</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><img src='/logo.jpg' alt='Team 4550' style={{ height: '52px', width: '52px', objectFit: 'contain', borderRadius: '8px' }} /><h1 style={styles.title}>FRC 4550 — SPONSOR TRACKER</h1></div>
         <div style={styles.liveBadge}><div style={styles.dot} />LIVE</div>
       </div>
       <div style={styles.main}>
@@ -329,6 +329,7 @@ export default function App() {
       {modal !== null && <Modal sponsor={modal.id ? modal : null} onClose={() => setModal(null)} onSave={save} />}
       {showImport && <ImportModal onClose={() => setShowImport(false)} onImport={handleImport} />}
       {toast && <Toast message={toast} />}
+      <div style={{ textAlign: 'center', padding: '24px', fontSize: '11px', color: 'rgba(255,255,255,0.15)', fontFamily: '"DM Mono", monospace', letterSpacing: '2px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '40px' }}>BUILT BY PALIVELA_JOEL · FRC TEAM 4550</div>
     </div>
   )
 }
