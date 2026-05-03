@@ -157,22 +157,29 @@ function ImportModal({ onClose, onImport }) {
   const [extracting, setExtracting] = useState(false)
   const [imageNames, setImageNames] = useState([])
 
+  const parseCSVLine = (line) => {
+    const result = []
+    let cur = "", inQuotes = false
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i]
+      if (ch === """) { inQuotes = !inQuotes }
+      else if (ch === "," && !inQuotes) { result.push(cur.trim()); cur = "" }
+      else { cur += ch }
+    }
+    result.push(cur.trim())
+    return result
+  }
+
   const parse = (text) => {
-    const lines = text.trim().split('\n').filter(Boolean)
+    const lines = text.trim().split("\n").filter(Boolean)
     if (lines.length < 2) return []
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''))
     return lines.slice(1).map(line => {
-      const vals = line.split(',').map(v => v.trim().replace(/['"]/g, ''))
-      const obj = {}
-      headers.forEach((h, i) => obj[h] = vals[i] || '')
-      return {
-        company: obj.company || obj.name || obj['company name'] || '',
-        email: obj.email || obj['email address'] || '',
-        phone: obj.phone || obj['phone number'] || obj.tel || '',
-        notes: obj.notes || obj.note || obj.description || '',
-        status: obj.status || 'Not Contacted',
-      }
-    }).filter(r => r.company)
+      const vals = parseCSVLine(line)
+      const company = (vals[0] || "").replace(/["\']/g, "").trim()
+      return { company, email: "", phone: "", notes: "", status: "Not Contacted" }
+    }).filter(r => r.company && r.company.length > 0)
+  }
+
   }
 
   const handleFile = (e) => {
