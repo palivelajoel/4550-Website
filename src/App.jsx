@@ -118,6 +118,40 @@ function Modal({ sponsor, onClose, onSave }) {
   )
 }
 
+function SuggestionsBox({ supabase, showToast }) {
+  const [msg, setMsg] = useState('')
+  const [sending, setSending] = useState(false)
+
+  const submit = async () => {
+    if (!msg.trim()) return
+    setSending(true)
+    await supabase.from('suggestions').insert([{ message: msg.trim() }])
+    setMsg('')
+    setSending(false)
+    showToast('💡 Suggestion submitted!')
+  }
+
+  return (
+    <div style={{ marginTop: '48px', padding: '24px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px' }}>
+      <div style={{ fontFamily: '"Bebas Neue", sans-serif', fontSize: '16px', letterSpacing: '2px', color: '#60a5fa', marginBottom: '8px' }}>💡 SUGGESTIONS</div>
+      <p style={{ fontSize: '11px', color: '#475569', margin: '0 0 12px', letterSpacing: '0.5px' }}>Have an idea or found a bug? Leave a suggestion and the team will review it.</p>
+      <textarea
+        value={msg}
+        onChange={e => setMsg(e.target.value)}
+        placeholder="Type your suggestion here..."
+        style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '10px 14px', color: '#e2e8f0', fontSize: '12px', fontFamily: '"DM Mono", monospace', outline: 'none', resize: 'vertical', height: '80px', boxSizing: 'border-box' }}
+      />
+      <button
+        onClick={submit}
+        disabled={sending || !msg.trim()}
+        style={{ marginTop: '8px', background: 'rgba(59,130,246,0.25)', border: '1px solid rgba(59,130,246,0.5)', borderRadius: '8px', padding: '8px 20px', color: '#bfdbfe', fontSize: '12px', fontFamily: '"DM Mono", monospace', cursor: 'pointer', letterSpacing: '1px' }}
+      >
+        {sending ? 'SENDING...' : 'SUBMIT'}
+      </button>
+    </div>
+  )
+}
+
 function ImportModal({ onClose, onImport }) {
   const [csv, setCsv] = useState('')
   const [extracting, setExtracting] = useState(false)
@@ -417,7 +451,7 @@ export default function App() {
                     <div style={styles.company}>{s.company}</div>
                     <div style={{ ...styles.statusBadge, color, borderColor: color + '50', background: color + '15' }}>{s.status}</div>
                   </div>
-                  {s.email && <div style={styles.fieldRow}><span>📧</span><a href={`mailto:${s.email}`} style={{ flex: 1, color: '#93c5fd', textDecoration: 'none', cursor: 'pointer' }}>{s.email}</a><button style={styles.copyBtn} onClick={() => copy(s.email)}>COPY</button></div>}
+                  {s.email && <div style={styles.fieldRow}><span>📧</span><a href={`mailto:${s.email}`} target='_blank' rel='noreferrer' style={{ flex: 1, color: '#93c5fd', textDecoration: 'none', cursor: 'pointer' }}>{s.email}</a><button style={styles.copyBtn} onClick={() => copy(s.email)}>COPY</button></div>}
                   {s.phone && <div style={styles.fieldRow}><span>📞</span><a href={`tel:${s.phone}`} style={{ flex: 1, color: '#93c5fd', textDecoration: 'none', cursor: 'pointer' }}>{s.phone}</a><button style={styles.copyBtn} onClick={() => copy(s.phone)}>COPY</button></div>}
                   {s.notes && <div style={{ ...styles.fieldRow, alignItems: 'flex-start' }}><span>📝</span><span style={{ color: '#94a3b8', lineHeight: '1.5' }}>{s.notes}</span></div>}
                   <div style={{ marginTop: '12px' }}>
@@ -436,6 +470,7 @@ export default function App() {
           </div>
         )}
       </div>
+      <SuggestionsBox supabase={supabase} showToast={showToast} />
       {modal !== null && <Modal sponsor={modal.id ? modal : null} onClose={() => setModal(null)} onSave={save} />}
       {showImport && <ImportModal onClose={() => setShowImport(false)} onImport={handleImport} />}
       {toast && <Toast message={toast} />}
