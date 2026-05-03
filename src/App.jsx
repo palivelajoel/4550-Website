@@ -17,9 +17,9 @@ const STATUS_COLORS = {
 const STATUS_OPTIONS = Object.keys(STATUS_COLORS)
 
 const styles = {
-  app: { minHeight: '100vh', background: 'linear-gradient(135deg, #060c1a 0%, #0a1530 50%, #060c1a 100%)', fontFamily: '"DM Mono", "Courier New", monospace', color: '#e2e8f0', padding: '0' },
-  header: { background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderBottom: '1px solid rgba(0,0,0,0.3)', padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' },
-  title: { fontSize: '28px', fontFamily: '"Bebas Neue", "Impact", sans-serif', letterSpacing: '3px', color: '#bfdbfe', margin: 0 },
+  app: { minHeight: '100vh', background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1b3e 50%, #0a0f1e 100%)', fontFamily: '"DM Mono", "Courier New", monospace', color: '#e2e8f0', padding: '0' },
+  header: { background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' },
+  title: { fontSize: '28px', fontFamily: '"Bebas Neue", "Impact", sans-serif', letterSpacing: '3px', color: '#60a5fa', margin: 0 },
   liveBadge: { display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '20px', padding: '6px 14px', fontSize: '11px', color: '#22c55e', letterSpacing: '1px' },
   dot: { width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' },
   main: { padding: '28px 32px', maxWidth: '1200px', margin: '0 auto' },
@@ -30,26 +30,26 @@ const styles = {
   controls: { display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' },
   input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px 14px', color: '#e2e8f0', fontSize: '13px', fontFamily: '"DM Mono", monospace', outline: 'none', flex: '1', minWidth: '200px' },
   select: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px 14px', color: '#e2e8f0', fontSize: '13px', fontFamily: '"DM Mono", monospace', outline: 'none', cursor: 'pointer' },
-  btn: { background: 'transparent', border: '1px solid #b91c1c', borderRadius: '8px', padding: '10px 20px', color: '#bfdbfe', fontSize: '13px', fontFamily: '"DM Mono", monospace', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600' },
+  btn: { background: 'rgba(59,130,246,0.25)', border: '1px solid rgba(59,130,246,0.5)', borderRadius: '8px', padding: '10px 20px', color: '#bfdbfe', fontSize: '13px', fontFamily: '"DM Mono", monospace', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' },
   card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', transition: 'all 0.3s ease' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' },
   company: { fontSize: '18px', fontFamily: '"Bebas Neue", sans-serif', letterSpacing: '2px', color: '#f1f5f9' },
   statusBadge: { borderRadius: '20px', padding: '4px 12px', fontSize: '10px', letterSpacing: '1px', fontWeight: '600', border: '1px solid' },
   fieldRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '12px', color: '#94a3b8' },
-  copyBtn: { background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '4px', padding: '2px 8px', color: '#94a3b8', fontSize: '10px', cursor: 'pointer', fontFamily: '"DM Mono", monospace' },
+  copyBtn: { background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.35)', borderRadius: '4px', padding: '2px 8px', color: '#bfdbfe', fontSize: '10px', cursor: 'pointer', fontFamily: '"DM Mono", monospace' },
   cardActions: { display: 'flex', gap: '8px', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.06)' },
-  editBtn: { background: 'transparent', border: '1px solid rgba(185,28,28,0.6)', borderRadius: '6px', padding: '6px 14px', color: '#bfdbfe', fontSize: '11px', cursor: 'pointer', fontFamily: '"DM Mono", monospace', flex: 1 },
+  editBtn: { background: 'rgba(59,130,246,0.25)', border: '1px solid rgba(59,130,246,0.5)', borderRadius: '6px', padding: '6px 14px', color: '#bfdbfe', fontSize: '11px', cursor: 'pointer', fontFamily: '"DM Mono", monospace', flex: 1 },
   deleteBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', padding: '6px 14px', color: '#f87171', fontSize: '11px', cursor: 'pointer', fontFamily: '"DM Mono", monospace' },
   modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
   modalBox: { background: '#0d1b3e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' },
-  modalTitle: { fontFamily: '"Bebas Neue", sans-serif', fontSize: '22px', letterSpacing: '2px', color: '#bfdbfe', marginBottom: '20px' },
+  modalTitle: { fontFamily: '"Bebas Neue", sans-serif', fontSize: '22px', letterSpacing: '2px', color: '#60a5fa', marginBottom: '20px' },
   field: { marginBottom: '14px' },
   label: { display: 'block', fontSize: '10px', color: '#94a3b8', letterSpacing: '1px', marginBottom: '6px' },
   modalInput: { width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px 14px', color: '#e2e8f0', fontSize: '13px', fontFamily: '"DM Mono", monospace', outline: 'none', boxSizing: 'border-box' },
   modalActions: { display: 'flex', gap: '10px', marginTop: '20px' },
   toast: { position: 'fixed', bottom: '24px', right: '24px', background: '#1e3a5f', border: '1px solid rgba(96,165,250,0.4)', borderRadius: '10px', padding: '12px 20px', color: '#e2e8f0', fontSize: '13px', zIndex: 2000, animation: 'fadeIn 0.3s ease' },
-  lookupBtn: { background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.4)', borderRadius: '6px', padding: '8px 14px', color: '#a78bfa', fontSize: '11px', cursor: 'pointer', fontFamily: '"DM Mono", monospace', whiteSpace: 'nowrap' },
+  lookupBtn: { background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: '6px', padding: '8px 14px', color: '#bfdbfe', fontSize: '11px', cursor: 'pointer', fontFamily: '"DM Mono", monospace', whiteSpace: 'nowrap' },
   lookupRow: { display: 'flex', gap: '8px', alignItems: 'flex-end' },
 }
 
@@ -276,7 +276,7 @@ export default function App() {
       <div style={styles.main}>
         <div style={styles.statsRow}>
           <div style={styles.statCard}>
-            <div style={{ ...styles.statNum, color: '#bfdbfe' }}>{sponsors.length}</div>
+            <div style={{ ...styles.statNum, color: '#60a5fa' }}>{sponsors.length}</div>
             <div style={styles.statLabel}>TOTAL</div>
           </div>
           {STATUS_OPTIONS.map(s => (
