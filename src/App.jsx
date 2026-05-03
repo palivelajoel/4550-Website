@@ -17,9 +17,9 @@ const STATUS_COLORS = {
 const STATUS_OPTIONS = Object.keys(STATUS_COLORS)
 
 const styles = {
-  app: { minHeight: '100vh', background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1b3e 50%, #0a0f1e 100%)', fontFamily: '"DM Mono", "Courier New", monospace', color: '#e2e8f0', padding: '0' },
-  header: { background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' },
-  title: { fontSize: '28px', fontFamily: '"Bebas Neue", "Impact", sans-serif', letterSpacing: '3px', color: '#dc2626', margin: 0 },
+  app: { minHeight: '100vh', background: 'linear-gradient(135deg, #060c1a 0%, #0a1530 50%, #060c1a 100%)', fontFamily: '"DM Mono", "Courier New", monospace', color: '#e2e8f0', padding: '0' },
+  header: { background: 'linear-gradient(135deg, #7f1d1d, #991b1b)', borderBottom: '1px solid rgba(0,0,0,0.3)', padding: '20px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' },
+  title: { fontSize: '28px', fontFamily: '"Bebas Neue", "Impact", sans-serif', letterSpacing: '3px', color: '#bfdbfe', margin: 0 },
   liveBadge: { display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '20px', padding: '6px 14px', fontSize: '11px', color: '#22c55e', letterSpacing: '1px' },
   dot: { width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' },
   main: { padding: '28px 32px', maxWidth: '1200px', margin: '0 auto' },
@@ -30,7 +30,7 @@ const styles = {
   controls: { display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' },
   input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px 14px', color: '#e2e8f0', fontSize: '13px', fontFamily: '"DM Mono", monospace', outline: 'none', flex: '1', minWidth: '200px' },
   select: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px 14px', color: '#e2e8f0', fontSize: '13px', fontFamily: '"DM Mono", monospace', outline: 'none', cursor: 'pointer' },
-  btn: { background: 'linear-gradient(135deg, #dc2626, #991b1b)', border: 'none', borderRadius: '8px', padding: '10px 20px', color: 'white', fontSize: '13px', fontFamily: '"DM Mono", monospace', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600' },
+  btn: { background: 'transparent', border: '1px solid #b91c1c', borderRadius: '8px', padding: '10px 20px', color: '#bfdbfe', fontSize: '13px', fontFamily: '"DM Mono", monospace', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' },
   card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', transition: 'all 0.3s ease' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' },
@@ -39,11 +39,11 @@ const styles = {
   fieldRow: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontSize: '12px', color: '#94a3b8' },
   copyBtn: { background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '4px', padding: '2px 8px', color: '#94a3b8', fontSize: '10px', cursor: 'pointer', fontFamily: '"DM Mono", monospace' },
   cardActions: { display: 'flex', gap: '8px', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.06)' },
-  editBtn: { background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: '6px', padding: '6px 14px', color: '#dc2626', fontSize: '11px', cursor: 'pointer', fontFamily: '"DM Mono", monospace', flex: 1 },
+  editBtn: { background: 'transparent', border: '1px solid rgba(185,28,28,0.6)', borderRadius: '6px', padding: '6px 14px', color: '#bfdbfe', fontSize: '11px', cursor: 'pointer', fontFamily: '"DM Mono", monospace', flex: 1 },
   deleteBtn: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', padding: '6px 14px', color: '#f87171', fontSize: '11px', cursor: 'pointer', fontFamily: '"DM Mono", monospace' },
   modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
   modalBox: { background: '#0d1b3e', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' },
-  modalTitle: { fontFamily: '"Bebas Neue", sans-serif', fontSize: '22px', letterSpacing: '2px', color: '#dc2626', marginBottom: '20px' },
+  modalTitle: { fontFamily: '"Bebas Neue", sans-serif', fontSize: '22px', letterSpacing: '2px', color: '#bfdbfe', marginBottom: '20px' },
   field: { marginBottom: '14px' },
   label: { display: 'block', fontSize: '10px', color: '#94a3b8', letterSpacing: '1px', marginBottom: '6px' },
   modalInput: { width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px 14px', color: '#e2e8f0', fontSize: '13px', fontFamily: '"DM Mono", monospace', outline: 'none', boxSizing: 'border-box' },
@@ -270,13 +270,13 @@ export default function App() {
         select option { background: #0d1b3e; }
       `}</style>
       <div style={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><img src='/logo.jpg.JPG' alt='Team 4550' style={{ height: '68px', width: '68px', objectFit: 'contain', borderRadius: '8px' }} /><h1 style={styles.title}>FRC 4550 — SPONSOR TRACKER</h1></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><img src='/logo.jpg' alt='Team 4550' style={{ height: '68px', width: '68px', objectFit: 'contain', borderRadius: '8px' }} /><h1 style={styles.title}>FRC 4550 — SPONSOR TRACKER</h1></div>
         <div style={styles.liveBadge}><div style={styles.dot} />LIVE</div>
       </div>
       <div style={styles.main}>
         <div style={styles.statsRow}>
           <div style={styles.statCard}>
-            <div style={{ ...styles.statNum, color: '#dc2626' }}>{sponsors.length}</div>
+            <div style={{ ...styles.statNum, color: '#bfdbfe' }}>{sponsors.length}</div>
             <div style={styles.statLabel}>TOTAL</div>
           </div>
           {STATUS_OPTIONS.map(s => (
