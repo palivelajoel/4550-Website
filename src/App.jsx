@@ -188,6 +188,9 @@ function ImportModal({ onClose, onImport }) {
 }
 
 export default function App() {
+  const [authed, setAuthed] = useState(() => localStorage.getItem('sb_authed') === 'true')
+  const [pwInput, setPwInput] = useState('')
+  const [pwError, setPwError] = useState(false)
   const [sponsors, setSponsors] = useState([])
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
@@ -294,6 +297,37 @@ export default function App() {
     showToast(`✅ Lookup complete for ${missing.length} sponsors!`)
   }
 
+  const handleLogin = () => {
+    if (pwInput === 'Bruin@4550') {
+      localStorage.setItem('sb_authed', 'true')
+      setAuthed(true)
+      setPwError(false)
+    } else {
+      setPwError(true)
+    }
+  }
+
+  if (!authed) return (
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1b3e 50%, #0a0f1e 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '"DM Mono", monospace' }}>
+      <style>{'@import url(\'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap\');'}</style>
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '48px 40px', width: '100%', maxWidth: '380px', textAlign: 'center' }}>
+        <img src='/logo.jpg' alt='Team 4550' style={{ height: '80px', width: '80px', objectFit: 'contain', borderRadius: '12px', marginBottom: '20px' }} />
+        <div style={{ fontFamily: '"Bebas Neue", sans-serif', fontSize: '24px', letterSpacing: '3px', color: '#60a5fa', marginBottom: '6px' }}>SOMETHING'S BRUIN</div>
+        <div style={{ fontSize: '11px', color: '#475569', letterSpacing: '2px', marginBottom: '32px' }}>SPONSOR TRACKER · TEAM 4550</div>
+        <input
+          type='password'
+          placeholder='Enter team password'
+          value={pwInput}
+          onChange={e => { setPwInput(e.target.value); setPwError(false) }}
+          onKeyDown={e => e.key === 'Enter' && handleLogin()}
+          style={{ width: '100%', background: 'rgba(255,255,255,0.06)', border: pwError ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '12px 16px', color: '#e2e8f0', fontSize: '13px', fontFamily: '"DM Mono", monospace', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }}
+        />
+        {pwError && <div style={{ color: '#ef4444', fontSize: '11px', marginBottom: '12px' }}>Incorrect password</div>}
+        <button onClick={handleLogin} style={{ width: '100%', background: 'rgba(59,130,246,0.25)', border: '1px solid rgba(59,130,246,0.5)', borderRadius: '8px', padding: '12px', color: '#bfdbfe', fontSize: '13px', fontFamily: '"DM Mono", monospace', cursor: 'pointer', letterSpacing: '1px', marginTop: '4px' }}>ENTER</button>
+      </div>
+    </div>
+  )
+
   return (
     <div style={styles.app}>
       <style>{`
@@ -305,7 +339,7 @@ export default function App() {
         select option { background: #0d1b3e; }
       `}</style>
       <div style={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><img src='/logo.jpg' alt='Team 4550' style={{ height: '68px', width: '68px', objectFit: 'contain', borderRadius: '8px' }} /><h1 style={styles.title}>FRC 4550 | SPONSOR TRACKER</h1></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><img src='/logo.jpg' alt='Team 4550' style={{ height: '68px', width: '68px', objectFit: 'contain', borderRadius: '8px' }} /><h1 style={styles.title}>4550 - Something's Bruin | SPONSOR TRACKER</h1></div>
         <div style={styles.liveBadge}><div style={styles.dot} />LIVE</div>
       </div>
       <div style={styles.main}>
