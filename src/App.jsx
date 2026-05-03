@@ -195,6 +195,8 @@ export default function App() {
   const [showImport, setShowImport] = useState(false)
   const [toast, setToast] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [lookingUp, setLookingUp] = useState(false)
+  const [lookupProgress, setLookupProgress] = useState({ current: 0, total: 0 })
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000) }
 
@@ -259,6 +261,39 @@ export default function App() {
 
   const counts = STATUS_OPTIONS.reduce((acc, s) => { acc[s] = sponsors.filter(x => x.status === s).length; return acc }, {})
 
+
+  const lookupAll = async () => {
+    const missing = sponsors.filter(s => !s.email && !s.phone)
+    if (!missing.length) { showToast('✅ All sponsors already have contact info!'); return }
+    if (!confirm(`Look up contact info for ${missing.length} sponsors? This may take a few minutes.`)) return
+    setLookingUp(true)
+    setLookupProgress({ current: 0, total: missing.length })
+    for (let i = 0; i < missing.length; i++) {
+      const s = missing[i]
+      setLookupProgress({ current: i + 1, total: missing.length })
+      try {
+        const res = await fetch('/api/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company: s.company })
+        })
+        const parsed = await res.json()
+        if (parsed.email || parsed.phone) {
+          await supabase.from('sponsors').update({
+            email: parsed.email || s.email,
+            phone: parsed.phone || s.phone,
+            notes: parsed.notes || s.notes,
+            updated_at: new Date().toISOString()
+          }).eq('id', s.id)
+        }
+        await new Promise(r => setTimeout(r, 800))
+      } catch (e) { console.error(e) }
+    }
+    setLookingUp(false)
+    fetchSponsors()
+    showToast(`✅ Lookup complete for ${missing.length} sponsors!`)
+  }
+
   return (
     <div style={styles.app}>
       <style>{`
@@ -270,7 +305,7 @@ export default function App() {
         select option { background: #0d1b3e; }
       `}</style>
       <div style={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><img src='/logo.jpg' alt='Team 4550' style={{ height: '68px', width: '68px', objectFit: 'contain', borderRadius: '8px' }} /><h1 style={styles.title}>FRC 4550 — SPONSOR TRACKER</h1></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}><img src='/logo.jpg' alt='Team 4550' style={{ height: '68px', width: '68px', objectFit: 'contain', borderRadius: '8px' }} /><h1 style={styles.title}>FRC 4550 | SPONSOR TRACKER</h1></div>
         <div style={styles.liveBadge}><div style={styles.dot} />LIVE</div>
       </div>
       <div style={styles.main}>
@@ -292,7 +327,8 @@ export default function App() {
             <option value="All">All Statuses</option>
             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button style={{ ...styles.btn, background: 'linear-gradient(135deg,#7c3aed,#4f46e5)' }} onClick={() => setShowImport(true)}>📥 IMPORT CSV</button>
+          <button style={styles.btn} onClick={() => setShowImport(true)}>📥 IMPORT CSV</button>
+          <button style={styles.btn} onClick={lookupAll} disabled={lookingUp}>🔍 {lookingUp ? `LOOKING UP ${lookupProgress.current}/${lookupProgress.total}...` : 'LOOKUP ALL MISSING'}</button>
           <button style={styles.btn} onClick={() => setModal({})}>+ ADD SPONSOR</button>
         </div>
         {loading ? (
