@@ -1,118 +1,38 @@
 import { useState, useEffect } from "react";
-
-const TEAM_PASSWORD = "Bruin@4550";
-
-const SUPABASE_URL = "https://ehkwxzumgizryvhkeusr.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc";
-
-async function sbFetch(path, opts = {}) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-      ...opts.headers,
-    },
-    ...opts,
-  });
-  if (!res.ok) return null;
-  try { return await res.json(); } catch { return null; }
-}
-
-const FEATURES = [
-  {
-    id: "sponsor-tracker",
-    icon: "🤝",
-    label: "Sponsor Tracker",
-    description: "Manage team sponsors, contact info, and outreach status.",
-    href: "/dashboard",
-    available: true,
-    accent: "#3b82f6",
-  },
-  {
-    id: "tasks",
-    icon: "✅",
-    label: "Task Board",
-    description: "View tasks assigned to you and track progress.",
-    href: null,
-    available: false,
-    accent: "#22c55e",
-    badge: "Coming Soon",
-  },
-  {
-    id: "calendar",
-    icon: "📅",
-    label: "Team Calendar",
-    description: "Upcoming meetings, competitions, and deadlines.",
-    href: null,
-    available: false,
-    accent: "#f59e0b",
-    badge: "Coming Soon",
-  },
-  {
-    id: "media",
-    icon: "📸",
-    label: "Media Gallery",
-    description: "Photos and videos from competitions and events.",
-    href: null,
-    available: false,
-    accent: "#a855f7",
-    badge: "Coming Soon",
-  },
-  {
-    id: "resources",
-    icon: "📁",
-    label: "Resources",
-    description: "Design files, CAD, documents, and team guides.",
-    href: null,
-    available: false,
-    accent: "#ec4899",
-    badge: "Coming Soon",
-  },
-  {
-    id: "announcements",
-    icon: "📣",
-    label: "Announcements",
-    description: "Team-wide updates from captains and mentors.",
-    href: null,
-    available: false,
-    accent: "#ef4444",
-    badge: "Coming Soon",
-  },
-];
+import { FONTS, C, TEAM_PASSWORD, sbFetch, SUPABASE_URL, SUPABASE_KEY } from "./hubUtils.js";
 
 export default function Hub() {
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
-  const [memberName, setMemberName] = useState("");
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
-  const [tasks, setTasks] = useState([]);
+  const [memberName, setMemberName] = useState("");
   const [taskCount, setTaskCount] = useState(0);
+  const [announcementCount, setAnnouncementCount] = useState(0);
 
   useEffect(() => {
-    const saved = localStorage.getItem("hub_authed");
-    if (saved === "true") {
-      setAuthed(true);
-      loadData();
-    }
     loadLogo();
+    if (localStorage.getItem("hub_authed") === "true") {
+      setAuthed(true);
+      loadStats();
+    }
   }, []);
 
   async function loadLogo() {
-    const res = await sbFetch("site_config?key=eq.logo_url&select=value");
-    if (res && res[0]) setLogoUrl(res[0].value);
+    const r = await sbFetch("site_config?key=eq.logo_url&select=value");
+    if (r?.[0]) setLogoUrl(r[0].value);
   }
 
-  async function loadData() {
-    const username = localStorage.getItem("hub_username") || "";
-    if (username) {
-      const members = await sbFetch(`members?username=eq.${encodeURIComponent(username)}&select=full_name`);
-      if (members && members[0]) setMemberName(members[0].full_name || username);
+  async function loadStats() {
+    const u = localStorage.getItem("hub_username") || "";
+    if (u) {
+      const m = await sbFetch(`members?username=eq.${encodeURIComponent(u)}&select=full_name`);
+      if (m?.[0]) setMemberName(m[0].full_name || u);
     }
-    const allTasks = await sbFetch("tasks?status=neq.Done&select=id");
-    if (allTasks) setTaskCount(allTasks.length);
+    const t = await sbFetch("hub_tasks?status=neq.Done&select=id");
+    if (t) setTaskCount(t.length);
+    const a = await sbFetch("hub_announcements?select=id&order=created_at.desc&limit=5");
+    if (a) setAnnouncementCount(a.length);
   }
 
   function handleLogin(e) {
@@ -121,319 +41,162 @@ export default function Hub() {
       localStorage.setItem("hub_authed", "true");
       setAuthed(true);
       setErr("");
-      loadData();
-    } else {
-      setErr("Incorrect password.");
-    }
+      loadStats();
+    } else setErr("Incorrect password.");
   }
 
-  function handleLogout() {
+  function logout() {
     localStorage.removeItem("hub_authed");
-    localStorage.removeItem("hub_username");
     setAuthed(false);
     setMemberName("");
   }
 
+  const FEATURES = [
+    { id: "projector", icon: "📡", label: "Meeting Projector", description: "Live rotating display of calendar, tasks & announcements. Fullscreen ready.", href: "/hub/projector", accent: "#ef4444", available: true, featured: true },
+    { id: "calendar", icon: "📅", label: "Team Calendar", description: "Events, deadlines, and meetings. Add and manage the team schedule.", href: "/hub/calendar", accent: "#3b82f6", available: true },
+    { id: "tasks", icon: "✅", label: "Task Board", description: "Monday.com-style board. Assign tasks by sub-team and member.", href: "/hub/tasks", accent: "#22c55e", available: true },
+    { id: "announcements", icon: "📣", label: "Announcements", description: "Team-wide updates from captains and mentors.", href: "/hub/announcements", accent: "#f59e0b", available: true },
+    { id: "media", icon: "📸", label: "Media Gallery", description: "Photos and videos from competitions and events. Upload new media.", href: "/hub/media", accent: "#a855f7", available: true },
+    { id: "resources", icon: "📁", label: "Resources", description: "Design files, CAD, documents, and team guides.", href: "/hub/resources", accent: "#ec4899", available: true },
+    { id: "sponsor-tracker", icon: "🤝", label: "Sponsor Tracker", description: "Manage team sponsors, contact info, and outreach status.", href: "/dashboard", accent: "#64748b", available: true },
+  ];
+
   if (!authed) {
     return (
-      <div style={styles.loginBg}>
-        <div style={styles.loginCard}>
-          <img src={logoUrl} alt="Team Logo" style={styles.loginLogo} />
-          <div style={styles.loginTitle}>MEMBER HUB</div>
-          <div style={styles.loginSub}>FRC Team 4550 · Something's Bruin</div>
-          <form onSubmit={handleLogin} style={styles.loginForm}>
-            <input
-              type="password"
-              placeholder="Team password"
-              value={pw}
-              onChange={e => setPw(e.target.value)}
-              style={styles.loginInput}
-              autoFocus
-            />
-            {err && <div style={styles.loginErr}>{err}</div>}
-            <button type="submit" style={styles.loginBtn}>ENTER HUB →</button>
+      <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Exo 2', sans-serif" }}>
+        <style>{FONTS}</style>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: "48px 40px", textAlign: "center", width: "100%", maxWidth: 380 }}>
+          <img src={logoUrl} alt="logo" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", marginBottom: 20 }} />
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 700, color: C.red, letterSpacing: 4, marginBottom: 6 }}>MEMBER HUB</div>
+          <div style={{ fontSize: 12, color: C.dim, fontFamily: "'Share Tech Mono', monospace", marginBottom: 32 }}>FRC Team 4550 · Something's Bruin</div>
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <input type="password" placeholder="Team password" value={pw} onChange={e => setPw(e.target.value)}
+              style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 16px", color: "#fff", fontSize: 14, fontFamily: "'Share Tech Mono', monospace", textAlign: "center" }} autoFocus />
+            {err && <div style={{ color: C.red, fontSize: 12, fontFamily: "monospace" }}>{err}</div>}
+            <button type="submit" style={{ background: C.red, border: "none", borderRadius: 6, padding: 12, color: "#fff", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, cursor: "pointer" }}>ENTER HUB →</button>
           </form>
-          <a href="/" style={styles.loginBack}>← Back to site</a>
+          <a href="/" style={{ display: "block", marginTop: 24, color: C.dim, fontSize: 12, fontFamily: "monospace", textDecoration: "none" }}>← Back to site</a>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={styles.bg}>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'Exo 2', sans-serif" }}>
+      <style>{FONTS}</style>
+
       {/* Header */}
-      <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <img src={logoUrl} alt="logo" style={styles.headerLogo} />
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 32px", borderBottom: `1px solid ${C.border}`, background: "rgba(8,10,15,0.95)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <img src={logoUrl} alt="logo" style={{ width: 38, height: 38, borderRadius: "50%", objectFit: "cover" }} />
           <div>
-            <div style={styles.headerTitle}>MEMBER HUB</div>
-            <div style={styles.headerSub}>FRC Team 4550 · Something's Bruin</div>
+            <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 14, color: C.red, letterSpacing: 2 }}>MEMBER HUB</div>
+            <div style={{ fontSize: 11, color: C.dim, fontFamily: "'Share Tech Mono', monospace" }}>FRC Team 4550 · Something's Bruin</div>
           </div>
         </div>
-        <div style={styles.headerRight}>
-          {memberName && <span style={styles.memberBadge}>👋 {memberName}</span>}
-          <a href="/" style={styles.navLink}>Public Site</a>
-          <button onClick={handleLogout} style={styles.logoutBtn}>Log Out</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {memberName && <span style={{ fontSize: 13, color: C.muted, fontFamily: "'Share Tech Mono', monospace" }}>👋 {memberName}</span>}
+          <a href="/" style={{ fontSize: 12, color: C.dim, textDecoration: "none", fontFamily: "monospace" }}>Public Site</a>
+          <button onClick={logout} style={{ background: "transparent", border: `1px solid rgba(239,68,68,0.4)`, color: C.red, padding: "6px 14px", borderRadius: 4, cursor: "pointer", fontSize: 12, fontFamily: "monospace" }}>Log Out</button>
         </div>
       </header>
 
-      {/* Main content */}
-      <main style={styles.main}>
-        <div style={styles.welcomeRow}>
-          <div style={styles.welcomeText}>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px" }}>
+        {/* Welcome row */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 36, flexWrap: "wrap", gap: 12 }}>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 700, color: C.text }}>
             {memberName ? `Welcome back, ${memberName.split(" ")[0]}.` : "Welcome back."}
           </div>
-          {taskCount > 0 && (
-            <div style={styles.taskAlert}>
-              📋 {taskCount} open task{taskCount !== 1 ? "s" : ""} on the board
-            </div>
-          )}
+          <div style={{ display: "flex", gap: 10 }}>
+            {taskCount > 0 && (
+              <div style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.3)", color: "#93c5fd", padding: "7px 14px", borderRadius: 6, fontSize: 12, fontFamily: "monospace" }}>
+                📋 {taskCount} open task{taskCount !== 1 ? "s" : ""}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div style={styles.grid}>
-          {FEATURES.map((f, i) => (
+        {/* Featured projector card */}
+        <ProjectorPreviewCard />
+
+        {/* Feature grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 18, marginTop: 24 }}>
+          {FEATURES.filter(f => f.id !== "projector").map((f, i) => (
             <FeatureCard key={f.id} feature={f} index={i} />
           ))}
         </div>
       </main>
 
-      <div style={styles.watermark}>BUILT BY PALIVELA_JOEL · FRC TEAM 4550</div>
+      <div style={{ textAlign: "center", padding: "24px", color: "#1e293b", fontSize: 11, fontFamily: "monospace", letterSpacing: 2 }}>
+        BUILT BY PALIVELA_JOEL · FRC TEAM 4550
+      </div>
     </div>
+  );
+}
+
+function ProjectorPreviewCard() {
+  return (
+    <a href="/hub/projector" style={{ textDecoration: "none", display: "block" }}>
+      <div style={{
+        background: "linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(59,130,246,0.08) 100%)",
+        border: "1px solid rgba(239,68,68,0.3)",
+        borderRadius: 14,
+        padding: "24px 28px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 20,
+        flexWrap: "wrap",
+        cursor: "pointer",
+        transition: "all 0.2s",
+        marginBottom: 8,
+      }}
+        onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(239,68,68,0.6)"}
+        onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(239,68,68,0.3)"}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          <div style={{ fontSize: 40 }}>📡</div>
+          <div>
+            <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 16, fontWeight: 700, color: C.red, letterSpacing: 2, marginBottom: 4 }}>MEETING PROJECTOR</div>
+            <div style={{ color: C.muted, fontSize: 13 }}>Live rotating display — calendar, tasks & announcements. Click to open fullscreen.</div>
+          </div>
+        </div>
+        <div style={{ background: C.red, color: "#fff", padding: "10px 22px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 2, whiteSpace: "nowrap" }}>
+          OPEN →
+        </div>
+      </div>
+    </a>
   );
 }
 
 function FeatureCard({ feature, index }) {
   const [hovered, setHovered] = useState(false);
-
-  function handleClick() {
-    if (feature.available && feature.href) {
-      // Pass auth through to Sponsor Tracker
-      if (feature.href === "/dashboard") {
-        localStorage.setItem("sponsor_authed", "true");
-      }
-      window.location.href = feature.href;
-    }
-  }
-
   return (
     <div
-      onClick={handleClick}
+      onClick={() => { if (feature.available && feature.href) { if (feature.href === "/dashboard") localStorage.setItem("sponsor_authed", "true"); window.location.href = feature.href; } }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        ...styles.card,
-        borderColor: hovered && feature.available ? feature.accent : "rgba(255,255,255,0.08)",
-        boxShadow: hovered && feature.available ? `0 0 24px ${feature.accent}33` : "none",
+        background: C.surface,
+        border: `1px solid ${hovered && feature.available ? feature.accent : C.border}`,
+        borderRadius: 12,
+        padding: "26px 22px",
         cursor: feature.available ? "pointer" : "default",
-        opacity: feature.available ? 1 : 0.6,
-        transform: hovered && feature.available ? "translateY(-4px)" : "none",
-        animationDelay: `${index * 0.07}s`,
+        transition: "all 0.2s ease",
+        transform: hovered && feature.available ? "translateY(-3px)" : "none",
+        boxShadow: hovered && feature.available ? `0 0 20px ${feature.accent}28` : "none",
+        opacity: feature.available ? 1 : 0.55,
+        animation: `fadeUp 0.35s ease both`,
+        animationDelay: `${index * 0.06}s`,
+        position: "relative",
       }}
     >
-      {feature.badge && (
-        <div style={{ ...styles.badge, background: `${feature.accent}22`, color: feature.accent }}>
-          {feature.badge}
-        </div>
-      )}
-      <div style={{ ...styles.cardIcon, color: feature.accent }}>{feature.icon}</div>
-      <div style={styles.cardLabel}>{feature.label}</div>
-      <div style={styles.cardDesc}>{feature.description}</div>
+      <div style={{ fontSize: 30, marginBottom: 12, color: feature.accent }}>{feature.icon}</div>
+      <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 13, color: C.text, marginBottom: 7, letterSpacing: 1 }}>{feature.label}</div>
+      <div style={{ fontSize: 13, color: C.dim, lineHeight: 1.6 }}>{feature.description}</div>
       {feature.available && (
-        <div style={{ ...styles.cardArrow, color: feature.accent }}>Open →</div>
+        <div style={{ marginTop: 14, fontSize: 12, fontFamily: "monospace", color: feature.accent, fontWeight: 700 }}>Open →</div>
       )}
     </div>
   );
 }
-
-const styles = {
-  bg: {
-    minHeight: "100vh",
-    background: "#080a0f",
-    color: "#fff",
-    fontFamily: "'Exo 2', sans-serif",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "16px 32px",
-    borderBottom: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(8,10,15,0.95)",
-    backdropFilter: "blur(12px)",
-    position: "sticky",
-    top: 0,
-    zIndex: 100,
-  },
-  headerLeft: { display: "flex", alignItems: "center", gap: 12 },
-  headerLogo: { width: 40, height: 40, borderRadius: "50%", objectFit: "cover" },
-  headerTitle: {
-    fontFamily: "'Orbitron', sans-serif",
-    fontWeight: 700,
-    fontSize: 15,
-    color: "#ef4444",
-    letterSpacing: 2,
-  },
-  headerSub: { fontSize: 11, color: "#64748b", fontFamily: "'Share Tech Mono', monospace" },
-  headerRight: { display: "flex", alignItems: "center", gap: 16 },
-  memberBadge: {
-    fontSize: 13,
-    color: "#94a3b8",
-    fontFamily: "'Share Tech Mono', monospace",
-  },
-  navLink: {
-    fontSize: 13,
-    color: "#64748b",
-    textDecoration: "none",
-    fontFamily: "'Share Tech Mono', monospace",
-    transition: "color 0.2s",
-  },
-  logoutBtn: {
-    background: "transparent",
-    border: "1px solid rgba(239,68,68,0.4)",
-    color: "#ef4444",
-    padding: "6px 14px",
-    borderRadius: 4,
-    cursor: "pointer",
-    fontSize: 12,
-    fontFamily: "'Share Tech Mono', monospace",
-    letterSpacing: 1,
-  },
-  main: { maxWidth: 1100, margin: "0 auto", padding: "48px 24px" },
-  welcomeRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 40,
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  welcomeText: {
-    fontFamily: "'Orbitron', sans-serif",
-    fontSize: 24,
-    fontWeight: 700,
-    color: "#f1f5f9",
-  },
-  taskAlert: {
-    background: "rgba(59,130,246,0.12)",
-    border: "1px solid rgba(59,130,246,0.3)",
-    color: "#93c5fd",
-    padding: "8px 16px",
-    borderRadius: 6,
-    fontSize: 13,
-    fontFamily: "'Share Tech Mono', monospace",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-    gap: 20,
-  },
-  card: {
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 12,
-    padding: "28px 24px",
-    transition: "all 0.25s ease",
-    position: "relative",
-    animation: "fadeInUp 0.4s ease both",
-  },
-  badge: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    fontSize: 10,
-    padding: "3px 8px",
-    borderRadius: 20,
-    fontFamily: "'Share Tech Mono', monospace",
-    letterSpacing: 1,
-  },
-  cardIcon: { fontSize: 32, marginBottom: 14 },
-  cardLabel: {
-    fontFamily: "'Orbitron', sans-serif",
-    fontWeight: 700,
-    fontSize: 14,
-    color: "#f1f5f9",
-    marginBottom: 8,
-    letterSpacing: 1,
-  },
-  cardDesc: { fontSize: 13, color: "#64748b", lineHeight: 1.6 },
-  cardArrow: {
-    marginTop: 16,
-    fontSize: 13,
-    fontFamily: "'Share Tech Mono', monospace",
-    fontWeight: 700,
-  },
-  watermark: {
-    textAlign: "center",
-    padding: "24px",
-    color: "#1e293b",
-    fontSize: 11,
-    fontFamily: "'Share Tech Mono', monospace",
-    letterSpacing: 2,
-  },
-  // Login
-  loginBg: {
-    minHeight: "100vh",
-    background: "#080a0f",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontFamily: "'Exo 2', sans-serif",
-  },
-  loginCard: {
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 16,
-    padding: "48px 40px",
-    textAlign: "center",
-    width: "100%",
-    maxWidth: 380,
-  },
-  loginLogo: { width: 72, height: 72, borderRadius: "50%", objectFit: "cover", marginBottom: 20 },
-  loginTitle: {
-    fontFamily: "'Orbitron', sans-serif",
-    fontSize: 22,
-    fontWeight: 700,
-    color: "#ef4444",
-    letterSpacing: 4,
-    marginBottom: 6,
-  },
-  loginSub: {
-    fontSize: 12,
-    color: "#64748b",
-    fontFamily: "'Share Tech Mono', monospace",
-    marginBottom: 32,
-  },
-  loginForm: { display: "flex", flexDirection: "column", gap: 12 },
-  loginInput: {
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 6,
-    padding: "12px 16px",
-    color: "#fff",
-    fontSize: 14,
-    fontFamily: "'Share Tech Mono', monospace",
-    outline: "none",
-    textAlign: "center",
-  },
-  loginErr: { color: "#ef4444", fontSize: 12, fontFamily: "'Share Tech Mono', monospace" },
-  loginBtn: {
-    background: "#ef4444",
-    border: "none",
-    borderRadius: 6,
-    padding: "12px",
-    color: "#fff",
-    fontFamily: "'Orbitron', sans-serif",
-    fontWeight: 700,
-    fontSize: 13,
-    letterSpacing: 2,
-    cursor: "pointer",
-  },
-  loginBack: {
-    display: "block",
-    marginTop: 24,
-    color: "#64748b",
-    fontSize: 12,
-    fontFamily: "'Share Tech Mono', monospace",
-    textDecoration: "none",
-  },
-};
