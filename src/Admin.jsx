@@ -1,471 +1,845 @@
-import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { useState, useEffect, useRef } from "react";
 
-const supabase = createClient(
-  'https://ehkwxzumgizryvhkeusr.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc'
-)
+const ADMIN_PASSWORD = "Admin@4550";
+const SUPABASE_URL = "https://ehkwxzumgizryvhkeusr.supabase.co";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc";
 
-const PRIORITY_COLORS = { Low: '#22c55e', Medium: '#f59e0b', High: '#ef4444' }
-const TASK_STATUSES = ['To Do', 'In Progress', 'Done']
-
-const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #080a0f; color: #e2e8f0; font-family: 'Exo 2', sans-serif; }
-  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0d1117; } ::-webkit-scrollbar-thumb { background: #ef4444; border-radius: 3px; }
-  input, textarea, select { font-family: 'Share Tech Mono', monospace; }
-  input::placeholder, textarea::placeholder { color: #334155; }
-  select option { background: #0d1117; color: #e2e8f0; }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-  .section-card { animation: fadeIn 0.4s ease; }
-`
-
-const S = {
-  page: { minHeight: '100vh', background: '#080a0f' },
-  sidebar: { width: '260px', background: 'rgba(255,255,255,0.02)', borderRight: '1px solid rgba(255,255,255,0.06)', height: '100vh', position: 'fixed', top: 0, left: 0, display: 'flex', flexDirection: 'column', zIndex: 10 },
-  sidebarTop: { padding: '24px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' },
-  sidebarNav: { flex: 1, padding: '16px 12px', overflowY: 'auto' },
-  navItem: (active) => ({ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderRadius: '10px', cursor: 'pointer', background: active ? 'rgba(239,68,68,0.1)' : 'transparent', border: active ? '1px solid rgba(239,68,68,0.2)' : '1px solid transparent', color: active ? '#fca5a5' : '#64748b', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', letterSpacing: '1px', marginBottom: '4px', transition: 'all 0.2s' }),
-  main: { marginLeft: '260px', minHeight: '100vh', padding: '32px' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' },
-  pageTitle: { fontFamily: "'Orbitron', monospace", fontSize: '24px', fontWeight: 900, color: '#f1f5f9' },
-  card: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '24px', marginBottom: '16px' },
-  cardTitle: { fontFamily: "'Orbitron', monospace", fontSize: '13px', fontWeight: 700, color: '#60a5fa', letterSpacing: '2px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' },
-  input: { width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '10px 14px', color: '#e2e8f0', fontSize: '13px', outline: 'none', fontFamily: "'Share Tech Mono', monospace" },
-  label: { display: 'block', fontSize: '10px', color: '#475569', letterSpacing: '2px', marginBottom: '6px', fontFamily: "'Share Tech Mono', monospace" },
-  field: { marginBottom: '14px' },
-  btnRed: { background: 'linear-gradient(135deg, #dc2626, #b91c1c)', border: 'none', borderRadius: '8px', padding: '10px 20px', color: 'white', fontFamily: "'Orbitron', monospace", fontSize: '11px', fontWeight: 700, letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.2s' },
-  btnBlue: { background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.4)', borderRadius: '8px', padding: '10px 20px', color: '#93c5fd', fontFamily: "'Orbitron', monospace", fontSize: '11px', fontWeight: 700, letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.2s' },
-  btnGhost: { background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 16px', color: '#64748b', fontFamily: "'Share Tech Mono', monospace", fontSize: '11px', cursor: 'pointer', transition: 'all 0.2s' },
-  btnDanger: { background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', padding: '6px 12px', color: '#f87171', fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', cursor: 'pointer' },
-  badge: (color) => ({ display: 'inline-block', background: color + '20', border: `1px solid ${color}50`, borderRadius: '20px', padding: '3px 12px', fontSize: '10px', fontFamily: "'Share Tech Mono', monospace", color, letterSpacing: '1px' }),
-  row: { display: 'flex', gap: '12px', alignItems: 'center', padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' },
-  grid2: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' },
-  statCard: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '20px', textAlign: 'center' },
-  toast: { position: 'fixed', bottom: '24px', right: '24px', background: '#1e3a5f', border: '1px solid rgba(96,165,250,0.4)', borderRadius: '10px', padding: '12px 20px', color: '#e2e8f0', fontSize: '13px', zIndex: 2000, fontFamily: "'Share Tech Mono', monospace", animation: 'fadeIn 0.3s ease' },
-  modal: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' },
-  modalBox: { background: '#0d1117', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' },
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+      ...opts.headers,
+    },
+    ...opts,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("sbFetch error", res.status, text);
+    return null;
+  }
+  try { return await res.json(); } catch { return null; }
 }
 
-// LOGIN
-function Login({ onLogin }) {
-  const [pw, setPw] = useState('')
-  const [err, setErr] = useState(false)
-  return (
-    <div style={{ minHeight: '100vh', background: '#080a0f', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <style>{css}</style>
-      <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '48px 40px', width: '100%', maxWidth: '380px', textAlign: 'center' }}>
-        <img src='/logo.jpg' alt='Team 4550' style={{ width: '72px', height: '72px', objectFit: 'contain', borderRadius: '50%', border: '2px solid rgba(239,68,68,0.4)', marginBottom: '20px' }} />
-        <div style={{ fontFamily: "'Orbitron', monospace", fontSize: '18px', fontWeight: 900, color: '#ef4444', letterSpacing: '3px', marginBottom: '4px' }}>ADMIN PANEL</div>
-        <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', color: '#334155', letterSpacing: '3px', marginBottom: '32px' }}>FRC TEAM 4550 · RESTRICTED ACCESS</div>
-        <input type='password' placeholder='Admin password' value={pw} onChange={e => { setPw(e.target.value); setErr(false) }} onKeyDown={e => e.key === 'Enter' && (pw === 'Admin@4550' ? (localStorage.setItem('admin_authed', 'true'), onLogin()) : setErr(true))} style={{ ...S.input, textAlign: 'center', marginBottom: '8px', border: err ? '1px solid #ef4444' : '1px solid rgba(255,255,255,0.1)' }} />
-        {err && <div style={{ color: '#ef4444', fontSize: '11px', fontFamily: "'Share Tech Mono', monospace", marginBottom: '8px' }}>Incorrect password</div>}
-        <button style={{ ...S.btnRed, width: '100%', marginTop: '8px', padding: '12px' }} onClick={() => pw === 'Admin@4550' ? (localStorage.setItem('admin_authed', 'true'), onLogin()) : setErr(true)}>ENTER</button>
-        <a href='/' style={{ display: 'block', marginTop: '20px', fontSize: '11px', color: '#334155', fontFamily: "'Share Tech Mono', monospace", textDecoration: 'none' }}>← BACK TO SITE</a>
+async function uploadImageToSupabase(file) {
+  const fileName = `${Date.now()}-${file.name.replace(/\s/g, "_")}`;
+  const res = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/team-assets/${fileName}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": file.type,
+        "x-upsert": "true",
+      },
+      body: file,
+    }
+  );
+  if (!res.ok) return null;
+  return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${fileName}`;
+}
+
+const NAV = [
+  { id: "overview", label: "📊 Overview" },
+  { id: "accounts", label: "👥 Accounts" },
+  { id: "tasks", label: "📋 Tasks" },
+  { id: "sponsors-assign", label: "🤝 Sponsor Assignment" },
+  { id: "captains", label: "🏆 Captains & Roles" },
+  { id: "suggestions", label: "💡 Suggestions" },
+  { id: "site", label: "⚙️ Site Config" },
+];
+
+export default function Admin() {
+  const [authed, setAuthed] = useState(false);
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState("");
+  const [page, setPage] = useState("overview");
+  const [members, setMembers] = useState([]);
+  const [tasks, setTaskList] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [sponsors, setSponsors] = useState([]);
+  const [captains, setCaptains] = useState([]);
+  const [config, setConfig] = useState({});
+  const [logoUrl, setLogoUrl] = useState("/logo.jpg");
+  const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    if (localStorage.getItem("admin_authed") === "true") { setAuthed(true); loadAll(); }
+  }, []);
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 3000);
+  }
+
+  async function loadAll() {
+    const [m, t, sg, sp, cap, cfg] = await Promise.all([
+      sbFetch("members?select=*&order=created_at.asc"),
+      sbFetch("tasks?select=*&order=created_at.desc"),
+      sbFetch("suggestions?select=*&order=submitted_at.desc"),
+      sbFetch("sponsors?select=*&order=company.asc"),
+      sbFetch("captains?select=*&order=sort_order.asc"),
+      sbFetch("site_config?select=key,value"),
+    ]);
+    if (m) setMembers(m);
+    if (t) setTaskList(t);
+    if (sg) setSuggestions(sg);
+    if (sp) setSponsors(sp);
+    if (cap) setCaptains(cap);
+    if (cfg) {
+      const obj = {};
+      cfg.forEach(r => { obj[r.key] = r.value; });
+      setConfig(obj);
+      if (obj.logo_url) setLogoUrl(obj.logo_url);
+    }
+  }
+
+  function handleLogin(e) {
+    e.preventDefault();
+    if (pw === ADMIN_PASSWORD) {
+      localStorage.setItem("admin_authed", "true");
+      setAuthed(true);
+      loadAll();
+    } else setErr("Incorrect password.");
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("admin_authed");
+    setAuthed(false);
+  }
+
+  if (!authed) {
+    return (
+      <div style={S.loginBg}>
+        <div style={S.loginCard}>
+          <div style={S.loginTitle}>ADMIN PANEL</div>
+          <div style={S.loginSub}>FRC Team 4550 · Something's Bruin</div>
+          <form onSubmit={handleLogin} style={S.loginForm}>
+            <input type="password" placeholder="Admin password" value={pw} onChange={e => setPw(e.target.value)}
+              style={S.loginInput} autoFocus />
+            {err && <div style={S.loginErr}>{err}</div>}
+            <button type="submit" style={S.loginBtn}>ENTER →</button>
+          </form>
+          <a href="/" style={S.loginBack}>← Back to site</a>
+        </div>
       </div>
+    );
+  }
+
+  const unread = suggestions.length;
+  const overdue = tasks.filter(t => t.due_date && t.status !== "Done" && new Date(t.due_date) < new Date()).length;
+
+  return (
+    <div style={S.layout}>
+      {toast && <div style={S.toast}>{toast}</div>}
+
+      {/* Sidebar */}
+      <aside style={S.sidebar}>
+        <div style={S.sidebarBrand}>
+          <img src={logoUrl} alt="logo" style={S.sidebarLogo} />
+          <div>
+            <div style={S.sidebarTitle}>ADMIN</div>
+            <div style={S.sidebarSub}>Team 4550</div>
+          </div>
+        </div>
+        <nav style={S.sidebarNav}>
+          {NAV.map(n => (
+            <button key={n.id} onClick={() => setPage(n.id)} style={{
+              ...S.navItem,
+              background: page === n.id ? "rgba(239,68,68,0.15)" : "transparent",
+              color: page === n.id ? "#ef4444" : "#94a3b8",
+              borderLeft: page === n.id ? "3px solid #ef4444" : "3px solid transparent",
+            }}>
+              {n.label}
+              {n.id === "suggestions" && unread > 0 && (
+                <span style={S.badge}>{unread}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+        <button onClick={handleLogout} style={S.logoutBtn}>Log Out</button>
+      </aside>
+
+      {/* Main */}
+      <main style={S.main}>
+        {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} overdue={overdue} />}
+        {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} />}
+        {page === "tasks" && <Tasks tasks={tasks} members={members} reload={loadAll} showToast={showToast} />}
+        {page === "sponsors-assign" && <SponsorAssign sponsors={sponsors} members={members} reload={loadAll} showToast={showToast} />}
+        {page === "captains" && <CaptainsAdmin captains={captains} reload={loadAll} showToast={showToast} />}
+        {page === "suggestions" && <Suggestions suggestions={suggestions} reload={loadAll} showToast={showToast} />}
+        {page === "site" && <SiteConfig config={config} logoUrl={logoUrl} setLogoUrl={setLogoUrl} reload={loadAll} showToast={showToast} />}
+      </main>
     </div>
-  )
+  );
 }
 
-// OVERVIEW
-function Overview({ members, tasks, suggestions, sponsors }) {
-  const overdue = tasks.filter(t => t.due_date && t.due_date < new Date().toISOString().split('T')[0] && t.status !== 'Done')
-  const unread = suggestions.length
+// ── OVERVIEW ──────────────────────────────────────────────────────────────
+function Overview({ members, tasks, suggestions, sponsors, overdue }) {
   return (
-    <div className='section-card'>
-      <div style={S.grid2}>
+    <div>
+      <h1 style={S.pageTitle}>Overview</h1>
+      <div style={S.statRow}>
         {[
-          { label: 'MEMBERS', val: members.length, color: '#60a5fa', icon: '👥' },
-          { label: 'OPEN TASKS', val: tasks.filter(t => t.status !== 'Done').length, color: '#f59e0b', icon: '📋' },
-          { label: 'SUGGESTIONS', val: unread, color: '#a78bfa', icon: '💡' },
-          { label: 'SPONSORS', val: sponsors, color: '#22c55e', icon: '🤝' },
+          { label: "Members", val: members.length, color: "#3b82f6" },
+          { label: "Open Tasks", val: tasks.filter(t => t.status !== "Done").length, color: "#f59e0b" },
+          { label: "Suggestions", val: suggestions.length, color: "#22c55e" },
+          { label: "Sponsors", val: sponsors.length, color: "#a855f7" },
         ].map(s => (
-          <div key={s.label} style={S.statCard}>
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>{s.icon}</div>
-            <div style={{ fontFamily: "'Orbitron', monospace", fontSize: '32px', fontWeight: 900, color: s.color }}>{s.val}</div>
-            <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', color: '#475569', letterSpacing: '2px', marginTop: '4px' }}>{s.label}</div>
+          <div key={s.label} style={{ ...S.statCard, borderColor: s.color }}>
+            <div style={{ ...S.statNum, color: s.color }}>{s.val}</div>
+            <div style={S.statLabel}>{s.label}</div>
           </div>
         ))}
       </div>
-      {overdue.length > 0 && (
-        <div style={{ marginTop: '20px', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', padding: '16px' }}>
-          <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '11px', color: '#ef4444', letterSpacing: '2px', marginBottom: '8px' }}>⚠️ OVERDUE TASKS</div>
-          {overdue.map(t => (
-            <div key={t.id} style={{ fontSize: '13px', color: '#fca5a5', padding: '4px 0' }}>{t.title} {t.assigned_name ? `→ ${t.assigned_name}` : ''} · Due {t.due_date}</div>
+      {overdue > 0 && (
+        <div style={S.alertBanner}>⚠️ {overdue} overdue task{overdue !== 1 ? "s" : ""}</div>
+      )}
+      <div style={S.quickLinks}>
+        <a href="/" target="_blank" style={S.quickBtn}>Public Site ↗</a>
+        <a href="/hub" target="_blank" style={S.quickBtn}>Member Hub ↗</a>
+        <a href="/dashboard" target="_blank" style={S.quickBtn}>Sponsor Tracker ↗</a>
+      </div>
+    </div>
+  );
+}
+
+// ── ACCOUNTS ─────────────────────────────────────────────────────────────
+function Accounts({ members, reload, showToast }) {
+  const [form, setForm] = useState({ username: "", password: "", full_name: "", role: "Member" });
+  const [editId, setEditId] = useState(null);
+  const [editData, setEditData] = useState({});
+
+  async function createMember() {
+    if (!form.username || !form.password) return;
+    await sbFetch("members", { method: "POST", body: JSON.stringify(form) });
+    setForm({ username: "", password: "", full_name: "", role: "Member" });
+    reload(); showToast("Member created.");
+  }
+
+  async function updateMember(id) {
+    await sbFetch(`members?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(editData) });
+    setEditId(null); reload(); showToast("Member updated.");
+  }
+
+  async function deleteMember(id) {
+    if (!confirm("Delete this member?")) return;
+    await sbFetch(`members?id=eq.${id}`, { method: "DELETE" });
+    reload(); showToast("Member deleted.");
+  }
+
+  const roleColor = { Member: "#64748b", Captain: "#3b82f6", Mentor: "#22c55e", Admin: "#ef4444" };
+
+  return (
+    <div>
+      <h1 style={S.pageTitle}>Account Management</h1>
+      <div style={S.card}>
+        <div style={S.cardTitle}>Create Account</div>
+        <div style={S.formRow}>
+          {[["Username", "username"], ["Password", "password"], ["Full Name", "full_name"]].map(([lbl, key]) => (
+            <input key={key} placeholder={lbl} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })}
+              style={S.input} type={key === "password" ? "password" : "text"} />
           ))}
+          <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={S.select}>
+            {["Member", "Captain", "Mentor", "Admin"].map(r => <option key={r}>{r}</option>)}
+          </select>
+          <button onClick={createMember} style={S.btnPrimary}>Create</button>
         </div>
-      )}
-      <div style={{ marginTop: '20px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-        <a href='/dashboard' target='_blank' style={{ ...S.btnBlue, textDecoration: 'none' }}>→ SPONSOR TRACKER</a>
-        <a href='/' target='_blank' style={{ ...S.btnGhost, textDecoration: 'none' }}>→ PUBLIC SITE</a>
       </div>
-    </div>
-  )
-}
-
-// ACCOUNTS
-function Accounts({ members, onRefresh, showToast }) {
-  const [form, setForm] = useState({ username: '', password: '', full_name: '', role: 'Member' })
-  const [adding, setAdding] = useState(false)
-  const [editMember, setEditMember] = useState(null)
-
-  const add = async () => {
-    if (!form.username || !form.password) return
-    const { error } = await supabase.from('members').insert([form])
-    if (error) { showToast('❌ Username already taken'); return }
-    setForm({ username: '', password: '', full_name: '', role: 'Member' })
-    setAdding(false); onRefresh(); showToast('✅ Member added!')
-  }
-
-  const remove = async (id) => {
-    if (!confirm('Delete this member?')) return
-    await supabase.from('members').delete().eq('id', id)
-    onRefresh(); showToast('🗑️ Member deleted')
-  }
-
-  const updatePassword = async () => {
-    if (!editMember?.password) return
-    await supabase.from('members').update({ password: editMember.password, role: editMember.role, full_name: editMember.full_name }).eq('id', editMember.id)
-    setEditMember(null); onRefresh(); showToast('✅ Member updated!')
-  }
-
-  return (
-    <div className='section-card'>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div style={{ ...S.cardTitle, margin: 0 }}>👥 MEMBER ACCOUNTS</div>
-        <button style={S.btnRed} onClick={() => setAdding(a => !a)}>{adding ? 'CANCEL' : '+ ADD MEMBER'}</button>
-      </div>
-
-      {adding && (
-        <div style={{ ...S.card, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)', marginBottom: '24px' }}>
-          <div style={S.grid2}>
-            <div style={S.field}><label style={S.label}>FULL NAME</label><input style={S.input} value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder='John Doe' /></div>
-            <div style={S.field}><label style={S.label}>USERNAME</label><input style={S.input} value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder='johndoe' /></div>
-            <div style={S.field}><label style={S.label}>PASSWORD</label><input style={S.input} type='password' value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder='••••••••' /></div>
-            <div style={S.field}><label style={S.label}>ROLE</label>
-              <select style={S.input} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-                {['Member', 'Captain', 'Mentor', 'Admin'].map(r => <option key={r}>{r}</option>)}
-              </select>
-            </div>
-          </div>
-          <button style={S.btnRed} onClick={add}>CREATE ACCOUNT</button>
-        </div>
-      )}
-
-      {members.length === 0 ? (
-        <div style={{ color: '#334155', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', padding: '20px 0' }}>No members yet. Add one above.</div>
-      ) : members.map(m => (
-        <div key={m.id} style={S.row}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Orbitron', monospace", fontSize: '14px', fontWeight: 700, color: '#60a5fa', flexShrink: 0 }}>
-            {(m.full_name || m.username)[0].toUpperCase()}
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: "'Exo 2', sans-serif", fontWeight: 600, color: '#f1f5f9', fontSize: '14px' }}>{m.full_name || m.username}</div>
-            <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '11px', color: '#475569', letterSpacing: '1px' }}>@{m.username}</div>
-          </div>
-          <span style={S.badge(m.role === 'Captain' ? '#ef4444' : m.role === 'Admin' ? '#eab308' : m.role === 'Mentor' ? '#a78bfa' : '#64748b')}>{m.role}</span>
-          <button style={S.btnGhost} onClick={() => setEditMember({ ...m, password: '' })}>EDIT</button>
-          <button style={S.btnDanger} onClick={() => remove(m.id)}>DEL</button>
-        </div>
-      ))}
-
-      {editMember && (
-        <div style={S.modal} onClick={e => e.target === e.currentTarget && setEditMember(null)}>
-          <div style={S.modalBox}>
-            <div style={{ fontFamily: "'Orbitron', monospace", fontSize: '16px', fontWeight: 700, color: '#60a5fa', marginBottom: '20px' }}>EDIT MEMBER</div>
-            <div style={S.field}><label style={S.label}>FULL NAME</label><input style={S.input} value={editMember.full_name || ''} onChange={e => setEditMember(m => ({ ...m, full_name: e.target.value }))} /></div>
-            <div style={S.field}><label style={S.label}>ROLE</label>
-              <select style={S.input} value={editMember.role} onChange={e => setEditMember(m => ({ ...m, role: e.target.value }))}>
-                {['Member', 'Captain', 'Mentor', 'Admin'].map(r => <option key={r}>{r}</option>)}
-              </select>
-            </div>
-            <div style={S.field}><label style={S.label}>NEW PASSWORD (leave blank to keep)</label><input style={S.input} type='password' value={editMember.password} onChange={e => setEditMember(m => ({ ...m, password: e.target.value }))} placeholder='New password...' /></div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button style={S.btnRed} onClick={updatePassword}>SAVE</button>
-              <button style={S.btnGhost} onClick={() => setEditMember(null)}>CANCEL</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// TASKS
-function Tasks({ members, showToast }) {
-  const [tasks, setTasks] = useState([])
-  const [adding, setAdding] = useState(false)
-  const [form, setForm] = useState({ title: '', description: '', assigned_to: '', assigned_name: '', due_date: '', priority: 'Medium', status: 'To Do' })
-
-  const fetch = async () => {
-    const { data } = await supabase.from('tasks').select('*').order('due_date', { ascending: true, nullsFirst: false })
-    if (data) setTasks(data)
-  }
-
-  useEffect(() => { fetch() }, [])
-
-  const add = async () => {
-    if (!form.title) return
-    const member = members.find(m => m.id === form.assigned_to)
-    await supabase.from('tasks').insert([{ ...form, assigned_name: member?.full_name || member?.username || '' }])
-    setForm({ title: '', description: '', assigned_to: '', assigned_name: '', due_date: '', priority: 'Medium', status: 'To Do' })
-    setAdding(false); fetch(); showToast('✅ Task created!')
-  }
-
-  const updateStatus = async (id, status) => {
-    await supabase.from('tasks').update({ status }).eq('id', id)
-    fetch()
-  }
-
-  const remove = async (id) => {
-    await supabase.from('tasks').delete().eq('id', id)
-    fetch(); showToast('🗑️ Task deleted')
-  }
-
-  const today = new Date().toISOString().split('T')[0]
-
-  return (
-    <div className='section-card'>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div style={{ ...S.cardTitle, margin: 0 }}>📋 TASK MANAGEMENT</div>
-        <button style={S.btnRed} onClick={() => setAdding(a => !a)}>{adding ? 'CANCEL' : '+ NEW TASK'}</button>
-      </div>
-
-      {adding && (
-        <div style={{ ...S.card, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)', marginBottom: '24px' }}>
-          <div style={S.grid2}>
-            <div style={{ ...S.field, gridColumn: '1/-1' }}><label style={S.label}>TASK TITLE</label><input style={S.input} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder='Task name...' /></div>
-            <div style={S.field}><label style={S.label}>ASSIGN TO</label>
-              <select style={S.input} value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))}>
-                <option value=''>Unassigned</option>
-                {members.map(m => <option key={m.id} value={m.id}>{m.full_name || m.username}</option>)}
-              </select>
-            </div>
-            <div style={S.field}><label style={S.label}>DUE DATE</label><input type='date' style={{ ...S.input, colorScheme: 'dark' }} value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} /></div>
-            <div style={S.field}><label style={S.label}>PRIORITY</label>
-              <select style={S.input} value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
-                {['Low', 'Medium', 'High'].map(p => <option key={p}>{p}</option>)}
-              </select>
-            </div>
-            <div style={S.field}><label style={S.label}>STATUS</label>
-              <select style={S.input} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                {TASK_STATUSES.map(s => <option key={s}>{s}</option>)}
-              </select>
-            </div>
-            <div style={{ ...S.field, gridColumn: '1/-1' }}><label style={S.label}>DESCRIPTION</label><textarea style={{ ...S.input, height: '70px', resize: 'vertical' }} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder='Optional details...' /></div>
-          </div>
-          <button style={S.btnRed} onClick={add}>CREATE TASK</button>
-        </div>
-      )}
-
-      {TASK_STATUSES.map(status => {
-        const group = tasks.filter(t => t.status === status)
-        return (
-          <div key={status} style={{ marginBottom: '24px' }}>
-            <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '11px', letterSpacing: '3px', color: status === 'Done' ? '#22c55e' : status === 'In Progress' ? '#f59e0b' : '#64748b', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-              {status.toUpperCase()} · {group.length}
-            </div>
-            {group.map(t => (
-              <div key={t.id} style={{ ...S.row, padding: '12px 0', alignItems: 'flex-start' }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: PRIORITY_COLORS[t.priority] || '#64748b', flexShrink: 0, marginTop: '4px' }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: "'Exo 2', sans-serif", fontWeight: 600, color: '#f1f5f9', fontSize: '14px', marginBottom: '4px' }}>{t.title}</div>
-                  {t.description && <div style={{ fontSize: '12px', color: '#475569', marginBottom: '4px' }}>{t.description}</div>}
-                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                    {t.assigned_name && <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', color: '#60a5fa' }}>→ {t.assigned_name}</span>}
-                    {t.due_date && <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', color: t.due_date < today && t.status !== 'Done' ? '#ef4444' : '#475569' }}>📅 {t.due_date}</span>}
-                  </div>
-                </div>
-                <select style={{ ...S.input, width: 'auto', fontSize: '11px', padding: '6px 10px' }} value={t.status} onChange={e => updateStatus(t.id, e.target.value)}>
-                  {TASK_STATUSES.map(s => <option key={s}>{s}</option>)}
+      <div style={S.card}>
+        <div style={S.cardTitle}>All Members ({members.length})</div>
+        {members.map(m => (
+          <div key={m.id} style={S.memberRow}>
+            {editId === m.id ? (
+              <div style={S.formRow}>
+                <input placeholder="Full Name" value={editData.full_name || ""} onChange={e => setEditData({ ...editData, full_name: e.target.value })} style={S.input} />
+                <input placeholder="New Password" value={editData.password || ""} onChange={e => setEditData({ ...editData, password: e.target.value })} style={S.input} type="password" />
+                <select value={editData.role || m.role} onChange={e => setEditData({ ...editData, role: e.target.value })} style={S.select}>
+                  {["Member", "Captain", "Mentor", "Admin"].map(r => <option key={r}>{r}</option>)}
                 </select>
-                <button style={S.btnDanger} onClick={() => remove(t.id)}>DEL</button>
+                <button onClick={() => updateMember(m.id)} style={S.btnPrimary}>Save</button>
+                <button onClick={() => setEditId(null)} style={S.btnGhost}>Cancel</button>
+              </div>
+            ) : (
+              <>
+                <div style={S.memberInfo}>
+                  <span style={S.memberName}>{m.full_name || m.username}</span>
+                  <span style={S.memberUser}>@{m.username}</span>
+                  <span style={{ ...S.roleBadge, background: `${roleColor[m.role] || "#64748b"}22`, color: roleColor[m.role] || "#64748b" }}>{m.role}</span>
+                </div>
+                <div style={S.memberActions}>
+                  <button onClick={() => { setEditId(m.id); setEditData({ full_name: m.full_name, role: m.role }); }} style={S.btnGhost}>Edit</button>
+                  <button onClick={() => deleteMember(m.id)} style={S.btnDanger}>Delete</button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── TASKS ─────────────────────────────────────────────────────────────────
+function Tasks({ tasks, members, reload, showToast }) {
+  const [form, setForm] = useState({ title: "", description: "", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status: "To Do" });
+
+  async function createTask() {
+    if (!form.title) return;
+    const member = members.find(m => m.id === form.assigned_to);
+    const payload = { ...form, assigned_name: member ? member.full_name || member.username : "" };
+    await sbFetch("tasks", { method: "POST", body: JSON.stringify(payload) });
+    setForm({ title: "", description: "", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status: "To Do" });
+    reload(); showToast("Task created.");
+  }
+
+  async function updateStatus(id, status) {
+    await sbFetch(`tasks?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+    reload();
+  }
+
+  async function deleteTask(id) {
+    await sbFetch(`tasks?id=eq.${id}`, { method: "DELETE" });
+    reload(); showToast("Task deleted.");
+  }
+
+  const groups = { "To Do": [], "In Progress": [], Done: [] };
+  tasks.forEach(t => { if (groups[t.status]) groups[t.status].push(t); });
+  const pColor = { Low: "#22c55e", Medium: "#f59e0b", High: "#ef4444" };
+  const isOverdue = t => t.due_date && t.status !== "Done" && new Date(t.due_date) < new Date();
+
+  return (
+    <div>
+      <h1 style={S.pageTitle}>Task Management</h1>
+      <div style={S.card}>
+        <div style={S.cardTitle}>Create Task</div>
+        <div style={S.formCol}>
+          <input placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={S.input} />
+          <input placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={S.input} />
+          <div style={S.formRow}>
+            <select value={form.assigned_to} onChange={e => setForm({ ...form, assigned_to: e.target.value })} style={S.select}>
+              <option value="">Unassigned</option>
+              {members.map(m => <option key={m.id} value={m.id}>{m.full_name || m.username}</option>)}
+            </select>
+            <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} style={S.input} />
+            <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={S.select}>
+              {["Low", "Medium", "High"].map(p => <option key={p}>{p}</option>)}
+            </select>
+            <button onClick={createTask} style={S.btnPrimary}>Create</button>
+          </div>
+        </div>
+      </div>
+      <div style={S.taskColumns}>
+        {Object.entries(groups).map(([status, list]) => (
+          <div key={status} style={S.taskCol}>
+            <div style={S.taskColHeader}>{status} <span style={S.taskCount}>{list.length}</span></div>
+            {list.map(t => (
+              <div key={t.id} style={{ ...S.taskCard, borderLeft: `3px solid ${pColor[t.priority] || "#64748b"}`, background: isOverdue(t) ? "rgba(239,68,68,0.07)" : "rgba(255,255,255,0.03)" }}>
+                <div style={S.taskTitle}>{t.title}</div>
+                {t.description && <div style={S.taskDesc}>{t.description}</div>}
+                <div style={S.taskMeta}>
+                  {t.assigned_name && <span>👤 {t.assigned_name}</span>}
+                  {t.due_date && <span style={{ color: isOverdue(t) ? "#ef4444" : "#64748b" }}>📅 {t.due_date}</span>}
+                </div>
+                <div style={S.taskActions}>
+                  <select value={t.status} onChange={e => updateStatus(t.id, e.target.value)} style={{ ...S.select, fontSize: 11, padding: "4px 8px" }}>
+                    {["To Do", "In Progress", "Done"].map(s => <option key={s}>{s}</option>)}
+                  </select>
+                  <button onClick={() => deleteTask(t.id)} style={S.btnDanger}>✕</button>
+                </div>
               </div>
             ))}
-            {group.length === 0 && <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '11px', color: '#1e293b', padding: '8px 0' }}>No tasks</div>}
           </div>
-        )
-      })}
+        ))}
+      </div>
     </div>
-  )
+  );
 }
 
-// SUGGESTIONS
-function Suggestions({ showToast }) {
-  const [suggestions, setSuggestions] = useState([])
-  const [loading, setLoading] = useState(true)
+// ── SPONSOR ASSIGNMENT ────────────────────────────────────────────────────
+function SponsorAssign({ sponsors, members, reload, showToast }) {
+  const [assignments, setAssignments] = useState({});
+  const [filter, setFilter] = useState("");
+  const [autoLoading, setAutoLoading] = useState(false);
 
-  const fetch = async () => {
-    const { data } = await supabase.from('suggestions').select('*').order('submitted_at', { ascending: false })
-    if (data) setSuggestions(data)
-    setLoading(false)
+  useEffect(() => {
+    const init = {};
+    sponsors.forEach(s => { init[s.id] = s.assigned_member_id || ""; });
+    setAssignments(init);
+  }, [sponsors]);
+
+  async function saveAssignment(sponsorId, memberId) {
+    const member = members.find(m => m.id === memberId);
+    await sbFetch(`sponsors?id=eq.${sponsorId}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        assigned_member_id: memberId || null,
+        assigned_member_name: member ? member.full_name || member.username : null,
+      }),
+    });
+    reload();
   }
 
-  useEffect(() => { fetch() }, [])
+  async function autoAssign() {
+    if (!members.length) return showToast("No members to assign.");
+    setAutoLoading(true);
+    const unassigned = sponsors.filter(s => !s.assigned_member_id);
+    if (!unassigned.length) { setAutoLoading(false); return showToast("All sponsors already assigned."); }
 
-  const remove = async (id) => {
-    await supabase.from('suggestions').delete().eq('id', id)
-    setSuggestions(s => s.filter(x => x.id !== id))
-    showToast('🗑️ Suggestion deleted')
+    let idx = 0;
+    for (const sponsor of unassigned) {
+      const member = members[idx % members.length];
+      await sbFetch(`sponsors?id=eq.${sponsor.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          assigned_member_id: member.id,
+          assigned_member_name: member.full_name || member.username,
+        }),
+      });
+      idx++;
+    }
+    reload();
+    setAutoLoading(false);
+    showToast(`Auto-assigned ${unassigned.length} sponsors evenly across ${members.length} members.`);
+  }
+
+  async function clearAll() {
+    if (!confirm("Clear all sponsor assignments?")) return;
+    for (const s of sponsors) {
+      await sbFetch(`sponsors?id=eq.${s.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ assigned_member_id: null, assigned_member_name: null }),
+      });
+    }
+    reload(); showToast("All assignments cleared.");
+  }
+
+  // Group by member
+  const byMember = {};
+  members.forEach(m => { byMember[m.id] = { member: m, sponsors: [] }; });
+  byMember["unassigned"] = { member: null, sponsors: [] };
+  sponsors.forEach(s => {
+    if (s.assigned_member_id && byMember[s.assigned_member_id]) {
+      byMember[s.assigned_member_id].sponsors.push(s);
+    } else {
+      byMember["unassigned"].sponsors.push(s);
+    }
+  });
+
+  const filtered = sponsors.filter(s => s.company.toLowerCase().includes(filter.toLowerCase()));
+
+  return (
+    <div>
+      <h1 style={S.pageTitle}>Sponsor Assignment</h1>
+
+      {/* Summary */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>Assignment Overview</div>
+        <div style={S.statRow}>
+          <div style={S.statCard}>
+            <div style={{ ...S.statNum, color: "#3b82f6" }}>{sponsors.length}</div>
+            <div style={S.statLabel}>Total Sponsors</div>
+          </div>
+          <div style={S.statCard}>
+            <div style={{ ...S.statNum, color: "#22c55e" }}>{sponsors.filter(s => s.assigned_member_id).length}</div>
+            <div style={S.statLabel}>Assigned</div>
+          </div>
+          <div style={S.statCard}>
+            <div style={{ ...S.statNum, color: "#f59e0b" }}>{sponsors.filter(s => !s.assigned_member_id).length}</div>
+            <div style={S.statLabel}>Unassigned</div>
+          </div>
+          <div style={S.statCard}>
+            <div style={{ ...S.statNum, color: "#a855f7" }}>{members.length}</div>
+            <div style={S.statLabel}>Members</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
+          <button onClick={autoAssign} disabled={autoLoading} style={{ ...S.btnPrimary, opacity: autoLoading ? 0.6 : 1 }}>
+            {autoLoading ? "Assigning..." : "⚡ Auto-Assign Evenly"}
+          </button>
+          <button onClick={clearAll} style={S.btnDanger}>Clear All Assignments</button>
+        </div>
+        {members.length > 0 && (
+          <div style={{ marginTop: 12, color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>
+            Each member gets ~{Math.ceil(sponsors.filter(s => !s.assigned_member_id).length / members.length)} unassigned sponsors
+          </div>
+        )}
+      </div>
+
+      {/* By Member breakdown */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>By Member</div>
+        {Object.values(byMember).map(({ member, sponsors: mSponsors }) => {
+          if (!mSponsors.length && member) return null;
+          return (
+            <div key={member ? member.id : "unassigned"} style={{ marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: member ? "#f1f5f9" : "#f59e0b", fontWeight: 700 }}>
+                  {member ? member.full_name || member.username : "⚠️ Unassigned"}
+                </span>
+                <span style={{ ...S.roleBadge, background: "rgba(255,255,255,0.05)", color: "#64748b" }}>
+                  {mSponsors.length} sponsor{mSponsors.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {mSponsors.map(s => (
+                  <span key={s.id} style={S.sponsorChip}>{s.company}</span>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Individual assignment table */}
+      <div style={S.card}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div style={S.cardTitle}>Individual Assignments</div>
+          <input placeholder="Search sponsors..." value={filter} onChange={e => setFilter(e.target.value)} style={{ ...S.input, maxWidth: 220, marginBottom: 0 }} />
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table style={S.table}>
+            <thead>
+              <tr>
+                <th style={S.th}>Company</th>
+                <th style={S.th}>Status</th>
+                <th style={S.th}>Assigned To</th>
+                <th style={S.th}>Save</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(s => (
+                <tr key={s.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <td style={S.td}>{s.company}</td>
+                  <td style={S.td}>
+                    <span style={{ ...S.roleBadge, background: "rgba(255,255,255,0.05)", color: "#64748b", fontSize: 11 }}>
+                      {s.status || "Not Contacted"}
+                    </span>
+                  </td>
+                  <td style={S.td}>
+                    <select
+                      value={assignments[s.id] || ""}
+                      onChange={e => setAssignments({ ...assignments, [s.id]: e.target.value })}
+                      style={{ ...S.select, fontSize: 12 }}
+                    >
+                      <option value="">Unassigned</option>
+                      {members.map(m => (
+                        <option key={m.id} value={m.id}>{m.full_name || m.username}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td style={S.td}>
+                    <button
+                      onClick={() => { saveAssignment(s.id, assignments[s.id]); showToast(`Saved: ${s.company}`); }}
+                      style={{ ...S.btnGhost, fontSize: 11, padding: "4px 10px" }}
+                    >Save</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── CAPTAINS ADMIN ────────────────────────────────────────────────────────
+function CaptainsAdmin({ captains, reload, showToast }) {
+  const [form, setForm] = useState({ name: "", position: "", bio: "", sort_order: 0 });
+  const [photoFile, setPhotoFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [editData, setEditData] = useState({});
+  const [editPhotoFile, setEditPhotoFile] = useState(null);
+  const fileRef = useRef(null);
+  const editFileRef = useRef(null);
+
+  async function createCaptain() {
+    if (!form.name || !form.position) return showToast("Name and position required.");
+    setUploading(true);
+    let photo_url = "";
+    if (photoFile) {
+      photo_url = await uploadImageToSupabase(photoFile) || "";
+    }
+    await sbFetch("captains", { method: "POST", body: JSON.stringify({ ...form, photo_url }) });
+    setForm({ name: "", position: "", bio: "", sort_order: 0 });
+    setPhotoFile(null);
+    setUploading(false);
+    reload(); showToast("Captain added.");
+  }
+
+  async function updateCaptain(id) {
+    setUploading(true);
+    let update = { ...editData };
+    if (editPhotoFile) {
+      const url = await uploadImageToSupabase(editPhotoFile);
+      if (url) update.photo_url = url;
+    }
+    await sbFetch(`captains?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(update) });
+    setEditId(null); setEditPhotoFile(null);
+    setUploading(false);
+    reload(); showToast("Captain updated.");
+  }
+
+  async function deleteCaptain(id) {
+    if (!confirm("Remove this person?")) return;
+    await sbFetch(`captains?id=eq.${id}`, { method: "DELETE" });
+    reload(); showToast("Removed.");
   }
 
   return (
-    <div className='section-card'>
-      <div style={S.cardTitle}>💡 SUGGESTIONS</div>
-      {loading ? <div style={{ color: '#334155', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px' }}>Loading...</div> :
-        suggestions.length === 0 ? <div style={{ color: '#334155', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px' }}>No suggestions yet.</div> :
-        suggestions.map(s => (
-          <div key={s.id} style={{ ...S.row, alignItems: 'flex-start', gap: '16px' }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '14px', color: '#e2e8f0', lineHeight: 1.6, marginBottom: '6px' }}>{s.message}</div>
-              <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', color: '#334155', letterSpacing: '1px' }}>{new Date(s.submitted_at).toLocaleString()}</div>
-            </div>
-            <button style={S.btnDanger} onClick={() => remove(s.id)}>DELETE</button>
+    <div>
+      <h1 style={S.pageTitle}>Captains & Leadership</h1>
+
+      <div style={S.card}>
+        <div style={S.cardTitle}>Add Person</div>
+        <div style={S.formCol}>
+          <div style={S.formRow}>
+            <input placeholder="Full Name *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={S.input} />
+            <input placeholder="Position / Role *" value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} style={S.input} />
+            <input placeholder="Display Order (0, 1, 2…)" type="number" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })} style={{ ...S.input, maxWidth: 160 }} />
           </div>
-        ))
-      }
+          <textarea placeholder="Short bio (optional)" value={form.bio} onChange={e => setForm({ ...form, bio: e.target.value })}
+            style={{ ...S.input, minHeight: 60, resize: "vertical" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={() => fileRef.current?.click()} style={S.btnGhost}>
+              {photoFile ? `📸 ${photoFile.name}` : "Upload Photo"}
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setPhotoFile(e.target.files[0])} />
+            <button onClick={createCaptain} disabled={uploading} style={{ ...S.btnPrimary, opacity: uploading ? 0.6 : 1 }}>
+              {uploading ? "Uploading..." : "Add Person"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style={S.card}>
+        <div style={S.cardTitle}>Current Leadership ({captains.length})</div>
+        {captains.length === 0 && <div style={{ color: "#64748b", fontSize: 14 }}>No captains added yet.</div>}
+        {captains.map(c => (
+          <div key={c.id} style={S.memberRow}>
+            {editId === c.id ? (
+              <div style={S.formCol}>
+                <div style={S.formRow}>
+                  <input placeholder="Name" value={editData.name || ""} onChange={e => setEditData({ ...editData, name: e.target.value })} style={S.input} />
+                  <input placeholder="Position" value={editData.position || ""} onChange={e => setEditData({ ...editData, position: e.target.value })} style={S.input} />
+                  <input placeholder="Order" type="number" value={editData.sort_order ?? ""} onChange={e => setEditData({ ...editData, sort_order: parseInt(e.target.value) || 0 })} style={{ ...S.input, maxWidth: 100 }} />
+                </div>
+                <textarea placeholder="Bio" value={editData.bio || ""} onChange={e => setEditData({ ...editData, bio: e.target.value })} style={{ ...S.input, minHeight: 60, resize: "vertical" }} />
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <button onClick={() => editFileRef.current?.click()} style={S.btnGhost}>
+                    {editPhotoFile ? `📸 ${editPhotoFile.name}` : "Change Photo"}
+                  </button>
+                  <input ref={editFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setEditPhotoFile(e.target.files[0])} />
+                  <button onClick={() => updateCaptain(c.id)} disabled={uploading} style={S.btnPrimary}>Save</button>
+                  <button onClick={() => setEditId(null)} style={S.btnGhost}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {c.photo_url ? (
+                    <img src={c.photo_url} alt={c.name} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.3)" }} />
+                  ) : (
+                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", fontWeight: 700 }}>
+                      {c.name[0]}
+                    </div>
+                  )}
+                  <div>
+                    <div style={S.memberName}>{c.name}</div>
+                    <div style={{ fontSize: 12, color: "#ef4444", fontFamily: "monospace" }}>{c.position}</div>
+                    {c.bio && <div style={{ fontSize: 12, color: "#64748b", maxWidth: 400 }}>{c.bio}</div>}
+                  </div>
+                </div>
+                <div style={S.memberActions}>
+                  <button onClick={() => { setEditId(c.id); setEditData({ name: c.name, position: c.position, bio: c.bio, sort_order: c.sort_order }); }} style={S.btnGhost}>Edit</button>
+                  <button onClick={() => deleteCaptain(c.id)} style={S.btnDanger}>Remove</button>
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
-  )
+  );
 }
 
-// SITE CONFIG
-function SiteConfig({ showToast }) {
-  const [config, setConfig] = useState({})
-  const [loading, setLoading] = useState(true)
+// ── SUGGESTIONS ───────────────────────────────────────────────────────────
+function Suggestions({ suggestions, reload, showToast }) {
+  async function deleteSuggestion(id) {
+    await sbFetch(`suggestions?id=eq.${id}`, { method: "DELETE" });
+    reload(); showToast("Deleted.");
+  }
+  return (
+    <div>
+      <h1 style={S.pageTitle}>Suggestions ({suggestions.length})</h1>
+      {suggestions.length === 0 && <div style={{ color: "#64748b" }}>No suggestions yet.</div>}
+      {suggestions.map(s => (
+        <div key={s.id} style={{ ...S.card, marginBottom: 12 }}>
+          <div style={{ color: "#f1f5f9", marginBottom: 8 }}>{s.message}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>{new Date(s.submitted_at).toLocaleString()}</div>
+            <button onClick={() => deleteSuggestion(s.id)} style={S.btnDanger}>Delete</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  const fetch = async () => {
-    const { data } = await supabase.from('site_config').select('*')
-    if (data) setConfig(Object.fromEntries(data.map(r => [r.key, r.value])))
-    setLoading(false)
+// ── SITE CONFIG ───────────────────────────────────────────────────────────
+function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
+  const [vals, setVals] = useState({});
+  const [logoFile, setLogoFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  useEffect(() => { setVals({ ...config }); }, [config]);
+
+  async function saveKey(key) {
+    const existing = await sbFetch(`site_config?key=eq.${key}&select=key`);
+    if (existing && existing.length > 0) {
+      await sbFetch(`site_config?key=eq.${key}`, { method: "PATCH", body: JSON.stringify({ value: vals[key] }) });
+    } else {
+      await sbFetch("site_config", { method: "POST", body: JSON.stringify({ key, value: vals[key] }) });
+    }
+    reload(); showToast(`Saved: ${key}`);
   }
 
-  useEffect(() => { fetch() }, [])
-
-  const save = async (key, value) => {
-    await supabase.from('site_config').upsert({ key, value })
-    showToast('✅ Saved!')
+  async function uploadLogo() {
+    if (!logoFile) return;
+    setUploading(true);
+    const url = await uploadImageToSupabase(logoFile);
+    if (!url) { showToast("Upload failed."); setUploading(false); return; }
+    const existing = await sbFetch("site_config?key=eq.logo_url&select=key");
+    if (existing && existing.length > 0) {
+      await sbFetch("site_config?key=eq.logo_url", { method: "PATCH", body: JSON.stringify({ value: url }) });
+    } else {
+      await sbFetch("site_config", { method: "POST", body: JSON.stringify({ key: "logo_url", value: url }) });
+    }
+    setLogoUrl(url);
+    setLogoFile(null);
+    setUploading(false);
+    reload(); showToast("Logo updated! Refresh the site to see it.");
   }
 
   const fields = [
-    { key: 'team_email', label: 'TEAM EMAIL' },
-    { key: 'instagram', label: 'INSTAGRAM URL' },
-    { key: 'youtube', label: 'YOUTUBE URL' },
-    { key: 'donate_url', label: 'DONATE URL' },
-    { key: 'season_year', label: 'CURRENT SEASON YEAR' },
-  ]
+    { key: "team_email", label: "Team Email" },
+    { key: "instagram", label: "Instagram URL" },
+    { key: "youtube", label: "YouTube URL" },
+    { key: "donate_url", label: "Donate URL" },
+    { key: "season_year", label: "Season Year" },
+  ];
 
   return (
-    <div className='section-card'>
-      <div style={S.cardTitle}>⚙️ SITE CONFIGURATION</div>
-      {loading ? <div style={{ color: '#334155', fontFamily: "'Share Tech Mono', monospace", fontSize: '12px' }}>Loading...</div> :
-        fields.map(f => (
-          <div key={f.key} style={{ ...S.field, display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-            <div style={{ flex: 1 }}>
-              <label style={S.label}>{f.label}</label>
-              <input style={S.input} value={config[f.key] || ''} onChange={e => setConfig(c => ({ ...c, [f.key]: e.target.value }))} />
-            </div>
-            <button style={{ ...S.btnBlue, whiteSpace: 'nowrap', marginBottom: '0px' }} onClick={() => save(f.key, config[f.key])}>SAVE</button>
-          </div>
-        ))
-      }
-    </div>
-  )
-}
+    <div>
+      <h1 style={S.pageTitle}>Site Configuration</h1>
 
-// MAIN ADMIN
-export default function Admin() {
-  const [authed, setAuthed] = useState(() => localStorage.getItem('admin_authed') === 'true')
-  const [activeTab, setActiveTab] = useState('overview')
-  const [members, setMembers] = useState([])
-  const [suggestions, setSuggestions] = useState([])
-  const [sponsorCount, setSponsorCount] = useState(0)
-  const [tasks, setTasks] = useState([])
-  const [toast, setToast] = useState(null)
-
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000) }
-
-  const fetchAll = async () => {
-    const [{ data: m }, { data: s }, { data: sp }, { data: t }] = await Promise.all([
-      supabase.from('members').select('*').order('created_at', { ascending: false }),
-      supabase.from('suggestions').select('*').order('submitted_at', { ascending: false }),
-      supabase.from('sponsors').select('id'),
-      supabase.from('tasks').select('*').order('due_date', { ascending: true }),
-    ])
-    if (m) setMembers(m)
-    if (s) setSuggestions(s)
-    if (sp) setSponsorCount(sp.length)
-    if (t) setTasks(t)
-  }
-
-  useEffect(() => { if (authed) fetchAll() }, [authed])
-
-  const NAV = [
-    { id: 'overview', label: 'OVERVIEW', icon: '📊' },
-    { id: 'accounts', label: 'ACCOUNTS', icon: '👥' },
-    { id: 'tasks', label: 'TASKS', icon: '📋' },
-    { id: 'suggestions', label: 'SUGGESTIONS', icon: '💡' },
-    { id: 'config', label: 'SITE CONFIG', icon: '⚙️' },
-  ]
-
-  if (!authed) return <Login onLogin={() => setAuthed(true)} />
-
-  return (
-    <div style={S.page}>
-      <style>{css}</style>
-
-      {/* SIDEBAR */}
-      <div style={S.sidebar}>
-        <div style={S.sidebarTop}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src='/logo.jpg' alt='4550' style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.3)' }} />
-            <div>
-              <div style={{ fontFamily: "'Orbitron', monospace", fontSize: '11px', fontWeight: 900, color: '#ef4444', letterSpacing: '2px' }}>ADMIN</div>
-              <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '9px', color: '#334155', letterSpacing: '2px' }}>TEAM 4550</div>
-            </div>
-          </div>
-        </div>
-        <div style={S.sidebarNav}>
-          {NAV.map(n => (
-            <div key={n.id} style={S.navItem(activeTab === n.id)} onClick={() => setActiveTab(n.id)}>
-              <span>{n.icon}</span>
-              <span>{n.label}</span>
-              {n.id === 'suggestions' && suggestions.length > 0 && (
-                <span style={{ marginLeft: 'auto', background: '#ef4444', borderRadius: '10px', padding: '1px 7px', fontSize: '10px', color: 'white' }}>{suggestions.length}</span>
+      {/* Logo upload */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>Team Logo</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <img src={logoUrl} alt="Current logo" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)" }} />
+          <div>
+            <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 8 }}>Upload a new logo to replace the current one site-wide.</div>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <button onClick={() => fileRef.current?.click()} style={S.btnGhost}>
+                {logoFile ? `📸 ${logoFile.name}` : "Choose Image"}
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setLogoFile(e.target.files[0])} />
+              {logoFile && (
+                <button onClick={uploadLogo} disabled={uploading} style={{ ...S.btnPrimary, opacity: uploading ? 0.6 : 1 }}>
+                  {uploading ? "Uploading..." : "Upload Logo"}
+                </button>
               )}
             </div>
-          ))}
-        </div>
-        <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', color: '#1e293b', letterSpacing: '1px', marginBottom: '8px' }}>LOGGED IN AS ADMIN</div>
-          <button style={{ ...S.btnDanger, width: '100%', textAlign: 'center' }} onClick={() => { localStorage.removeItem('admin_authed'); setAuthed(false) }}>LOGOUT</button>
+          </div>
         </div>
       </div>
 
-      {/* MAIN */}
-      <div style={S.main}>
-        <div style={S.header}>
-          <div>
-            <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', color: '#475569', letterSpacing: '3px', marginBottom: '4px' }}>
-              {NAV.find(n => n.id === activeTab)?.icon} · ADMIN PANEL
-            </div>
-            <div style={S.pageTitle}>{NAV.find(n => n.id === activeTab)?.label}</div>
+      {/* Config fields */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>Site Details</div>
+        {fields.map(f => (
+          <div key={f.key} style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center" }}>
+            <label style={{ color: "#94a3b8", fontSize: 13, minWidth: 120, fontFamily: "monospace" }}>{f.label}</label>
+            <input value={vals[f.key] || ""} onChange={e => setVals({ ...vals, [f.key]: e.target.value })} style={{ ...S.input, flex: 1, marginBottom: 0 }} />
+            <button onClick={() => saveKey(f.key)} style={S.btnGhost}>Save</button>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <a href='/' target='_blank' style={{ ...S.btnGhost, textDecoration: 'none', fontSize: '11px' }}>PUBLIC SITE ↗</a>
-            <a href='/dashboard' target='_blank' style={{ ...S.btnBlue, textDecoration: 'none', fontSize: '11px' }}>SPONSOR TRACKER ↗</a>
-          </div>
-        </div>
-
-        {activeTab === 'overview' && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsorCount} />}
-        {activeTab === 'accounts' && <Accounts members={members} onRefresh={fetchAll} showToast={showToast} />}
-        {activeTab === 'tasks' && <Tasks members={members} showToast={showToast} />}
-        {activeTab === 'suggestions' && <Suggestions showToast={showToast} />}
-        {activeTab === 'config' && <SiteConfig showToast={showToast} />}
+        ))}
       </div>
-
-      {toast && <div style={S.toast}>{toast}</div>}
     </div>
-  )
+  );
 }
+
+// ── STYLES ────────────────────────────────────────────────────────────────
+const S = {
+  layout: { display: "flex", minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" },
+  sidebar: { width: 220, background: "#0d1117", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0 },
+  sidebarBrand: { display: "flex", alignItems: "center", gap: 10, padding: "20px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" },
+  sidebarLogo: { width: 36, height: 36, borderRadius: "50%", objectFit: "cover" },
+  sidebarTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#ef4444", letterSpacing: 2 },
+  sidebarSub: { fontSize: 10, color: "#64748b", fontFamily: "monospace" },
+  sidebarNav: { flex: 1, padding: "12px 0" },
+  navItem: { display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px", border: "none", cursor: "pointer", fontFamily: "'Exo 2', sans-serif", fontSize: 13, textAlign: "left", transition: "all 0.15s" },
+  badge: { background: "#ef4444", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 700 },
+  logoutBtn: { margin: "12px 16px", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "8px", borderRadius: 4, cursor: "pointer", fontSize: 12, fontFamily: "monospace" },
+  main: { flex: 1, padding: "32px 40px", overflowY: "auto", maxHeight: "100vh" },
+  pageTitle: { fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 22, color: "#f1f5f9", marginBottom: 28 },
+  card: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "24px", marginBottom: 20 },
+  cardTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#94a3b8", letterSpacing: 1, marginBottom: 18 },
+  statRow: { display: "flex", gap: 16, flexWrap: "wrap" },
+  statCard: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "18px 20px", minWidth: 110, textAlign: "center" },
+  statNum: { fontFamily: "'Orbitron', sans-serif", fontSize: 26, fontWeight: 700 },
+  statLabel: { fontSize: 12, color: "#64748b", fontFamily: "monospace", marginTop: 4 },
+  alertBanner: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: 6, padding: "10px 16px", marginTop: 16, fontSize: 13 },
+  quickLinks: { display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" },
+  quickBtn: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", padding: "8px 16px", borderRadius: 6, textDecoration: "none", fontSize: 13 },
+  formRow: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" },
+  formCol: { display: "flex", flexDirection: "column", gap: 10 },
+  input: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none", marginBottom: 0 },
+  select: { background: "#0d1117", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", cursor: "pointer" },
+  btnPrimary: { background: "#ef4444", border: "none", borderRadius: 6, padding: "9px 18px", color: "#fff", cursor: "pointer", fontSize: 13, fontFamily: "'Exo 2', sans-serif", fontWeight: 600, whiteSpace: "nowrap" },
+  btnGhost: { background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "9px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" },
+  btnDanger: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "9px 14px", color: "#ef4444", cursor: "pointer", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" },
+  memberRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" },
+  memberInfo: { display: "flex", alignItems: "center", gap: 10 },
+  memberName: { color: "#f1f5f9", fontWeight: 600 },
+  memberUser: { color: "#64748b", fontSize: 12, fontFamily: "monospace" },
+  memberActions: { display: "flex", gap: 8 },
+  roleBadge: { borderRadius: 10, padding: "2px 10px", fontSize: 11, fontFamily: "monospace" },
+  taskColumns: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 },
+  taskCol: { background: "rgba(255,255,255,0.02)", borderRadius: 8, padding: 16 },
+  taskColHeader: { fontFamily: "'Orbitron', sans-serif", fontSize: 12, fontWeight: 700, color: "#94a3b8", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 },
+  taskCount: { background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "1px 8px", fontSize: 11 },
+  taskCard: { borderRadius: 6, padding: "12px", marginBottom: 10, border: "1px solid rgba(255,255,255,0.06)" },
+  taskTitle: { color: "#f1f5f9", fontSize: 13, fontWeight: 600, marginBottom: 4 },
+  taskDesc: { color: "#64748b", fontSize: 11, marginBottom: 8 },
+  taskMeta: { display: "flex", gap: 12, fontSize: 11, color: "#64748b", fontFamily: "monospace", marginBottom: 8 },
+  taskActions: { display: "flex", gap: 6 },
+  sponsorChip: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, padding: "2px 8px", fontSize: 12, color: "#94a3b8", fontFamily: "monospace" },
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: { textAlign: "left", padding: "8px 12px", fontFamily: "monospace", fontSize: 11, color: "#64748b", borderBottom: "1px solid rgba(255,255,255,0.08)" },
+  td: { padding: "8px 12px", fontSize: 13, color: "#f1f5f9" },
+  toast: {
+    position: "fixed", bottom: 24, right: 24, background: "#22c55e", color: "#fff",
+    padding: "12px 20px", borderRadius: 8, fontFamily: "monospace", fontSize: 13,
+    zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+    animation: "fadeUp 0.3s ease",
+  },
+  // login
+  loginBg: { minHeight: "100vh", background: "#080a0f", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Exo 2', sans-serif" },
+  loginCard: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: "48px 40px", textAlign: "center", width: "100%", maxWidth: 360 },
+  loginTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 700, color: "#ef4444", letterSpacing: 4, marginBottom: 6 },
+  loginSub: { fontSize: 12, color: "#64748b", fontFamily: "monospace", marginBottom: 32 },
+  loginForm: { display: "flex", flexDirection: "column", gap: 12 },
+  loginInput: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "12px 16px", color: "#fff", fontSize: 14, fontFamily: "monospace", outline: "none", textAlign: "center" },
+  loginErr: { color: "#ef4444", fontSize: 12, fontFamily: "monospace" },
+  loginBtn: { background: "#ef4444", border: "none", borderRadius: 6, padding: "12px", color: "#fff", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, cursor: "pointer" },
+  loginBack: { display: "block", marginTop: 24, color: "#64748b", fontSize: 12, fontFamily: "monospace", textDecoration: "none" },
+};

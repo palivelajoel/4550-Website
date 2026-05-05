@@ -1,414 +1,612 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from "react";
 
-const NAV_ITEMS = ['Home', 'About', 'Outreach', 'Events', 'Media', 'Sponsors', 'Special Projects', 'T-Magazine', 'Donate', 'Contact']
+const SUPABASE_URL = "https://ehkwxzumgizryvhkeusr.supabase.co";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc";
 
-function useInView(threshold = 0.15) {
-  const ref = useRef(null)
-  const [inView, setInView] = useState(false)
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true) }, { threshold })
-    if (ref.current) obs.observe(ref.current)
-    return () => obs.disconnect()
-  }, [threshold])
-  return [ref, inView]
+async function sbFetch(path) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+    },
+  });
+  if (!res.ok) return null;
+  return res.json();
 }
 
-function AnimSection({ children, delay = 0 }) {
-  const [ref, inView] = useInView()
+// ── Parallax hook (members-only sections) ──────────────────────────────────
+function useParallax() {
+  const [scrollY, setScrollY] = useState(0);
+  const lastY = useRef(0);
+  const velRef = useRef(0);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    function onScroll() {
+      const current = window.scrollY;
+      velRef.current = current - lastY.current;
+      lastY.current = current;
+      setScrollY(current);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return scrollY;
+}
+
+// ── Particle canvas ────────────────────────────────────────────────────────
+function ParticleCanvas() {
+  const canvasRef = useRef(null);
+  const particles = useRef([]);
+  const animRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    let W = (canvas.width = window.innerWidth);
+    let H = (canvas.height = window.innerHeight);
+
+    const count = Math.floor((W * H) / 12000);
+    particles.current = Array.from({ length: count }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 1.5 + 0.5,
+    }));
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      const pts = particles.current;
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0) p.x = W;
+        if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H;
+        if (p.y > H) p.y = 0;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fill();
+
+        for (let j = i + 1; j < pts.length; j++) {
+          const q = pts[j];
+          const dx = p.x - q.x;
+          const dy = p.y - q.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = `rgba(239,68,68,${0.15 * (1 - dist / 120)})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      animRef.current = requestAnimationFrame(draw);
+    }
+
+    draw();
+
+    const onResize = () => {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      window.removeEventListener("resize", onResize);
+    };
+  }, []);
+
   return (
-    <div ref={ref} style={{
-      opacity: inView ? 1 : 0,
-      transform: inView ? 'translateY(0)' : 'translateY(48px)',
-      transition: `opacity 0.8s ease ${delay}s, transform 0.8s ease ${delay}s`,
-    }}>
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "absolute",
+        inset: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        opacity: 0.6,
+      }}
+    />
+  );
+}
+
+// ── Section fade-in observer ───────────────────────────────────────────────
+function useFadeIn() {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+  return [ref, visible];
+}
+
+function FadeSection({ children, style }) {
+  const [ref, visible] = useFadeIn();
+  return (
+    <div
+      ref={ref}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(32px)",
+        transition: "opacity 0.7s ease, transform 0.7s ease",
+        ...style,
+      }}
+    >
       {children}
     </div>
-  )
+  );
 }
 
-function Particles() {
-  const canvasRef = useRef(null)
-  useEffect(() => {
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    let W = canvas.width = window.innerWidth
-    let H = canvas.height = window.innerHeight
-    const pts = Array.from({ length: 120 }, () => ({
-      x: Math.random() * W, y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
-      r: Math.random() * 1.5 + 0.5,
-      color: Math.random() > 0.7 ? '#ef4444' : Math.random() > 0.5 ? '#3b82f6' : '#ffffff'
-    }))
-    const onResize = () => { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight }
-    window.addEventListener('resize', onResize)
-    let raf
-    const draw = () => {
-      ctx.clearRect(0, 0, W, H)
-      pts.forEach(p => {
-        p.x += p.vx; p.y += p.vy
-        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0
-        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = p.color + '99'; ctx.fill()
-      })
-      pts.forEach((a, i) => pts.slice(i + 1).forEach(b => {
-        const d = Math.hypot(a.x - b.x, a.y - b.y)
-        if (d < 120) {
-          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y)
-          ctx.strokeStyle = `rgba(255,255,255,${0.06 * (1 - d / 120)})`; ctx.lineWidth = 0.5; ctx.stroke()
-        }
-      }))
-      raf = requestAnimationFrame(draw)
-    }
-    draw()
-    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize) }
-  }, [])
-  return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />
-}
-
+// ── Main Landing ───────────────────────────────────────────────────────────
 export default function Landing() {
-  const [navOpen, setNavOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const [activeSection, setActiveSection] = useState('Home')
+  const scrollY = useParallax();
+  const [config, setConfig] = useState({});
+  const [captains, setCaptains] = useState([]);
+  const [logoUrl, setLogoUrl] = useState("/logo.jpg");
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 60)
-    window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    document.title = "Team 4550 Something's Bruin";
+    loadConfig();
+    loadCaptains();
+  }, []);
 
-  const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
-    setNavOpen(false)
+  async function loadConfig() {
+    const rows = await sbFetch("site_config?select=key,value");
+    if (!rows) return;
+    const obj = {};
+    rows.forEach(r => { obj[r.key] = r.value; });
+    setConfig(obj);
+    if (obj.logo_url) setLogoUrl(obj.logo_url);
   }
 
-  const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #080a0f; color: #e2e8f0; font-family: 'Exo 2', sans-serif; overflow-x: hidden; }
-    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0d1117; } ::-webkit-scrollbar-thumb { background: #ef4444; border-radius: 3px; }
-    html { scroll-behavior: smooth; }
-    .glow-red { text-shadow: 0 0 20px rgba(239,68,68,0.6), 0 0 40px rgba(239,68,68,0.3); }
-    .glow-blue { text-shadow: 0 0 20px rgba(59,130,246,0.6), 0 0 40px rgba(59,130,246,0.3); }
-    .nav-link { color: #94a3b8; text-decoration: none; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 8px 0; transition: color 0.2s; position: relative; }
-    .nav-link::after { content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 1px; background: #ef4444; transition: width 0.3s; }
-    .nav-link:hover { color: #ef4444; } .nav-link:hover::after { width: 100%; }
-    .section { padding: 100px 0; max-width: 1200px; margin: 0 auto; padding-left: 32px; padding-right: 32px; }
-    .section-label { font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 4px; color: #ef4444; margin-bottom: 16px; text-transform: uppercase; }
-    .section-title { font-family: 'Orbitron', monospace; font-size: clamp(28px, 4vw, 48px); font-weight: 900; line-height: 1.1; margin-bottom: 24px; }
-    .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; padding: 32px; transition: all 0.3s; }
-    .card:hover { background: rgba(255,255,255,0.06); border-color: rgba(239,68,68,0.3); transform: translateY(-4px); }
-    .btn-red { background: linear-gradient(135deg, #dc2626, #b91c1c); border: none; border-radius: 8px; padding: 14px 32px; color: white; font-family: 'Orbitron', monospace; font-size: 13px; font-weight: 700; letter-spacing: 2px; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-block; }
-    .btn-red:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(220,38,38,0.4); }
-    .btn-outline { background: transparent; border: 1px solid rgba(59,130,246,0.5); border-radius: 8px; padding: 14px 32px; color: #93c5fd; font-family: 'Orbitron', monospace; font-size: 13px; font-weight: 700; letter-spacing: 2px; cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-block; }
-    .btn-outline:hover { background: rgba(59,130,246,0.15); border-color: #3b82f6; transform: translateY(-2px); }
-    .divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(239,68,68,0.4), rgba(59,130,246,0.4), transparent); margin: 0; }
-    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
-    .tag { display: inline-block; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 20px; padding: 4px 14px; font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 2px; color: #fca5a5; margin: 4px; }
-    .social-btn { display: flex; align-items: center; gap: 12px; padding: 16px 24px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; color: #e2e8f0; text-decoration: none; font-family: 'Share Tech Mono', monospace; font-size: 13px; letter-spacing: 1px; transition: all 0.3s; }
-    .social-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(59,130,246,0.4); transform: translateX(4px); }
-    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-16px)} }
-    @keyframes spin-slow { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-    @keyframes scanline { 0%{transform:translateY(-100%)} 100%{transform:translateY(100vh)} }
-    .hero-logo { animation: float 4s ease-in-out infinite; }
-    .rotating-ring { animation: spin-slow 20s linear infinite; }
-    .cursor-blink { animation: blink 1s infinite; }
-  `
+  async function loadCaptains() {
+    const rows = await sbFetch("captains?select=*&order=sort_order.asc");
+    if (rows) setCaptains(rows);
+  }
+
+  const teamEmail = config.team_email || "team4550frc@gmail.com";
+  const instagram = config.instagram || "https://www.instagram.com/cherrycreek.robotics";
+  const youtube = config.youtube || "https://www.youtube.com/channel/UC4_P1A5xYb7A7rCdEXdKzBQ";
+  const donateUrl = config.donate_url || "https://www.vancoevents.com/us/events/landing/46671";
 
   return (
-    <div style={{ minHeight: '100vh', background: '#080a0f' }}>
-      <style>{css}</style>
+    <div style={S.page}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&family=Bebas+Neue&family=DM+Mono&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { background: #080a0f; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #ef4444; border-radius: 3px; }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+      `}</style>
 
-      {/* NAVBAR */}
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        background: scrolled ? 'rgba(8,10,15,0.95)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(20px)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(239,68,68,0.2)' : 'none',
-        transition: 'all 0.3s', padding: '0 32px', height: '72px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src='/logo.jpg' alt='Team 4550' style={{ height: '44px', width: '44px', objectFit: 'contain', borderRadius: '8px' }} />
-          <div>
-            <div style={{ fontFamily: "'Orbitron', monospace", fontSize: '14px', fontWeight: 900, color: '#ef4444', letterSpacing: '2px' }}>SOMETHING'S BRUIN</div>
-            <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', color: '#475569', letterSpacing: '3px' }}>FRC TEAM 4550</div>
-          </div>
+      {/* NAV */}
+      <nav style={S.nav}>
+        <div style={S.navBrand}>
+          <img src={logoUrl} alt="logo" style={S.navLogo} />
+          <span style={S.navTitle}>SOMETHING'S BRUIN</span>
         </div>
-
-        <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
-          {['About', 'Events', 'Media', 'Sponsors', 'Donate', 'Contact'].map(item => (
-            <a key={item} className='nav-link' href={`#${item.toLowerCase()}`} onClick={e => { e.preventDefault(); scrollTo(item.toLowerCase()) }}>{item}</a>
+        <div style={S.navLinks}>
+          {["About", "Team", "Outreach", "Sponsors", "Contact"].map(l => (
+            <a key={l} href={`#${l.toLowerCase()}`} style={S.navLink}>{l}</a>
           ))}
-          <a href='/login' style={{
-            background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderRadius: '6px',
-            padding: '8px 20px', color: 'white', fontFamily: "'Orbitron', monospace",
-            fontSize: '11px', fontWeight: 700, letterSpacing: '2px', textDecoration: 'none',
-            border: 'none', cursor: 'pointer', transition: 'all 0.3s',
-          }} onMouseOver={e => e.target.style.boxShadow = '0 4px 16px rgba(220,38,38,0.5)'}
-             onMouseOut={e => e.target.style.boxShadow = 'none'}>
-            FOR MEMBERS ›
-          </a>
+          <a href="/hub" style={S.memberBtn}>FOR MEMBERS ›</a>
         </div>
       </nav>
 
       {/* HERO */}
-      <section id='home' style={{ position: 'relative', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <Particles />
+      <section style={{ ...S.hero, position: "relative", overflow: "hidden" }}>
+        <ParticleCanvas />
         {/* Grid overlay */}
-        <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(239,68,68,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(239,68,68,0.03) 1px, transparent 1px)', backgroundSize: '60px 60px', pointerEvents: 'none' }} />
-        {/* Glow orbs */}
-        <div style={{ position: 'absolute', top: '20%', left: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: '20%', right: '10%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-        <div style={{ position: 'relative', textAlign: 'center', zIndex: 2, padding: '0 32px' }}>
-          <div className='hero-logo' style={{ marginBottom: '32px' }}>
-            <img src='/logo.jpg' alt='Team 4550' style={{ width: '140px', height: '140px', objectFit: 'contain', borderRadius: '50%', border: '2px solid rgba(239,68,68,0.4)', boxShadow: '0 0 40px rgba(239,68,68,0.3), 0 0 80px rgba(239,68,68,0.1)' }} />
-          </div>
-          <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '13px', letterSpacing: '6px', color: '#ef4444', marginBottom: '16px' }}>
-            FRC TEAM 4550 · CHERRY CREEK HIGH SCHOOL · EST. 2012
-          </div>
-          <h1 style={{ fontFamily: "'Orbitron', monospace", fontSize: 'clamp(40px, 7vw, 90px)', fontWeight: 900, lineHeight: 1, marginBottom: '8px' }}>
-            <span style={{ color: '#ef4444', display: 'block' }} className='glow-red'>SOMETHING'S</span>
-            <span style={{ color: '#3b82f6', display: 'block' }} className='glow-blue'>BRUIN</span>
-          </h1>
-          <p style={{ fontFamily: "'Exo 2', sans-serif", fontSize: '18px', color: '#94a3b8', maxWidth: '600px', margin: '24px auto 40px', lineHeight: 1.7 }}>
-            Engineering the future. Inspiring the next generation of innovators at Cherry Creek High School, Greenwood Village, Colorado.
+        <div style={S.gridOverlay} />
+        <div style={{ ...S.heroContent, transform: `translateY(${scrollY * 0.25}px)` }}>
+          <div style={S.heroEyebrow}>FRC ROBOTICS · CHERRY CREEK HIGH SCHOOL · GREENWOOD VILLAGE, CO</div>
+          <img src={logoUrl} alt="Team Logo" style={S.heroLogo} />
+          <h1 style={S.heroTitle}>SOMETHING'S BRUIN</h1>
+          <div style={S.heroSub}>FRC TEAM 4550</div>
+          <div style={S.heroDivider} />
+          <p style={S.heroTagline}>
+            Engineering excellence. Community impact. Championship mindset.
           </p>
-          <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a className='btn-red' href='#about' onClick={e => { e.preventDefault(); scrollTo('about') }}>LEARN MORE</a>
-            <a className='btn-outline' href='#donate' onClick={e => { e.preventDefault(); scrollTo('donate') }}>SUPPORT US</a>
-          </div>
-          <div style={{ marginTop: '64px', fontFamily: "'Share Tech Mono', monospace", fontSize: '11px', color: '#334155', letterSpacing: '2px', animation: 'float 3s ease-in-out infinite' }}>
-            ↓ SCROLL TO EXPLORE
+          <div style={S.heroBtns}>
+            <a href="#about" style={S.heroBtnPrimary}>LEARN MORE</a>
+            <a href={donateUrl} target="_blank" rel="noreferrer" style={S.heroBtnSecondary}>SUPPORT US</a>
           </div>
         </div>
       </section>
-
-      <div className='divider' />
 
       {/* ABOUT */}
-      <section id='about' style={{ padding: '100px 32px', maxWidth: '1200px', margin: '0 auto' }}>
-        <AnimSection>
-          <div className='section-label'>// ABOUT US</div>
-          <h2 className='section-title'>
-            <span style={{ color: '#ef4444' }}>WHO</span> WE ARE
-          </h2>
-        </AnimSection>
-        <div className='grid-2' style={{ marginTop: '48px', alignItems: 'start' }}>
-          <AnimSection delay={0.1}>
-            <div className='card'>
-              <p style={{ fontSize: '16px', lineHeight: 1.8, color: '#cbd5e1' }}>
-                Team 4550 <em style={{ color: '#ef4444' }}>Something's Bruin</em> Robotics was created in 2012 by a group of high school students at Cherry Creek High School. We are a student-led club with mentors and teachers providing guidance to members.
+      <section id="about" style={S.section}>
+        <FadeSection>
+          <div style={S.sectionLabel}>// WHO WE ARE</div>
+          <h2 style={S.sectionTitle}>About the Team</h2>
+          <div style={S.aboutGrid}>
+            <div style={S.aboutText}>
+              <p style={S.body}>
+                FRC Team 4550 "Something's Bruin" has been competing since 2012, representing Cherry Creek High School in FIRST Robotics Competition. Our team of 40–50 student engineers, programmers, and designers builds competition-ready robots each season — from scratch, in six weeks.
               </p>
-              <p style={{ fontSize: '16px', lineHeight: 1.8, color: '#cbd5e1', marginTop: '16px' }}>
-                Our team consists of <strong style={{ color: '#60a5fa' }}>40–50 members</strong> from all levels and backgrounds, operating across three sub-teams: <strong style={{ color: '#ef4444' }}>Mechanical</strong>, <strong style={{ color: '#60a5fa' }}>Electrical</strong>, and <strong style={{ color: '#a78bfa' }}>Programming</strong> — all while engaging in marketing and outreach.
+              <p style={{ ...S.body, marginTop: 16 }}>
+                We've competed at the 2016 World Championship and continue to push the boundaries of what student-built robots can achieve. Beyond the robot, we're committed to STEM outreach and community impact.
               </p>
-              <div style={{ marginTop: '24px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {['Mechanical', 'Electrical', 'Programming', 'Marketing', 'Outreach'].map(t => <span key={t} className='tag'>{t}</span>)}
-              </div>
             </div>
-          </AnimSection>
-          <AnimSection delay={0.2}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={S.statsGrid}>
               {[
-                { num: '12+', label: 'Years of Innovation', color: '#ef4444' },
-                { num: '40–50', label: 'Active Members', color: '#3b82f6' },
-                { num: '2016', label: 'World Championship', color: '#eab308' },
-                { num: '3', label: 'Sub-Teams', color: '#a78bfa' },
+                { num: "12+", label: "Years Competing" },
+                { num: "40–50", label: "Members" },
+                { num: "2016", label: "World Championship" },
+                { num: "3", label: "Sub-Teams" },
               ].map(s => (
-                <div key={s.label} className='card' style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '20px 24px' }}>
-                  <div style={{ fontFamily: "'Orbitron', monospace", fontSize: '32px', fontWeight: 900, color: s.color, minWidth: '80px' }}>{s.num}</div>
-                  <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', letterSpacing: '2px', color: '#94a3b8', textTransform: 'uppercase' }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </AnimSection>
-        </div>
-
-        {/* Leadership */}
-        <AnimSection delay={0.1}>
-          <div style={{ marginTop: '64px' }}>
-            <div className='section-label'>// LEADERSHIP</div>
-            <div className='grid-3' style={{ marginTop: '24px' }}>
-              {[
-                { role: 'Captain', name: 'Ian Funk', icon: '⚡' },
-                { role: 'Captain', name: 'Edward Cherkasskiy', icon: '⚡' },
-                { role: 'Head Mentor', name: 'Dr. Keith Harrison', icon: '🎓' },
-              ].map(p => (
-                <div key={p.name} className='card' style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '36px', marginBottom: '12px' }}>{p.icon}</div>
-                  <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', letterSpacing: '3px', color: '#ef4444', marginBottom: '8px' }}>{p.role}</div>
-                  <div style={{ fontFamily: "'Exo 2', sans-serif", fontSize: '18px', fontWeight: 600, color: '#f1f5f9' }}>{p.name}</div>
+                <div key={s.label} style={S.statCard}>
+                  <div style={S.statNum}>{s.num}</div>
+                  <div style={S.statLabel}>{s.label}</div>
                 </div>
               ))}
             </div>
           </div>
-        </AnimSection>
+        </FadeSection>
       </section>
 
-      <div className='divider' />
+      {/* OUR TEAM / CAPTAINS */}
+      {captains.length > 0 && (
+        <section id="team" style={{ ...S.section, background: "rgba(255,255,255,0.015)" }}>
+          <FadeSection>
+            <div style={S.sectionLabel}>// LEADERSHIP</div>
+            <h2 style={S.sectionTitle}>Our Team</h2>
+            <div style={S.captainsGrid}>
+              {captains.map((c, i) => (
+                <CaptainCard key={c.id} captain={c} index={i} scrollY={scrollY} />
+              ))}
+            </div>
+          </FadeSection>
+        </section>
+      )}
 
-      {/* OUTREACH */}
-      <section id='outreach' style={{ padding: '100px 32px', maxWidth: '1200px', margin: '0 auto' }}>
-        <AnimSection>
-          <div className='section-label'>// OUTREACH</div>
-          <h2 className='section-title'>COMMUNITY <span style={{ color: '#3b82f6' }}>IMPACT</span></h2>
-          <p style={{ fontSize: '16px', color: '#94a3b8', maxWidth: '600px', lineHeight: 1.8 }}>
-            We believe in growing STEM beyond our school walls. From mentoring younger teams to community events, we're committed to inspiring the next generation.
-          </p>
-        </AnimSection>
-        <div className='grid-3' style={{ marginTop: '48px' }}>
-          {[
-            { icon: '🤝', title: 'Team Mentoring', desc: 'Collaborating with local FRC teams to share knowledge and experience.' },
-            { icon: '🏫', title: 'School Outreach', desc: 'Visiting elementary and middle schools to spark interest in STEM and robotics.' },
-            { icon: '🌎', title: 'Community Events', desc: 'Participating in community events to showcase robotics and inspire young minds.' },
-          ].map(o => (
-            <AnimSection key={o.title} delay={0.1}>
-              <div className='card' style={{ height: '100%' }}>
-                <div style={{ fontSize: '40px', marginBottom: '16px' }}>{o.icon}</div>
-                <div style={{ fontFamily: "'Orbitron', monospace", fontSize: '14px', fontWeight: 700, color: '#f1f5f9', marginBottom: '12px' }}>{o.title}</div>
-                <p style={{ fontSize: '14px', color: '#94a3b8', lineHeight: 1.7 }}>{o.desc}</p>
-              </div>
-            </AnimSection>
-          ))}
-        </div>
-      </section>
-
-      <div className='divider' />
-
-      {/* EVENTS */}
-      <section id='events' style={{ padding: '100px 32px', maxWidth: '1200px', margin: '0 auto' }}>
-        <AnimSection>
-          <div className='section-label'>// EVENTS</div>
-          <h2 className='section-title'>2025 <span style={{ color: '#ef4444' }}>SEASON</span></h2>
-        </AnimSection>
-        <AnimSection delay={0.1}>
-          <div className='grid-2' style={{ marginTop: '48px' }}>
+      {/* OUTREACH / COMMUNITY */}
+      <section id="outreach" style={S.section}>
+        <FadeSection>
+          <div style={S.sectionLabel}>// COMMUNITY</div>
+          <h2 style={S.sectionTitle}>Community Outreach</h2>
+          <div style={S.outreachGrid}>
             {[
-              { name: 'Utah Regional', date: 'April 16–19, 2026', location: 'Salt Lake City, UT', status: 'Competed', color: '#22c55e' },
-              { name: 'Colorado Regional', date: 'TBD', location: 'Denver, CO', status: 'Upcoming', color: '#3b82f6' },
-            ].map(e => (
-              <div key={e.name} className='card' style={{ borderLeft: `3px solid ${e.color}` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <div style={{ fontFamily: "'Orbitron', monospace", fontSize: '16px', fontWeight: 700, color: '#f1f5f9' }}>{e.name}</div>
-                  <span style={{ background: e.color + '20', border: `1px solid ${e.color}50`, borderRadius: '20px', padding: '3px 12px', fontSize: '10px', fontFamily: "'Share Tech Mono', monospace", color: e.color, letterSpacing: '1px' }}>{e.status}</span>
-                </div>
-                <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', color: '#94a3b8', letterSpacing: '1px' }}>📅 {e.date}</div>
-                <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '12px', color: '#94a3b8', letterSpacing: '1px', marginTop: '4px' }}>📍 {e.location}</div>
+              { icon: "🤖", title: "Team Mentoring", desc: "We mentor younger FRC and FLL teams throughout the Denver metro area, sharing technical knowledge and competition experience." },
+              { icon: "🏫", title: "School Outreach", desc: "Visiting local elementary and middle schools to inspire the next generation of engineers through hands-on robotics demos." },
+              { icon: "🌍", title: "Community Events", desc: "Participating in local STEM fairs, library events, and community festivals to promote robotics and engineering education." },
+            ].map(o => (
+              <div key={o.title} style={S.outreachCard}>
+                <div style={S.outreachIcon}>{o.icon}</div>
+                <div style={S.outreachTitle}>{o.title}</div>
+                <p style={S.body}>{o.desc}</p>
               </div>
             ))}
           </div>
-        </AnimSection>
+        </FadeSection>
       </section>
-
-      <div className='divider' />
 
       {/* MEDIA */}
-      <section id='media' style={{ padding: '100px 32px', maxWidth: '1200px', margin: '0 auto' }}>
-        <AnimSection>
-          <div className='section-label'>// MEDIA</div>
-          <h2 className='section-title'>FOLLOW <span style={{ color: '#3b82f6' }}>OUR JOURNEY</span></h2>
-          <p style={{ fontSize: '16px', color: '#94a3b8', lineHeight: 1.8, marginBottom: '48px' }}>Stay connected with Team 4550 across our social platforms.</p>
-        </AnimSection>
-        <div className='grid-2' style={{ gap: '16px' }}>
-          {[
-            { icon: '📸', label: 'INSTAGRAM', handle: '@cherrycreek.robotics', url: 'https://www.instagram.com/cherrycreek.robotics', color: '#e1306c' },
-            { icon: '▶️', label: 'YOUTUBE', handle: 'Team 4550 Something\'s Bruin', url: 'https://www.youtube.com/channel/UC4_P1A5xYb7A7rCdEXdKzBQ', color: '#ff0000' },
-          ].map(s => (
-            <AnimSection key={s.label} delay={0.1}>
-              <a href={s.url} target='_blank' rel='noreferrer' className='social-btn' style={{ borderColor: s.color + '30' }}>
-                <span style={{ fontSize: '28px' }}>{s.icon}</span>
-                <div>
-                  <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', letterSpacing: '3px', color: s.color, marginBottom: '4px' }}>{s.label}</div>
-                  <div style={{ fontSize: '14px', color: '#e2e8f0' }}>{s.handle}</div>
-                </div>
-              </a>
-            </AnimSection>
-          ))}
-        </div>
+      <section id="media" style={{ ...S.section, background: "rgba(255,255,255,0.015)" }}>
+        <FadeSection>
+          <div style={S.sectionLabel}>// FOLLOW ALONG</div>
+          <h2 style={S.sectionTitle}>Media</h2>
+          <div style={S.mediaRow}>
+            <a href={instagram} target="_blank" rel="noreferrer" style={S.mediaCard}>
+              <div style={S.mediaIcon}>📸</div>
+              <div style={S.mediaCardTitle}>Instagram</div>
+              <div style={S.mediaHandle}>@cherrycreek.robotics</div>
+            </a>
+            <a href={youtube} target="_blank" rel="noreferrer" style={{ ...S.mediaCard, borderColor: "rgba(239,68,68,0.3)" }}>
+              <div style={S.mediaIcon}>▶️</div>
+              <div style={S.mediaCardTitle}>YouTube</div>
+              <div style={S.mediaHandle}>Team 4550 Something's Bruin</div>
+            </a>
+          </div>
+        </FadeSection>
       </section>
-
-      <div className='divider' />
 
       {/* SPONSORS */}
-      <section id='sponsors' style={{ padding: '100px 32px', maxWidth: '1200px', margin: '0 auto' }}>
-        <AnimSection>
-          <div className='section-label'>// SPONSORS</div>
-          <h2 className='section-title'>OUR <span style={{ color: '#eab308' }}>SUPPORTERS</span></h2>
-          <p style={{ fontSize: '16px', color: '#94a3b8', maxWidth: '600px', lineHeight: 1.8, marginBottom: '48px' }}>
-            We are deeply grateful to our sponsors who make our robotics program possible. Interested in supporting Team 4550?
-          </p>
-        </AnimSection>
-        <AnimSection delay={0.1}>
-          <div style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.05), rgba(59,130,246,0.05))', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '20px', padding: '48px', textAlign: 'center' }}>
-            <div style={{ fontFamily: "'Orbitron', monospace", fontSize: '20px', fontWeight: 700, color: '#f1f5f9', marginBottom: '16px' }}>Become a Sponsor</div>
-            <p style={{ color: '#94a3b8', fontSize: '15px', lineHeight: 1.7, maxWidth: '500px', margin: '0 auto 32px' }}>
-              Your support helps us purchase materials, travel to competitions, and inspire the next generation of engineers. Recognition on our robot, team shirts, and website.
+      <section id="sponsors" style={S.section}>
+        <FadeSection>
+          <div style={S.sectionLabel}>// PARTNER WITH US</div>
+          <h2 style={S.sectionTitle}>Become a Sponsor</h2>
+          <div style={S.sponsorContent}>
+            <p style={{ ...S.body, maxWidth: 600, margin: "0 auto 32px", textAlign: "center" }}>
+              Sponsoring FRC Team 4550 connects your organization with motivated young engineers and demonstrates your commitment to STEM education. We offer multiple sponsorship tiers with recognition at competitions, on our robot, and across our platforms.
             </p>
-            <a href='mailto:team4550frc@gmail.com' className='btn-red'>CONTACT US TO SPONSOR</a>
+            <div style={S.tierRow}>
+              {[
+                { name: "Bronze", color: "#b45309" },
+                { name: "Silver", color: "#94a3b8" },
+                { name: "Gold", color: "#eab308" },
+                { name: "Platinum", color: "#818cf8" },
+              ].map(t => (
+                <div key={t.name} style={{ ...S.tierBadge, borderColor: t.color, color: t.color }}>
+                  {t.name}
+                </div>
+              ))}
+            </div>
+            <a href={`mailto:${teamEmail}`} style={S.heroBtnPrimary}>CONTACT US TO SPONSOR</a>
           </div>
-        </AnimSection>
+        </FadeSection>
       </section>
-
-      <div className='divider' />
 
       {/* DONATE */}
-      <section id='donate' style={{ padding: '100px 32px', maxWidth: '1200px', margin: '0 auto', textAlign: 'center' }}>
-        <AnimSection>
-          <div className='section-label'>// SUPPORT THE TEAM</div>
-          <h2 className='section-title'>HELP US <span style={{ color: '#22c55e' }}>BUILD</span> THE FUTURE</h2>
-          <p style={{ fontSize: '16px', color: '#94a3b8', maxWidth: '600px', margin: '0 auto 48px', lineHeight: 1.8 }}>
-            Every donation directly funds robot components, competition fees, travel, and outreach programs. 100% goes to Team 4550.
-          </p>
-          <a href='https://www.vancoevents.com/us/events/landing/46671' target='_blank' rel='noreferrer' className='btn-red' style={{ fontSize: '16px', padding: '18px 48px' }}>
-            DONATE NOW ›
-          </a>
-        </AnimSection>
+      <section style={{ ...S.section, background: "rgba(239,68,68,0.05)", borderTop: "1px solid rgba(239,68,68,0.2)" }}>
+        <FadeSection>
+          <div style={{ textAlign: "center" }}>
+            <div style={S.sectionLabel}>// SUPPORT THE TEAM</div>
+            <h2 style={S.sectionTitle}>Make a Donation</h2>
+            <p style={{ ...S.body, maxWidth: 500, margin: "0 auto 32px" }}>
+              Every donation goes directly toward robot parts, competition fees, and team travel. Help us compete at the highest level.
+            </p>
+            <a href={donateUrl} target="_blank" rel="noreferrer" style={S.heroBtnPrimary}>DONATE NOW</a>
+          </div>
+        </FadeSection>
       </section>
 
-      <div className='divider' />
-
       {/* CONTACT */}
-      <section id='contact' style={{ padding: '100px 32px', maxWidth: '1200px', margin: '0 auto' }}>
-        <AnimSection>
-          <div className='section-label'>// CONTACT</div>
-          <h2 className='section-title'>GET IN <span style={{ color: '#3b82f6' }}>TOUCH</span></h2>
-        </AnimSection>
-        <div className='grid-2' style={{ marginTop: '48px' }}>
-          {[
-            { icon: '📧', label: 'General Inquiries', value: 'team4550frc@gmail.com', url: 'mailto:team4550frc@gmail.com' },
-            { icon: '📸', label: 'Instagram', value: '@cherrycreek.robotics', url: 'https://www.instagram.com/cherrycreek.robotics' },
-          ].map(c => (
-            <AnimSection key={c.label} delay={0.1}>
-              <a href={c.url} target='_blank' rel='noreferrer' className='social-btn'>
-                <span style={{ fontSize: '28px' }}>{c.icon}</span>
-                <div>
-                  <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '10px', letterSpacing: '3px', color: '#94a3b8', marginBottom: '4px' }}>{c.label}</div>
-                  <div style={{ fontSize: '14px', color: '#93c5fd' }}>{c.value}</div>
-                </div>
+      <section id="contact" style={S.section}>
+        <FadeSection>
+          <div style={{ textAlign: "center" }}>
+            <div style={S.sectionLabel}>// GET IN TOUCH</div>
+            <h2 style={S.sectionTitle}>Contact</h2>
+            <div style={S.contactRow}>
+              <a href={`mailto:${teamEmail}`} style={S.contactItem}>
+                <span style={S.contactIcon}>✉️</span>
+                {teamEmail}
               </a>
-            </AnimSection>
-          ))}
-        </div>
+              <a href={instagram} target="_blank" rel="noreferrer" style={S.contactItem}>
+                <span style={S.contactIcon}>📸</span>
+                @cherrycreek.robotics
+              </a>
+            </div>
+          </div>
+        </FadeSection>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ background: 'rgba(0,0,0,0.5)', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '48px 32px', textAlign: 'center' }}>
-        <img src='/logo.jpg' alt='Team 4550' style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '50%', marginBottom: '16px', opacity: 0.7 }} />
-        <div style={{ fontFamily: "'Orbitron', monospace", fontSize: '14px', fontWeight: 700, color: '#ef4444', letterSpacing: '3px', marginBottom: '8px' }}>SOMETHING'S BRUIN</div>
-        <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '11px', color: '#334155', letterSpacing: '3px', marginBottom: '24px' }}>FRC TEAM 4550 · CHERRY CREEK HIGH SCHOOL · GREENWOOD VILLAGE, CO</div>
-        <div style={{ display: 'flex', gap: '24px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '32px' }}>
-          {['Home', 'About', 'Outreach', 'Events', 'Media', 'Sponsors', 'Donate', 'Contact'].map(item => (
-            <a key={item} href={`#${item.toLowerCase()}`} onClick={e => { e.preventDefault(); scrollTo(item.toLowerCase()) }} className='nav-link' style={{ fontSize: '11px' }}>{item}</a>
-          ))}
+      <footer style={S.footer}>
+        <div style={S.footerTop}>
+          <div style={S.footerBrand}>
+            <img src={logoUrl} alt="logo" style={S.footerLogo} />
+            <div>
+              <div style={S.footerName}>SOMETHING'S BRUIN</div>
+              <div style={S.footerSub}>FRC Team 4550 · Cherry Creek High School</div>
+            </div>
+          </div>
+          <div style={S.footerLinks}>
+            {["About", "Team", "Outreach", "Sponsors", "Contact"].map(l => (
+              <a key={l} href={`#${l.toLowerCase()}`} style={S.footerLink}>{l}</a>
+            ))}
+            <a href="/hub" style={S.footerLink}>Member Hub</a>
+          </div>
         </div>
-        <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: '11px', color: '#1e293b', letterSpacing: '2px' }}>
-          COPYRIGHT © 2025 TEAM 4550 SOMETHING'S BRUIN · ALL RIGHTS RESERVED
+        <div style={S.footerBottom}>
+          © {new Date().getFullYear()} FRC Team 4550 Something's Bruin · Built by Palivela_Joel
         </div>
       </footer>
     </div>
-  )
+  );
 }
+
+// ── Captain Card with parallax ─────────────────────────────────────────────
+function CaptainCard({ captain, index, scrollY }) {
+  const ref = useRef(null);
+  const [offsetY, setOffsetY] = useState(0);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0.1 });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!ref.current || !visible) return;
+    const rect = ref.current.getBoundingClientRect();
+    const centerY = rect.top + rect.height / 2;
+    const windowCenter = window.innerHeight / 2;
+    setOffsetY((centerY - windowCenter) * 0.06);
+  }, [scrollY, visible]);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        ...S.captainCard,
+        transform: `translateY(${offsetY}px)`,
+        animationDelay: `${index * 0.1}s`,
+      }}
+    >
+      {captain.photo_url ? (
+        <img src={captain.photo_url} alt={captain.name} style={S.captainPhoto} />
+      ) : (
+        <div style={S.captainPhotoPlaceholder}>
+          {captain.name ? captain.name[0].toUpperCase() : "?"}
+        </div>
+      )}
+      <div style={S.captainName}>{captain.name}</div>
+      <div style={S.captainRole}>{captain.position}</div>
+      {captain.bio && <p style={S.captainBio}>{captain.bio}</p>}
+    </div>
+  );
+}
+
+// ── Styles ─────────────────────────────────────────────────────────────────
+const S = {
+  page: { background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden" },
+  nav: {
+    position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    padding: "14px 32px",
+    background: "rgba(8,10,15,0.92)", backdropFilter: "blur(16px)",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+  },
+  navBrand: { display: "flex", alignItems: "center", gap: 10 },
+  navLogo: { width: 34, height: 34, borderRadius: "50%", objectFit: "cover" },
+  navTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#ef4444", letterSpacing: 2 },
+  navLinks: { display: "flex", alignItems: "center", gap: 24 },
+  navLink: { color: "#94a3b8", textDecoration: "none", fontSize: 13, fontFamily: "'Share Tech Mono', monospace", transition: "color 0.2s" },
+  memberBtn: {
+    background: "transparent", border: "1px solid #ef4444", color: "#ef4444",
+    padding: "7px 16px", borderRadius: 4, textDecoration: "none",
+    fontSize: 12, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1,
+    transition: "all 0.2s",
+  },
+  hero: {
+    minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+    background: "linear-gradient(180deg, #080a0f 0%, #0d1117 100%)",
+    paddingTop: 80,
+  },
+  gridOverlay: {
+    position: "absolute", inset: 0,
+    backgroundImage: "linear-gradient(rgba(239,68,68,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(239,68,68,0.04) 1px, transparent 1px)",
+    backgroundSize: "60px 60px",
+    pointerEvents: "none",
+  },
+  heroContent: { textAlign: "center", zIndex: 1, padding: "0 24px" },
+  heroEyebrow: { fontFamily: "'Share Tech Mono', monospace", fontSize: 11, color: "#64748b", letterSpacing: 3, marginBottom: 24 },
+  heroLogo: {
+    width: 110, height: 110, borderRadius: "50%", objectFit: "cover",
+    border: "2px solid rgba(239,68,68,0.4)",
+    boxShadow: "0 0 40px rgba(239,68,68,0.2)",
+    marginBottom: 28,
+    animation: "fadeUp 0.8s ease both",
+  },
+  heroTitle: {
+    fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: "clamp(32px, 6vw, 72px)",
+    letterSpacing: 4, color: "#f1f5f9",
+    animation: "fadeUp 0.8s ease 0.15s both",
+  },
+  heroSub: {
+    fontFamily: "'Bebas Neue', sans-serif", fontSize: "clamp(18px, 3vw, 32px)",
+    color: "#ef4444", letterSpacing: 8, marginTop: 8,
+    animation: "fadeUp 0.8s ease 0.25s both",
+  },
+  heroDivider: {
+    width: 60, height: 2, background: "linear-gradient(90deg, transparent, #ef4444, transparent)",
+    margin: "24px auto",
+    animation: "fadeUp 0.8s ease 0.35s both",
+  },
+  heroTagline: { color: "#94a3b8", fontSize: 16, maxWidth: 480, margin: "0 auto 36px", animation: "fadeUp 0.8s ease 0.4s both" },
+  heroBtns: { display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", animation: "fadeUp 0.8s ease 0.5s both" },
+  heroBtnPrimary: {
+    background: "#ef4444", color: "#fff", textDecoration: "none",
+    padding: "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif",
+    fontWeight: 700, fontSize: 13, letterSpacing: 2,
+  },
+  heroBtnSecondary: {
+    background: "transparent", color: "#ef4444", textDecoration: "none",
+    padding: "14px 32px", borderRadius: 6, border: "1px solid #ef4444",
+    fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2,
+  },
+  section: { padding: "100px 24px", maxWidth: 1100, margin: "0 auto" },
+  sectionLabel: { fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: "#ef4444", letterSpacing: 3, marginBottom: 12 },
+  sectionTitle: { fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "clamp(24px, 4vw, 40px)", color: "#f1f5f9", marginBottom: 48 },
+  body: { color: "#94a3b8", lineHeight: 1.8, fontSize: 15 },
+  aboutGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "start" },
+  aboutText: {},
+  statsGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 },
+  statCard: {
+    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 10, padding: "24px 20px", textAlign: "center",
+  },
+  statNum: { fontFamily: "'Orbitron', sans-serif", fontSize: 28, fontWeight: 700, color: "#ef4444" },
+  statLabel: { fontSize: 12, color: "#64748b", fontFamily: "'Share Tech Mono', monospace", marginTop: 4 },
+
+  // CAPTAINS
+  captainsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+    gap: 28,
+  },
+  captainCard: {
+    background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 12,
+    padding: "28px 20px",
+    textAlign: "center",
+    transition: "transform 0.1s ease",
+  },
+  captainPhoto: {
+    width: 90, height: 90, borderRadius: "50%", objectFit: "cover",
+    border: "2px solid rgba(239,68,68,0.4)",
+    marginBottom: 16, display: "block", margin: "0 auto 16px",
+  },
+  captainPhotoPlaceholder: {
+    width: 90, height: 90, borderRadius: "50%",
+    background: "rgba(239,68,68,0.15)", border: "2px solid rgba(239,68,68,0.3)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    margin: "0 auto 16px",
+    fontFamily: "'Orbitron', sans-serif", fontSize: 28, color: "#ef4444",
+  },
+  captainName: { fontFamily: "'Orbitron', sans-serif", fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 },
+  captainRole: { fontFamily: "'Share Tech Mono', monospace", fontSize: 11, color: "#ef4444", letterSpacing: 2, marginBottom: 12 },
+  captainBio: { color: "#64748b", fontSize: 12, lineHeight: 1.6 },
+
+  // OUTREACH
+  outreachGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 24 },
+  outreachCard: {
+    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 10, padding: "28px 24px",
+  },
+  outreachIcon: { fontSize: 32, marginBottom: 12 },
+  outreachTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 12 },
+
+  // MEDIA
+  mediaRow: { display: "flex", gap: 24, flexWrap: "wrap" },
+  mediaCard: {
+    flex: "1 1 220px", background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(59,130,246,0.3)", borderRadius: 10,
+    padding: "32px 24px", textDecoration: "none", textAlign: "center",
+    transition: "transform 0.2s",
+  },
+  mediaIcon: { fontSize: 36, marginBottom: 12 },
+  mediaCardTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 16, fontWeight: 700, color: "#f1f5f9", marginBottom: 8 },
+  mediaHandle: { fontFamily: "'Share Tech Mono', monospace", fontSize: 13, color: "#64748b" },
+
+  // SPONSORS
+  sponsorContent: { textAlign: "center" },
+  tierRow: { display: "flex", gap: 16, justifyContent: "center", marginBottom: 32, flexWrap: "wrap" },
+  tierBadge: {
+    border: "1px solid", borderRadius: 20, padding: "6px 20px",
+    fontFamily: "'Orbitron', sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 2,
+  },
+
+  // CONTACT
+  contactRow: { display: "flex", gap: 32, justifyContent: "center", flexWrap: "wrap", marginTop: 24 },
+  contactItem: {
+    display: "flex", alignItems: "center", gap: 8,
+    color: "#94a3b8", textDecoration: "none", fontSize: 15,
+    fontFamily: "'Share Tech Mono', monospace",
+  },
+  contactIcon: { fontSize: 20 },
+
+  // FOOTER
+  footer: { borderTop: "1px solid rgba(255,255,255,0.06)", padding: "40px 32px 24px" },
+  footerTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, flexWrap: "wrap", gap: 24 },
+  footerBrand: { display: "flex", alignItems: "center", gap: 12 },
+  footerLogo: { width: 40, height: 40, borderRadius: "50%", objectFit: "cover" },
+  footerName: { fontFamily: "'Orbitron', sans-serif", fontSize: 14, fontWeight: 700, color: "#ef4444" },
+  footerSub: { fontSize: 12, color: "#64748b", fontFamily: "'Share Tech Mono', monospace" },
+  footerLinks: { display: "flex", gap: 20, flexWrap: "wrap" },
+  footerLink: { color: "#64748b", textDecoration: "none", fontSize: 13, fontFamily: "'Share Tech Mono', monospace" },
+  footerBottom: { textAlign: "center", color: "#334155", fontSize: 12, fontFamily: "'Share Tech Mono', monospace", borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: 20 },
+};
