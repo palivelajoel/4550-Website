@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FONTS, C, sbFetch, isAuthed, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.js";
+import { FONTS, C, sbFetch, isAuthed, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
 
 const TAGS = ["General", "Build", "Programming", "Marketing & Outreach", "Competition", "Reminder", "Urgent"];
 const tagColor = { General: "#64748b", Build: "#f59e0b", Programming: "#3b82f6", "Marketing & Outreach": "#22c55e", Competition: "#ef4444", Reminder: "#a855f7", Urgent: "#ef4444" };

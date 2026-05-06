@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FONTS, C, TEAM_PASSWORD, sbFetch, SUPABASE_URL, SUPABASE_KEY } from "./hubUtils.js";
+import { FONTS, C, TEAM_PASSWORD, sbFetch, SUPABASE_URL, SUPABASE_KEY } from "./hubUtils.jsx";
 
 export default function Hub() {
   const [authed, setAuthed] = useState(false);

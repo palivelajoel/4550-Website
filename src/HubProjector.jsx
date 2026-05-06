@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch } from "./hubUtils.js";
+import { FONTS, C, sbFetch } from "./hubUtils.jsx";
 
 const SLIDE_DURATION = 12000; // ms per slide
 

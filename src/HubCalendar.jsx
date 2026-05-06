@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FONTS, C, sbFetch, isAuthed, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.js";
+import { FONTS, C, sbFetch, isAuthed, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
 
 const EVENT_TYPES = [
   { value: "event", label: "Event", color: "#3b82f6" },
