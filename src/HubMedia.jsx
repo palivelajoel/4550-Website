@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch, isAuthed, uploadFile } from "./hubUtils.js";
-import { HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn } from "./HubCalendar.jsx";
+import { FONTS, C, sbFetch, isAuthed, uploadFile, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.js";
 
 const CATEGORIES = ["All", "Competition", "Build Season", "Outreach", "Team", "Other"];
 

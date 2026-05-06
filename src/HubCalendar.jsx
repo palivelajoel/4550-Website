@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FONTS, C, sbFetch, isAuthed } from "./hubUtils.js";
+import { FONTS, C, sbFetch, isAuthed, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.js";
 
 const EVENT_TYPES = [
   { value: "event", label: "Event", color: "#3b82f6" },
@@ -257,24 +257,4 @@ export default function HubCalendar() {
   );
 }
 
-export function HubHeader({ title }) {
-  return (
-    <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: `1px solid ${C.border}`, background: "rgba(8,10,15,0.95)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <a href="/hub" style={{ color: C.dim, textDecoration: "none", fontSize: 12, fontFamily: "monospace" }}>← Hub</a>
-        <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 15, fontWeight: 700, color: C.text }}>{title}</div>
-      </div>
-      <a href="/" style={{ fontSize: 12, color: C.dim, textDecoration: "none", fontFamily: "monospace" }}>Public Site</a>
-    </header>
-  );
-}
-
-const toastStyle = { position: "fixed", bottom: 24, right: 24, background: "#22c55e", color: "#fff", padding: "12px 20px", borderRadius: 8, fontFamily: "monospace", fontSize: 13, zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.4)" };
 const navBtnStyle = { background: C.surface, border: `1px solid ${C.border}`, color: C.muted, padding: "8px 16px", borderRadius: 6, cursor: "pointer", fontSize: 16, fontFamily: "monospace" };
-const addBtnStyle = { background: C.red, border: "none", borderRadius: 6, padding: "9px 18px", color: "#fff", cursor: "pointer", fontSize: 13, fontFamily: "'Exo 2', sans-serif", fontWeight: 600 };
-const ghostBtn = { background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 12px", color: C.muted, cursor: "pointer", fontSize: 12, fontFamily: "monospace" };
-const dangerBtn = { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "7px 12px", color: C.red, cursor: "pointer", fontSize: 12, fontFamily: "monospace" };
-const overlayStyle = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 };
-const modalStyle = { background: "#0d1117", border: `1px solid ${C.border}`, borderRadius: 14, padding: "28px 24px", width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto" };
-const inputStyle = { background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", width: "100%" };
-const selectStyle = { background: "#0d1117", border: `1px solid ${C.border}`, borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", width: "100%", cursor: "pointer" };
