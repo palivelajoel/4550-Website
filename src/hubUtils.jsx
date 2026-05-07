@@ -50,7 +50,6 @@ export function getRole() {
 export function canEditHub() {
   return ["Captain", "Mentor", "Admin"].includes(getRole());
 }
-}
 
 // Shared Google Fonts injection
 export const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&family=Bebas+Neue&display=swap');
