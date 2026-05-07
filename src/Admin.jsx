@@ -25,9 +25,11 @@ async function sbFetch(path, opts = {}) {
 }
 
 async function uploadImageToSupabase(file) {
-  const fileName = `${Date.now()}-${file.name.replace(/\s/g, "_")}`;
+  const safeFileName = `${Date.now()}-${file.name}`
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9._-]/g, "_");
   const res = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/team-assets/${fileName}`,
+    `${SUPABASE_URL}/storage/v1/object/team-assets/${encodeURIComponent(safeFileName)}`,
     {
       method: "POST",
       headers: {
@@ -40,7 +42,7 @@ async function uploadImageToSupabase(file) {
     }
   );
   if (!res.ok) return null;
-  return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${fileName}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${encodeURIComponent(safeFileName)}`;
 }
 
 const NAV = [
@@ -784,7 +786,7 @@ function CaptainsAdmin({ captains, reload, showToast }) {
               <>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   {c.photo_url ? (
-                    <img src={c.photo_url} alt={c.name} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.3)" }} />
+                    <img src={c.photo_url} alt={c.name} onError={e => { e.target.onerror = null; e.target.src = "/logo.jpg"; }} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.3)" }} />
                   ) : (
                     <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", fontWeight: 700 }}>
                       {c.name[0]}
