@@ -1,8 +1,13 @@
 import { useState, useEffect } from "react";
+<<<<<<< Updated upstream
 import { FONTS, C, TEAM_PASSWORD, sbFetch, SUPABASE_URL, SUPABASE_KEY } from "./hubUtils.jsx";
+=======
+import { FONTS, C, TEAM_PASSWORD, sbFetch } from "./hubUtils.js";
+>>>>>>> Stashed changes
 
 export default function Hub() {
   const [authed, setAuthed] = useState(false);
+  const [username, setUsername] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
@@ -14,6 +19,7 @@ export default function Hub() {
     loadLogo();
     if (localStorage.getItem("hub_authed") === "true") {
       setAuthed(true);
+      setUsername(localStorage.getItem("hub_username") || "");
       loadStats();
     }
   }, []);
@@ -35,18 +41,42 @@ export default function Hub() {
     if (a) setAnnouncementCount(a.length);
   }
 
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault();
-    if (pw === TEAM_PASSWORD) {
+    if (!username.trim() || !pw.trim()) {
+      setErr("Username and password required.");
+      return;
+    }
+
+    const user = await sbFetch(`members?username=eq.${encodeURIComponent(username.trim())}&select=full_name,role,password`);
+    if (user?.[0] && user[0].password === pw.trim()) {
+      const role = user[0].role || "Member";
       localStorage.setItem("hub_authed", "true");
+      localStorage.setItem("hub_username", username.trim());
+      localStorage.setItem("hub_role", role);
       setAuthed(true);
       setErr("");
       loadStats();
-    } else setErr("Incorrect password.");
+      return;
+    }
+
+    if (pw === TEAM_PASSWORD) {
+      localStorage.setItem("hub_authed", "true");
+      localStorage.setItem("hub_username", username.trim());
+      localStorage.setItem("hub_role", "Member");
+      setAuthed(true);
+      setErr("");
+      loadStats();
+      return;
+    }
+
+    setErr("Incorrect username or password.");
   }
 
   function logout() {
     localStorage.removeItem("hub_authed");
+    localStorage.removeItem("hub_username");
+    localStorage.removeItem("hub_role");
     setAuthed(false);
     setMemberName("");
   }
@@ -65,13 +95,15 @@ export default function Hub() {
     return (
       <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Exo 2', sans-serif" }}>
         <style>{FONTS}</style>
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: "48px 40px", textAlign: "center", width: "100%", maxWidth: 380 }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: "48px 40px", textAlign: "center", width: "100%", maxWidth: 400 }}>
           <img src={logoUrl} alt="logo" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", marginBottom: 20 }} />
-          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 700, color: C.red, letterSpacing: 4, marginBottom: 6 }}>MEMBER HUB</div>
-          <div style={{ fontSize: 12, color: C.dim, fontFamily: "'Share Tech Mono', monospace", marginBottom: 32 }}>FRC Team 4550 · Something's Bruin</div>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 700, color: C.red, letterSpacing: 4, marginBottom: 6 }}>4550 SOMETHING'S BRUIN HUB</div>
+          <div style={{ fontSize: 12, color: C.dim, fontFamily: "'Share Tech Mono', monospace", marginBottom: 32 }}>Team members and captains only. Captains can edit tasks, events, and announcements.</div>
           <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <input type="password" placeholder="Team password" value={pw} onChange={e => setPw(e.target.value)}
-              style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 16px", color: "#fff", fontSize: 14, fontFamily: "'Share Tech Mono', monospace", textAlign: "center" }} autoFocus />
+            <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)}
+              style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 16px", color: "#fff", fontSize: 14, fontFamily: "'Share Tech Mono', monospace", textAlign: "center" }} />
+            <input type="password" placeholder="Password" value={pw} onChange={e => setPw(e.target.value)}
+              style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}`, borderRadius: 6, padding: "12px 16px", color: "#fff", fontSize: 14, fontFamily: "'Share Tech Mono', monospace", textAlign: "center" }} />
             {err && <div style={{ color: C.red, fontSize: 12, fontFamily: "monospace" }}>{err}</div>}
             <button type="submit" style={{ background: C.red, border: "none", borderRadius: 6, padding: 12, color: "#fff", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, cursor: "pointer" }}>ENTER HUB →</button>
           </form>

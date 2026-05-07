@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+<<<<<<< Updated upstream
 import { FONTS, C, sbFetch, isAuthed, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
+=======
+import { FONTS, C, sbFetch, isAuthed, canEditHub } from "./hubUtils.js";
+import { HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./HubCalendar.jsx";
+>>>>>>> Stashed changes
 
 const STATUSES = ["Backlog", "To Do", "In Progress", "Review", "Done"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
@@ -9,6 +14,7 @@ const priorityColor = { Low: "#22c55e", Medium: "#f59e0b", High: "#ef4444", Crit
 
 export default function HubTasks() {
   const [authed] = useState(isAuthed());
+  const [canEdit] = useState(canEditHub());
   const [tasks, setTasks] = useState([]);
   const [members, setMembers] = useState([]);
   const [modal, setModal] = useState(null);
@@ -36,8 +42,7 @@ export default function HubTasks() {
     if (m) setMembers(m);
   }
 
-  function openAdd(status = "To Do") {
-    setForm({ title: "", description: "", subteam: "All", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status });
+  function openAdd(status = "To Do") {    if (!canEdit) return;    setForm({ title: "", description: "", subteam: "All", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status });
     setModal({ mode: "add" });
   }
 
@@ -96,7 +101,7 @@ export default function HubTasks() {
 
       {/* Filters */}
       <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "rgba(13,17,23,0.8)" }}>
-        <button onClick={() => openAdd()} style={addBtnStyle}>+ New Task</button>
+        {canEdit ? <button onClick={() => openAdd()} style={addBtnStyle}>+ New Task</button> : <div style={{ color: C.dim, fontSize: 12, fontFamily: "monospace", padding: "10px 0" }}>You are in view-only mode. Captains and mentors can add/edit tasks.</div>}
         <select value={filterTeam} onChange={e => setFilterTeam(e.target.value)} style={{ ...selectStyle, width: "auto" }}>
           {["All", "Build", "Programming", "Marketing & Outreach"].map(s => <option key={s}>{s}</option>)}
         </select>

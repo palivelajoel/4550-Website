@@ -51,8 +51,8 @@ const styles = {
   input: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px 14px', color: '#e2e8f0', fontSize: '13px', fontFamily: '"DM Mono", monospace', outline: 'none', flex: '1', minWidth: '180px' },
   select: { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px 14px', color: '#e2e8f0', fontSize: '13px', fontFamily: '"DM Mono", monospace', outline: 'none', cursor: 'pointer' },
   btn: { background: 'rgba(59,130,246,0.25)', border: '1px solid rgba(59,130,246,0.5)', borderRadius: '8px', padding: '10px 16px', color: '#bfdbfe', fontSize: '12px', fontFamily: '"DM Mono", monospace', cursor: 'pointer', letterSpacing: '1px', fontWeight: '600', whiteSpace: 'nowrap' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' },
-  card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', transition: 'all 0.3s ease' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '18px' },
+  card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', transition: 'all 0.3s ease', outline: '1px solid rgba(255,255,255,0.08)' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' },
   company: { fontSize: '18px', fontFamily: '"Bebas Neue", sans-serif', letterSpacing: '2px', color: '#f1f5f9' },
   statusBadge: { borderRadius: '20px', padding: '4px 12px', fontSize: '10px', letterSpacing: '1px', fontWeight: '600', border: '1px solid' },
@@ -478,6 +478,7 @@ export default function App() {
 
   const counts = STATUS_OPTIONS.reduce((acc, s) => { acc[s] = sponsors.filter(x => x.status === s).length; return acc }, {})
 
+  useEffect(() => { document.title = '4550 Something\'s Bruin | Sponsor Tracker' }, [])
   const bg = darkMode
     ? 'linear-gradient(135deg, #0a0f1e 0%, #0d1b3e 50%, #0a0f1e 100%)'
     : 'linear-gradient(135deg, #e0e7ff 0%, #dbeafe 50%, #e0e7ff 100%)'
@@ -505,6 +506,8 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .sponsor-card { outline: 1px solid rgba(255,255,255,0.08); border-radius: 14px; transform: translateZ(0); transition: transform 0.22s ease, box-shadow 0.22s ease, outline-color 0.22s ease; }
+        .sponsor-card:hover { transform: translateY(-3px) scale(1.01); box-shadow: 0 24px 55px rgba(14,165,233,0.14); outline-color: rgba(96,165,250,0.45); }
         * { box-sizing: border-box; } body { margin: 0; }
         input::placeholder { color: #475569; } textarea::placeholder { color: #475569; }
         select option { background: #0d1b3e; }

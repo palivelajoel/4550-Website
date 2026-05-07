@@ -46,7 +46,8 @@ async function uploadImageToSupabase(file) {
 const NAV = [
   { id: "overview", label: "📊 Overview" },
   { id: "accounts", label: "👥 Accounts" },
-  { id: "tasks", label: "📋 Tasks" },
+  { id: "hub-tasks", label: "📋 Hub Tasks" },
+  { id: "hub-calendar", label: "📅 Hub Calendar" },
   { id: "sponsors-assign", label: "🤝 Sponsor Assignment" },
   { id: "captains", label: "🏆 Captains & Roles" },
   { id: "suggestions", label: "💡 Suggestions" },
@@ -60,6 +61,7 @@ export default function Admin() {
   const [page, setPage] = useState("overview");
   const [members, setMembers] = useState([]);
   const [tasks, setTaskList] = useState([]);
+  const [hubCalendar, setHubCalendar] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [sponsors, setSponsors] = useState([]);
   const [captains, setCaptains] = useState([]);
@@ -77,9 +79,10 @@ export default function Admin() {
   }
 
   async function loadAll() {
-    const [m, t, sg, sp, cap, cfg] = await Promise.all([
+    const [m, t, cals, sg, sp, cap, cfg] = await Promise.all([
       sbFetch("members?select=*&order=created_at.asc"),
-      sbFetch("tasks?select=*&order=created_at.desc"),
+      sbFetch("hub_tasks?select=*&order=created_at.desc"),
+      sbFetch("hub_calendar?select=*&order=date.asc"),
       sbFetch("suggestions?select=*&order=submitted_at.desc"),
       sbFetch("sponsors?select=*&order=company.asc"),
       sbFetch("captains?select=*&order=sort_order.asc"),
@@ -87,6 +90,7 @@ export default function Admin() {
     ]);
     if (m) setMembers(m);
     if (t) setTaskList(t);
+    if (cals) setHubCalendar(cals);
     if (sg) setSuggestions(sg);
     if (sp) setSponsors(sp);
     if (cap) setCaptains(cap);
@@ -168,7 +172,8 @@ export default function Admin() {
       <main style={S.main}>
         {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} overdue={overdue} />}
         {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} />}
-        {page === "tasks" && <Tasks tasks={tasks} members={members} reload={loadAll} showToast={showToast} />}
+        {page === "hub-tasks" && <Tasks tasks={tasks} members={members} reload={loadAll} showToast={showToast} />}
+        {page === "hub-calendar" && <HubCalendarAdmin events={hubCalendar} reload={loadAll} showToast={showToast} />}
         {page === "sponsors-assign" && <SponsorAssign sponsors={sponsors} members={members} reload={loadAll} showToast={showToast} />}
         {page === "captains" && <CaptainsAdmin captains={captains} reload={loadAll} showToast={showToast} />}
         {page === "suggestions" && <Suggestions suggestions={suggestions} reload={loadAll} showToast={showToast} />}
@@ -292,18 +297,18 @@ function Tasks({ tasks, members, reload, showToast }) {
     if (!form.title) return;
     const member = members.find(m => m.id === form.assigned_to);
     const payload = { ...form, assigned_name: member ? member.full_name || member.username : "" };
-    await sbFetch("tasks", { method: "POST", body: JSON.stringify(payload) });
+    await sbFetch("hub_tasks", { method: "POST", body: JSON.stringify(payload) });
     setForm({ title: "", description: "", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status: "To Do" });
     reload(); showToast("Task created.");
   }
 
   async function updateStatus(id, status) {
-    await sbFetch(`tasks?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+    await sbFetch(`hub_tasks?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
     reload();
   }
 
   async function deleteTask(id) {
-    await sbFetch(`tasks?id=eq.${id}`, { method: "DELETE" });
+    await sbFetch(`hub_tasks?id=eq.${id}`, { method: "DELETE" });
     reload(); showToast("Task deleted.");
   }
 
@@ -314,7 +319,7 @@ function Tasks({ tasks, members, reload, showToast }) {
 
   return (
     <div>
-      <h1 style={S.pageTitle}>Task Management</h1>
+      <h1 style={S.pageTitle}>Hub Task Management</h1>
       <div style={S.card}>
         <div style={S.cardTitle}>Create Task</div>
         <div style={S.formCol}>
@@ -355,6 +360,108 @@ function Tasks({ tasks, members, reload, showToast }) {
             ))}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function HubCalendarAdmin({ events, reload, showToast }) {
+  const [form, setForm] = useState({ title: "", type: "event", date: "", end_date: "", time: "", description: "", all_day: true });
+  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [filterType, setFilterType] = useState("All");
+  const EVENT_TYPES = [
+    { value: "event", label: "Event" },
+    { value: "deadline", label: "Deadline" },
+    { value: "meeting", label: "Meeting" },
+    { value: "competition", label: "Competition" },
+    { value: "other", label: "Other" },
+  ];
+
+  async function saveEvent() {
+    if (!form.title || !form.date) return showToast("Title and date required.");
+    setSaving(true);
+    if (editingId) {
+      await sbFetch(`hub_calendar?id=eq.${editingId}`, { method: "PATCH", body: JSON.stringify(form) });
+      showToast("Event updated.");
+    } else {
+      await sbFetch("hub_calendar", { method: "POST", body: JSON.stringify(form) });
+      showToast("Event created.");
+    }
+    setSaving(false);
+    setEditingId(null);
+    setForm({ title: "", type: "event", date: "", end_date: "", time: "", description: "", all_day: true });
+    reload();
+  }
+
+  function beginEdit(event) {
+    setEditingId(event.id);
+    setForm({ title: event.title || "", type: event.type || "event", date: event.date || "", end_date: event.end_date || "", time: event.time || "", description: event.description || "", all_day: event.all_day !== false });
+  }
+
+  async function deleteEvent(id) {
+    if (!confirm("Delete this event?")) return;
+    await sbFetch(`hub_calendar?id=eq.${id}`, { method: "DELETE" });
+    showToast("Event deleted.");
+    reload();
+  }
+
+  const filtered = filterType === "All" ? events : events.filter(e => e.type === filterType);
+
+  return (
+    <div>
+      <h1 style={S.pageTitle}>Hub Calendar</h1>
+      <div style={S.card}>
+        <div style={S.cardTitle}>{editingId ? "Edit Event" : "Add Event"}</div>
+        <div style={S.formCol}>
+          <div style={S.formRow}>
+            <input placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={S.input} />
+            <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} style={S.select}>
+              {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+          <div style={S.formRow}>
+            <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={S.input} />
+            <input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} style={S.input} />
+            <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} style={S.input} />
+          </div>
+          <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={{ ...S.input, minHeight: 100, resize: "vertical" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <label style={{ color: "#94a3b8", fontSize: 13, fontFamily: "monospace" }}>
+              <input type="checkbox" checked={form.all_day} onChange={e => setForm({ ...form, all_day: e.target.checked })} style={{ marginRight: 6 }} /> All day event
+            </label>
+            <button onClick={saveEvent} disabled={saving} style={S.btnPrimary}>{saving ? "Saving..." : editingId ? "Save" : "Add Event"}</button>
+            {editingId && <button onClick={() => { setEditingId(null); setForm({ title: "", type: "event", date: "", end_date: "", time: "", description: "", all_day: true }) }} style={S.btnGhost}>Cancel</button>}
+          </div>
+        </div>
+      </div>
+      <div style={S.card}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={S.cardTitle}>Upcoming Events</div>
+          <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ ...S.select, width: 180 }}>
+            <option value="All">All Types</option>
+            {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+          </select>
+        </div>
+        {filtered.length === 0 ? (
+          <div style={{ color: "#64748b", fontSize: 14 }}>No events yet.</div>
+        ) : (
+          filtered.map(event => (
+            <div key={event.id} style={{ marginBottom: 14, padding: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 15, fontFamily: "'Orbitron', sans-serif", color: "#f1f5f9", fontWeight: 700 }}>{event.title}</div>
+                  <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: "monospace", marginTop: 4 }}>{event.type?.toUpperCase()} · {event.date}{event.time ? ` · ${event.time}` : ""}{event.end_date ? ` → ${event.end_date}` : ""}</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => beginEdit(event)} style={S.btnGhost}>Edit</button>
+                  <button onClick={() => deleteEvent(event.id)} style={S.btnDanger}>Delete</button>
+                </div>
+              </div>
+              {event.description && <div style={{ marginTop: 10, color: "#94a3b8", lineHeight: 1.6 }}>{event.description}</div>}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -729,10 +836,12 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
   }
 
   const fields = [
+    { key: "site_title", label: "Site Title" },
     { key: "team_email", label: "Team Email" },
     { key: "instagram", label: "Instagram URL" },
     { key: "youtube", label: "YouTube URL" },
     { key: "donate_url", label: "Donate URL" },
+    { key: "redirect_url", label: "Redirect URL" },
     { key: "season_year", label: "Season Year" },
   ];
 

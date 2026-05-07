@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
+<<<<<<< Updated upstream
 import { FONTS, C, sbFetch, isAuthed, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
+=======
+import { FONTS, C, sbFetch, isAuthed, canEditHub } from "./hubUtils.js";
+import { HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn } from "./HubCalendar.jsx";
+>>>>>>> Stashed changes
 
 const TAGS = ["General", "Build", "Programming", "Marketing & Outreach", "Competition", "Reminder", "Urgent"];
 const tagColor = { General: "#64748b", Build: "#f59e0b", Programming: "#3b82f6", "Marketing & Outreach": "#22c55e", Competition: "#ef4444", Reminder: "#a855f7", Urgent: "#ef4444" };
 
 export default function HubAnnouncements() {
   const [authed] = useState(isAuthed());
+  const [canEdit] = useState(canEditHub());
   const [items, setItems] = useState([]);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ title: "", body: "", tag: "General", pinned: false, author: "" });
@@ -75,7 +81,7 @@ export default function HubAnnouncements() {
 
       {/* Toolbar */}
       <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <button onClick={() => setModal(true)} style={addBtnStyle}>+ Post Announcement</button>
+        {canEdit ? <button onClick={() => setModal(true)} style={addBtnStyle}>+ Post Announcement</button> : <div style={{ color: C.dim, fontSize: 12, fontFamily: "monospace", padding: "10px 0" }}>View only: only captains and mentors can post announcements.</div>}
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {["All", ...TAGS].map(tag => (
             <button key={tag} onClick={() => setFilter(tag)} style={{
@@ -123,8 +129,14 @@ export default function HubAnnouncements() {
                   )}
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
-                  <button onClick={() => togglePin(item)} style={{ ...ghostBtn, fontSize: 11, padding: "5px 10px" }}>{item.pinned ? "Unpin" : "Pin"}</button>
-                  <button onClick={() => deleteItem(item.id)} style={{ ...dangerBtn, fontSize: 11, padding: "5px 10px" }}>Delete</button>
+                  {canEdit ? (
+                    <>
+                      <button onClick={() => togglePin(item)} style={{ ...ghostBtn, fontSize: 11, padding: "5px 10px" }}>{item.pinned ? "Unpin" : "Pin"}</button>
+                      <button onClick={() => deleteItem(item.id)} style={{ ...dangerBtn, fontSize: 11, padding: "5px 10px" }}>Delete</button>
+                    </>
+                  ) : (
+                    <div style={{ color: C.dim, fontSize: 11, fontFamily: "monospace" }}>View only</div>
+                  )}
                 </div>
               </div>
             </div>

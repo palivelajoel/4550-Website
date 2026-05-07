@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
+<<<<<<< Updated upstream
 import { FONTS, C, sbFetch, isAuthed, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
+=======
+import { FONTS, C, sbFetch, isAuthed, canEditHub } from "./hubUtils.js";
+>>>>>>> Stashed changes
 
 const EVENT_TYPES = [
   { value: "event", label: "Event", color: "#3b82f6" },
@@ -16,6 +20,7 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 
 export default function HubCalendar() {
   const [authed] = useState(isAuthed());
+  const [canEdit] = useState(canEditHub());
   const [events, setEvents] = useState([]);
   const [today] = useState(new Date());
   const [view, setView] = useState({ year: new Date().getFullYear(), month: new Date().getMonth() });
@@ -39,6 +44,7 @@ export default function HubCalendar() {
   }
 
   function openAdd(date) {
+    if (!canEdit) return;
     const d = date ? `${date.year}-${String(date.month + 1).padStart(2, "0")}-${String(date.day).padStart(2, "0")}` : "";
     setForm({ title: "", type: "event", date: d, end_date: "", time: "", description: "", all_day: true });
     setModal({ mode: "add" });
@@ -170,8 +176,14 @@ export default function HubCalendar() {
                     {ev.description && <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>{ev.description}</div>}
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => openEdit(ev)} style={ghostBtn}>Edit</button>
-                    <button onClick={() => deleteEvent(ev.id)} style={dangerBtn}>✕</button>
+                    {canEdit ? (
+                      <>
+                        <button onClick={() => openEdit(ev)} style={ghostBtn}>Edit</button>
+                        <button onClick={() => deleteEvent(ev.id)} style={dangerBtn}>✕</button>
+                      </>
+                    ) : (
+                      <div style={{ color: C.dim, fontSize: 11, fontFamily: "monospace" }}>View only</div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -181,7 +193,11 @@ export default function HubCalendar() {
 
         {/* Right: Sidebar */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <button onClick={() => openAdd(null)} style={{ ...addBtnStyle, width: "100%", padding: "12px", fontSize: 13, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }}>+ ADD EVENT</button>
+          {canEdit ? (
+            <button onClick={() => openAdd(null)} style={{ ...addBtnStyle, width: "100%", padding: "12px", fontSize: 13, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }}>+ ADD EVENT</button>
+          ) : (
+            <div style={{ color: C.dim, fontSize: 12, fontFamily: "monospace", padding: "12px", background: "rgba(255,255,255,0.03)", borderRadius: 10, textAlign: "center" }}>View only: captains and mentors can edit this calendar.</div>
+          )}
 
           {/* Legend */}
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: 16 }}>
