@@ -114,8 +114,35 @@ export default function Landing() {
 
   function normalizeCaptainPhotoUrl(photoUrl) {
     if (!photoUrl) return "";
-    if (photoUrl.startsWith("http://") || photoUrl.startsWith("https://")) return photoUrl;
-    let path = photoUrl.replace(/^\/+/, "");
+    const trimmed = photoUrl.trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      try {
+        const url = new URL(trimmed);
+        const pathname = url.pathname;
+        if (pathname.includes("/storage/v1/object/team-assets/")) {
+          const name = pathname.split("/storage/v1/object/team-assets/").pop();
+          return `https://ehkwxzumgizryvhkeusr.supabase.co/storage/v1/object/public/team-assets/${encodeURIComponent(name)}`;
+        }
+        if (pathname.includes("/storage/v1/object/public/team-assets/")) {
+          return url.href;
+        }
+        if (pathname.includes("/team-assets/")) {
+          const name = pathname.split("/team-assets/").pop();
+          return `https://ehkwxzumgizryvhkeusr.supabase.co/storage/v1/object/public/team-assets/${encodeURIComponent(name)}`;
+        }
+        return url.href;
+      } catch {
+        // fallback to relative path handling below
+      }
+    }
+
+    let path = trimmed.replace(/^\/+/, "");
+    if (path.includes("storage/v1/object/team-assets/")) {
+      path = path.split("storage/v1/object/team-assets/").pop();
+    }
+    if (path.includes("storage/v1/object/public/team-assets/")) {
+      path = path.split("storage/v1/object/public/team-assets/").pop();
+    }
     if (path.includes("/team-assets/")) {
       path = path.split("/team-assets/").pop();
     }
