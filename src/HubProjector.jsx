@@ -121,7 +121,7 @@ export default function HubProjector() {
           <button onClick={toggleFullscreen} style={{ background: C.red, border: "none", color: "#fff", borderRadius: 6, padding: "5px 14px", cursor: "pointer", fontSize: 12, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }}>
             {fullscreen ? "⊠ EXIT" : "⊞ FULLSCREEN"}
           </button>
-          {!fullscreen && <a href="/hub" style={{ fontSize: 11, color: C.dim, textDecoration: "none", fontFamily: "monospace" }}>← Hub</a>}
+          {!fullscreen && <a href="/member-hub" style={{ fontSize: 11, color: C.dim, textDecoration: "none", fontFamily: "monospace" }}>← Hub</a>}
         </div>
       </div>
 

@@ -27,7 +27,7 @@ export default function HubCalendar() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    if (!authed) { window.location.href = "/hub"; return; }
+    if (!authed) { window.location.href = "/member-hub"; return; }
     document.title = "Calendar · Team 4550";
     loadEvents();
   }, []);

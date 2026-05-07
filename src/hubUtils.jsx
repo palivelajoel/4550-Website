@@ -97,7 +97,7 @@ export function HubHeader({ title }) {
   return (
     <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(8,10,15,0.95)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 100 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <a href="/hub" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "monospace" }}>← Hub</a>
+        <a href="/member-hub" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "monospace" }}>← Hub</a>
         <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 15, fontWeight: 700, color: "#f1f5f9" }}>{title}</div>
       </div>
       <a href="/" style={{ fontSize: 12, color: "#64748b", textDecoration: "none", fontFamily: "monospace" }}>Public Site</a>

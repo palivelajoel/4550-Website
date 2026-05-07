@@ -170,7 +170,7 @@ export default function Admin() {
 
       {/* Main */}
       <main style={S.main}>
-        {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} overdue={overdue} />}
+        {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} events={hubCalendar} overdue={overdue} />}
         {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} />}
         {page === "hub-tasks" && <Tasks tasks={tasks} members={members} reload={loadAll} showToast={showToast} />}
         {page === "hub-calendar" && <HubCalendarAdmin events={hubCalendar} reload={loadAll} showToast={showToast} />}
@@ -184,18 +184,52 @@ export default function Admin() {
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────────────────────
-function Overview({ members, tasks, suggestions, sponsors, overdue }) {
+function Overview({ members, tasks, suggestions, sponsors, events, overdue }) {
+  const [hovered, setHovered] = useState(null);
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const openTasks = tasks.filter(t => t.status !== "Done");
+  const dueToday = openTasks.filter(t => t.due_date === todayStr).length;
+  const overdueTasks = openTasks.filter(t => t.due_date && new Date(t.due_date) < today);
+  const overdueDays = overdueTasks.reduce((sum, task) => {
+    const diff = Math.floor((today - new Date(task.due_date)) / 86400000);
+    return sum + Math.max(0, diff);
+  }, 0);
+  const weekAhead = new Date(today);
+  weekAhead.setDate(weekAhead.getDate() + 7);
+  const upcomingEvents = events.filter(e => {
+    if (!e?.date) return false;
+    const d = new Date(e.date);
+    return d >= today && d <= weekAhead;
+  }).length;
+
+  const stats = [
+    { label: "Members", val: members.length, color: "#3b82f6" },
+    { label: "Open Tasks", val: openTasks.length, color: "#f59e0b" },
+    { label: "Due Today", val: dueToday, color: "#22c55e" },
+    { label: "Overdue Days", val: overdueDays, color: "#ef4444" },
+    { label: "Upcoming Events", val: upcomingEvents, color: "#3b82f6" },
+    { label: "Suggestions", val: suggestions.length, color: "#a855f7" },
+    { label: "Sponsors", val: sponsors.length, color: "#64748b" },
+  ];
+
   return (
     <div>
       <h1 style={S.pageTitle}>Overview</h1>
-      <div style={S.statRow}>
-        {[
-          { label: "Members", val: members.length, color: "#3b82f6" },
-          { label: "Open Tasks", val: tasks.filter(t => t.status !== "Done").length, color: "#f59e0b" },
-          { label: "Suggestions", val: suggestions.length, color: "#22c55e" },
-          { label: "Sponsors", val: sponsors.length, color: "#a855f7" },
-        ].map(s => (
-          <div key={s.label} style={{ ...S.statCard, borderColor: s.color }}>
+      <div style={{ ...S.statRow, gap: 18 }}>
+        {stats.map(s => (
+          <div
+            key={s.label}
+            onMouseEnter={() => setHovered(s.label)}
+            onMouseLeave={() => setHovered(null)}
+            style={{
+              ...S.statCard,
+              borderColor: s.color,
+              cursor: "default",
+              boxShadow: hovered === s.label ? `0 0 24px ${s.color}33` : "none",
+              transform: hovered === s.label ? "translateY(-4px) scale(1.01)" : "none",
+            }}
+          >
             <div style={{ ...S.statNum, color: s.color }}>{s.val}</div>
             <div style={S.statLabel}>{s.label}</div>
           </div>
@@ -206,8 +240,7 @@ function Overview({ members, tasks, suggestions, sponsors, overdue }) {
       )}
       <div style={S.quickLinks}>
         <a href="/" target="_blank" style={S.quickBtn}>Public Site ↗</a>
-        <a href="/hub" target="_blank" style={S.quickBtn}>Member Hub ↗</a>
-        <a href="/dashboard" target="_blank" style={S.quickBtn}>Sponsor Tracker ↗</a>
+        <a href="/member-hub" target="_blank" style={S.quickBtn}>Member Hub ↗</a>
       </div>
     </div>
   );
@@ -903,7 +936,7 @@ const S = {
   card: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "24px", marginBottom: 20 },
   cardTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#94a3b8", letterSpacing: 1, marginBottom: 18 },
   statRow: { display: "flex", gap: 16, flexWrap: "wrap" },
-  statCard: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "18px 20px", minWidth: 110, textAlign: "center" },
+  statCard: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: "24px 22px", minWidth: 180, minHeight: 140, textAlign: "center", transition: "all 0.22s ease", display: "flex", flexDirection: "column", justifyContent: "center" },
   statNum: { fontFamily: "'Orbitron', sans-serif", fontSize: 26, fontWeight: 700 },
   statLabel: { fontSize: 12, color: "#64748b", fontFamily: "monospace", marginTop: 4 },
   alertBanner: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: 6, padding: "10px 16px", marginTop: 16, fontSize: 13 },

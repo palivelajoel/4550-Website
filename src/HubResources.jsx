@@ -18,7 +18,7 @@ export default function HubResources() {
   const fileRef = useRef(null);
 
   useEffect(() => {
-    if (!authed) { window.location.href = "/hub"; return; }
+    if (!authed) { window.location.href = "/member-hub"; return; }
     document.title = "Resources · Team 4550";
     load();
   }, []);

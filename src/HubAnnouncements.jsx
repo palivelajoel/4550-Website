@@ -16,7 +16,7 @@ export default function HubAnnouncements() {
   const [expanded, setExpanded] = useState(null);
 
   useEffect(() => {
-    if (!authed) { window.location.href = "/hub"; return; }
+    if (!authed) { window.location.href = "/member-hub"; return; }
     document.title = "Announcements · Team 4550";
     const username = localStorage.getItem("hub_username") || "";
     setForm(f => ({ ...f, author: username }));

@@ -21,7 +21,7 @@ export default function HubTasks() {
   const [dragId, setDragId] = useState(null);
 
   useEffect(() => {
-    if (!authed) { window.location.href = "/hub"; return; }
+    if (!authed) { window.location.href = "/member-hub"; return; }
     document.title = "Tasks · Team 4550";
     load();
   }, []);

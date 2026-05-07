@@ -16,13 +16,13 @@ const path = window.location.pathname
 const Page =
   path === '/admin'                            ? Admin
   : path === '/login' || path === '/dashboard' ? App
-  : path === '/hub'                            ? Hub
-  : path === '/hub/calendar'                   ? HubCalendar
-  : path === '/hub/tasks'                      ? HubTasks
-  : path === '/hub/media'                      ? HubMedia
-  : path === '/hub/announcements'              ? HubAnnouncements
-  : path === '/hub/resources'                  ? HubResources
-  : path === '/hub/projector'                  ? HubProjector
+  : path === '/member-hub'                     ? Hub
+  : path === '/member-hub/calendar'            ? HubCalendar
+  : path === '/member-hub/tasks'               ? HubTasks
+  : path === '/member-hub/media'               ? HubMedia
+  : path === '/member-hub/announcements'       ? HubAnnouncements
+  : path === '/member-hub/resources'           ? HubResources
+  : path === '/member-hub/projector'           ? HubProjector
   : Landing
 
 createRoot(document.getElementById('root')).render(

@@ -78,12 +78,12 @@ export default function Hub() {
   }
 
   const FEATURES = [
-    { id: "projector", icon: "📡", label: "Meeting Projector", description: "Live rotating display of calendar, tasks & announcements. Fullscreen ready.", href: "/hub/projector", accent: "#ef4444", available: true, featured: true },
-    { id: "calendar", icon: "📅", label: "Team Calendar", description: "Events, deadlines, and meetings. Add and manage the team schedule.", href: "/hub/calendar", accent: "#3b82f6", available: true },
-    { id: "tasks", icon: "✅", label: "Task Board", description: "Monday.com-style board. Assign tasks by sub-team and member.", href: "/hub/tasks", accent: "#22c55e", available: true },
-    { id: "announcements", icon: "📣", label: "Announcements", description: "Team-wide updates from captains and mentors.", href: "/hub/announcements", accent: "#f59e0b", available: true },
-    { id: "media", icon: "📸", label: "Media Gallery", description: "Photos and videos from competitions and events. Upload new media.", href: "/hub/media", accent: "#a855f7", available: true },
-    { id: "resources", icon: "📁", label: "Resources", description: "Design files, CAD, documents, and team guides.", href: "/hub/resources", accent: "#ec4899", available: true },
+    { id: "projector", icon: "📡", label: "Meeting Projector", description: "Live rotating display of calendar, tasks & announcements. Fullscreen ready.", href: "/member-hub/projector", accent: "#ef4444", available: true, featured: true },
+    { id: "calendar", icon: "📅", label: "Team Calendar", description: "Events, deadlines, and meetings. Add and manage the team schedule.", href: "/member-hub/calendar", accent: "#3b82f6", available: true },
+    { id: "tasks", icon: "✅", label: "Task Board", description: "Monday.com-style board. Assign tasks by sub-team and member.", href: "/member-hub/tasks", accent: "#22c55e", available: true },
+    { id: "announcements", icon: "📣", label: "Announcements", description: "Team-wide updates from captains and mentors.", href: "/member-hub/announcements", accent: "#f59e0b", available: true },
+    { id: "media", icon: "📸", label: "Media Gallery", description: "Photos and videos from competitions and events. Upload new media.", href: "/member-hub/media", accent: "#a855f7", available: true },
+    { id: "resources", icon: "📁", label: "Resources", description: "Design files, CAD, documents, and team guides.", href: "/member-hub/resources", accent: "#ec4899", available: true },
     { id: "sponsor-tracker", icon: "🤝", label: "Sponsor Tracker", description: "Manage team sponsors, contact info, and outreach status.", href: "/dashboard", accent: "#64748b", available: true },
   ];
 
@@ -164,7 +164,7 @@ export default function Hub() {
 
 function ProjectorPreviewCard() {
   return (
-    <a href="/hub/projector" style={{ textDecoration: "none", display: "block" }}>
+    <a href="/member-hub/projector" style={{ textDecoration: "none", display: "block" }}>
       <div style={{
         background: "linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(59,130,246,0.08) 100%)",
         border: "1px solid rgba(239,68,68,0.3)",
