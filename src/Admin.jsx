@@ -905,7 +905,7 @@ function CaptainsAdmin({ captains, reload, showToast }) {
               </>
             )}
           </div>
-        })}
+        )})}
       </div>
     </div>
   );
