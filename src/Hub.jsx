@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
-<<<<<<< Updated upstream
 import { FONTS, C, TEAM_PASSWORD, sbFetch, SUPABASE_URL, SUPABASE_KEY } from "./hubUtils.jsx";
-=======
-import { FONTS, C, TEAM_PASSWORD, sbFetch } from "./hubUtils.js";
->>>>>>> Stashed changes
 
 export default function Hub() {
   const [authed, setAuthed] = useState(false);

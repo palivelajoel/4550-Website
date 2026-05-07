@@ -1,9 +1,5 @@
 import { useState, useEffect } from "react";
-<<<<<<< Updated upstream
-import { FONTS, C, sbFetch, isAuthed, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
-=======
-import { FONTS, C, sbFetch, isAuthed, canEditHub } from "./hubUtils.js";
->>>>>>> Stashed changes
+import { FONTS, C, sbFetch, isAuthed, canEditHub, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
 
 const EVENT_TYPES = [
   { value: "event", label: "Event", color: "#3b82f6" },

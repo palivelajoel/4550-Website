@@ -43,6 +43,15 @@ export function getUsername() {
   return localStorage.getItem("hub_username") || "";
 }
 
+export function getRole() {
+  return localStorage.getItem("hub_role") || "Member";
+}
+
+export function canEditHub() {
+  return ["Captain", "Mentor", "Admin"].includes(getRole());
+}
+}
+
 // Shared Google Fonts injection
 export const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&family=Bebas+Neue&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
