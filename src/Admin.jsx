@@ -49,6 +49,19 @@ async function uploadImageToSupabase(file) {
   return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${encodeURIComponent(safeFileName)}`;
 }
 
+function normalizeCaptainPhotoUrl(photoUrl) {
+  if (!photoUrl) return "";
+  if (photoUrl.startsWith("http://") || photoUrl.startsWith("https://")) return photoUrl;
+  let path = photoUrl.replace(/^\/+/, "");
+  if (path.includes("/team-assets/")) {
+    path = path.split("/team-assets/").pop();
+  }
+  if (path.startsWith("team-assets/")) {
+    path = path.slice("team-assets/".length);
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${encodeURIComponent(path)}`;
+}
+
 const NAV = [
   { id: "overview", label: "📊 Overview" },
   { id: "accounts", label: "👥 Accounts" },
@@ -772,6 +785,33 @@ function CaptainsAdmin({ captains, reload, showToast }) {
     showToast("Captain order updated.");
   }
 
+  function handleDragStart(e, id) {
+    setDraggingId(id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", id);
+  }
+
+  function handleDragOver(e, id) {
+    e.preventDefault();
+    if (dragOverId !== id) setDragOverId(id);
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  function handleDrop(e, targetId) {
+    e.preventDefault();
+    const sourceId = draggingId || e.dataTransfer.getData("text/plain");
+    reorderCaptains(sourceId, targetId);
+  }
+
+  function handleDragLeave() {
+    setDragOverId(null);
+  }
+
+  function handleDragEnd() {
+    setDraggingId(null);
+    setDragOverId(null);
+  }
+
   return (
     <div>
       <h1 style={S.pageTitle}>Captains & Leadership</h1>
@@ -811,23 +851,11 @@ function CaptainsAdmin({ captains, reload, showToast }) {
             <div
               key={c.id}
               draggable
-              onDragStart={e => {
-                setDraggingId(c.id);
-                e.dataTransfer.effectAllowed = "move";
-                e.dataTransfer.setData("text/plain", c.id);
-              }}
-              onDragOver={e => {
-                e.preventDefault();
-                if (dragOverId !== c.id) setDragOverId(c.id);
-                e.dataTransfer.dropEffect = "move";
-              }}
-              onDragLeave={() => setDragOverId(null)}
-              onDrop={e => {
-                e.preventDefault();
-                const sourceId = draggingId || e.dataTransfer.getData("text/plain");
-                reorderCaptains(sourceId, c.id);
-              }}
-              onDragEnd={() => { setDraggingId(null); setDragOverId(null); }}
+              onDragStart={e => handleDragStart(e, c.id)}
+              onDragOver={e => handleDragOver(e, c.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={e => handleDrop(e, c.id)}
+              onDragEnd={handleDragEnd}
               style={{
                 ...S.memberRow,
                 cursor: "grab",
@@ -858,7 +886,7 @@ function CaptainsAdmin({ captains, reload, showToast }) {
                 <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
                   <div style={S.dragHandle} title="Drag to reorder">⠿</div>
                   {c.photo_url ? (
-                    <img src={c.photo_url} alt={c.name} onError={e => { e.target.onerror = null; e.target.src = "/logo.jpg"; }} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.3)" }} />
+                    <img src={normalizeCaptainPhotoUrl(c.photo_url)} alt={c.name} onError={e => { e.target.onerror = null; e.target.src = "/logo.jpg"; }} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.3)" }} />
                   ) : (
                     <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", fontWeight: 700 }}>
                       {c.name[0]}
