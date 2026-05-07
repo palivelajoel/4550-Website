@@ -41,7 +41,11 @@ async function uploadImageToSupabase(file) {
       body: file,
     }
   );
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("Supabase image upload failed", res.status, text);
+    return null;
+  }
   return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${encodeURIComponent(safeFileName)}`;
 }
 
@@ -706,7 +710,12 @@ function CaptainsAdmin({ captains, reload, showToast }) {
     setUploading(true);
     let photo_url = "";
     if (photoFile) {
-      photo_url = await uploadImageToSupabase(photoFile) || "";
+      const url = await uploadImageToSupabase(photoFile);
+      if (!url) {
+        setUploading(false);
+        return showToast("Photo upload failed. Please try again.");
+      }
+      photo_url = url;
     }
     await sbFetch("captains", { method: "POST", body: JSON.stringify({ ...form, photo_url }) });
     setForm({ name: "", position: "", bio: "", sort_order: 0 });
@@ -720,7 +729,11 @@ function CaptainsAdmin({ captains, reload, showToast }) {
     let update = { ...editData };
     if (editPhotoFile) {
       const url = await uploadImageToSupabase(editPhotoFile);
-      if (url) update.photo_url = url;
+      if (!url) {
+        setUploading(false);
+        return showToast("Photo upload failed. Please try again.");
+      }
+      update.photo_url = url;
     }
     await sbFetch(`captains?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(update) });
     setEditId(null); setEditPhotoFile(null);
@@ -732,6 +745,22 @@ function CaptainsAdmin({ captains, reload, showToast }) {
     if (!confirm("Remove this person?")) return;
     await sbFetch(`captains?id=eq.${id}`, { method: "DELETE" });
     reload(); showToast("Removed.");
+  }
+
+  async function moveCaptain(id, direction) {
+    const idx = captains.findIndex(c => c.id === id);
+    if (idx < 0) return;
+    const targetIdx = idx + direction;
+    if (targetIdx < 0 || targetIdx >= captains.length) return;
+    const current = captains[idx];
+    const target = captains[targetIdx];
+    const currentOrder = current.sort_order ?? idx;
+    const targetOrder = target.sort_order ?? targetIdx;
+    await Promise.all([
+      sbFetch(`captains?id=eq.${current.id}`, { method: "PATCH", body: JSON.stringify({ sort_order: targetOrder }) }),
+      sbFetch(`captains?id=eq.${target.id}`, { method: "PATCH", body: JSON.stringify({ sort_order: currentOrder }) }),
+    ]);
+    reload(); showToast("Captain order updated.");
   }
 
   return (
@@ -762,8 +791,11 @@ function CaptainsAdmin({ captains, reload, showToast }) {
 
       <div style={S.card}>
         <div style={S.cardTitle}>Current Leadership ({captains.length})</div>
+        <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 12, fontFamily: "monospace" }}>
+          Use the up/down arrows to reorder leaders, then save any edits as needed.
+        </div>
         {captains.length === 0 && <div style={{ color: "#64748b", fontSize: 14 }}>No captains added yet.</div>}
-        {captains.map(c => (
+        {captains.map((c, idx) => (
           <div key={c.id} style={S.memberRow}>
             {editId === c.id ? (
               <div style={S.formCol}>
@@ -799,6 +831,8 @@ function CaptainsAdmin({ captains, reload, showToast }) {
                   </div>
                 </div>
                 <div style={S.memberActions}>
+                  <button onClick={() => moveCaptain(c.id, -1)} disabled={idx === 0} style={S.btnGhost}>↑</button>
+                  <button onClick={() => moveCaptain(c.id, 1)} disabled={idx === captains.length - 1} style={S.btnGhost}>↓</button>
                   <button onClick={() => { setEditId(c.id); setEditData({ name: c.name, position: c.position, bio: c.bio, sort_order: c.sort_order }); }} style={S.btnGhost}>Edit</button>
                   <button onClick={() => deleteCaptain(c.id)} style={S.btnDanger}>Remove</button>
                 </div>

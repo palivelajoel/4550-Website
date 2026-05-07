@@ -262,7 +262,7 @@ export default function Landing() {
               {captains.map(c => (
                 <div key={c.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: isMobile ? "20px 14px" : "26px 20px", textAlign: "center" }}>
                   {c.photo_url ? (
-                    <img src={c.photo_url} alt={c.name} style={{ width: isMobile ? 70 : 88, height: isMobile ? 70 : 88, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)", display: "block", margin: "0 auto 12px" }} />
+                    <img src={c.photo_url} alt={c.name} onError={e => { e.target.onerror = null; e.target.src = "/logo.jpg"; }} style={{ width: isMobile ? 70 : 88, height: isMobile ? 70 : 88, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)", display: "block", margin: "0 auto 12px" }} />
                   ) : (
                     <div style={{ width: isMobile ? 70 : 88, height: isMobile ? 70 : 88, borderRadius: "50%", background: "rgba(239,68,68,0.12)", border: "2px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", fontFamily: "'Orbitron', sans-serif", fontSize: 24, color: "#ef4444" }}>{c.name[0]}</div>
                   )}
