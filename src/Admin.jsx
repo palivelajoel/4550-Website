@@ -213,7 +213,7 @@ function Overview({ members, tasks, suggestions, sponsors, events, overdue }) {
     { label: "Members", val: members.length, color: "#3b82f6" },
     { label: "Open Tasks", val: openTasks.length, color: "#f59e0b" },
     { label: "Due Today", val: dueToday, color: "#22c55e" },
-    { label: "Overdue Days", val: overdueDays, color: "#ef4444" },
+    { label: "Overdue Tasks", val: overdueDays, color: "#ef4444" },
     { label: "Upcoming Events", val: upcomingEvents, color: "#3b82f6" },
     { label: "Suggestions", val: suggestions.length, color: "#a855f7" },
     { label: "Sponsors", val: sponsors.length, color: "#64748b" },
@@ -702,6 +702,8 @@ function CaptainsAdmin({ captains, reload, showToast }) {
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
   const [editPhotoFile, setEditPhotoFile] = useState(null);
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
   const fileRef = useRef(null);
   const editFileRef = useRef(null);
 
@@ -747,20 +749,27 @@ function CaptainsAdmin({ captains, reload, showToast }) {
     reload(); showToast("Removed.");
   }
 
-  async function moveCaptain(id, direction) {
-    const idx = captains.findIndex(c => c.id === id);
-    if (idx < 0) return;
-    const targetIdx = idx + direction;
-    if (targetIdx < 0 || targetIdx >= captains.length) return;
-    const current = captains[idx];
-    const target = captains[targetIdx];
-    const currentOrder = current.sort_order ?? idx;
-    const targetOrder = target.sort_order ?? targetIdx;
-    await Promise.all([
-      sbFetch(`captains?id=eq.${current.id}`, { method: "PATCH", body: JSON.stringify({ sort_order: targetOrder }) }),
-      sbFetch(`captains?id=eq.${target.id}`, { method: "PATCH", body: JSON.stringify({ sort_order: currentOrder }) }),
-    ]);
-    reload(); showToast("Captain order updated.");
+  async function reorderCaptains(sourceId, targetId) {
+    if (!sourceId || sourceId === targetId) return;
+    const ordered = [...captains].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    const sourceIndex = ordered.findIndex(c => c.id === sourceId);
+    const targetIndex = ordered.findIndex(c => c.id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+
+    const [moved] = ordered.splice(sourceIndex, 1);
+    ordered.splice(targetIndex, 0, moved);
+
+    const updates = ordered.map((captain, index) => {
+      const newOrder = index;
+      if ((captain.sort_order ?? 0) === newOrder) return null;
+      return sbFetch(`captains?id=eq.${captain.id}`, { method: "PATCH", body: JSON.stringify({ sort_order: newOrder }) });
+    }).filter(Boolean);
+
+    if (updates.length) await Promise.all(updates);
+    setDraggingId(null);
+    setDragOverId(null);
+    reload();
+    showToast("Captain order updated.");
   }
 
   return (
@@ -792,12 +801,42 @@ function CaptainsAdmin({ captains, reload, showToast }) {
       <div style={S.card}>
         <div style={S.cardTitle}>Current Leadership ({captains.length})</div>
         <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 12, fontFamily: "monospace" }}>
-          Use the up/down arrows to reorder leaders, then save any edits as needed.
+          Drag and drop the captain rows to reorder leadership. Release to save the new order.
         </div>
         {captains.length === 0 && <div style={{ color: "#64748b", fontSize: 14 }}>No captains added yet.</div>}
-        {captains.map((c, idx) => (
-          <div key={c.id} style={S.memberRow}>
-            {editId === c.id ? (
+        {captains.map((c, idx) => {
+          const isDragging = draggingId === c.id;
+          const isDragOver = dragOverId === c.id && draggingId !== c.id;
+          return (
+            <div
+              key={c.id}
+              draggable
+              onDragStart={e => {
+                setDraggingId(c.id);
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", c.id);
+              }}
+              onDragOver={e => {
+                e.preventDefault();
+                if (dragOverId !== c.id) setDragOverId(c.id);
+                e.dataTransfer.dropEffect = "move";
+              }}
+              onDragLeave={() => setDragOverId(null)}
+              onDrop={e => {
+                e.preventDefault();
+                const sourceId = draggingId || e.dataTransfer.getData("text/plain");
+                reorderCaptains(sourceId, c.id);
+              }}
+              onDragEnd={() => { setDraggingId(null); setDragOverId(null); }}
+              style={{
+                ...S.memberRow,
+                cursor: "grab",
+                opacity: isDragging ? 0.45 : 1,
+                background: isDragOver ? "rgba(239,68,68,0.08)" : "transparent",
+                border: isDragOver ? "1px dashed rgba(239,68,68,0.4)" : "1px solid transparent",
+              }}
+            >
+              {editId === c.id ? (
               <div style={S.formCol}>
                 <div style={S.formRow}>
                   <input placeholder="Name" value={editData.name || ""} onChange={e => setEditData({ ...editData, name: e.target.value })} style={S.input} />
@@ -816,7 +855,8 @@ function CaptainsAdmin({ captains, reload, showToast }) {
               </div>
             ) : (
               <>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
+                  <div style={S.dragHandle} title="Drag to reorder">⠿</div>
                   {c.photo_url ? (
                     <img src={c.photo_url} alt={c.name} onError={e => { e.target.onerror = null; e.target.src = "/logo.jpg"; }} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.3)" }} />
                   ) : (
@@ -824,15 +864,13 @@ function CaptainsAdmin({ captains, reload, showToast }) {
                       {c.name[0]}
                     </div>
                   )}
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <div style={S.memberName}>{c.name}</div>
                     <div style={{ fontSize: 12, color: "#ef4444", fontFamily: "monospace" }}>{c.position}</div>
                     {c.bio && <div style={{ fontSize: 12, color: "#64748b", maxWidth: 400 }}>{c.bio}</div>}
                   </div>
                 </div>
                 <div style={S.memberActions}>
-                  <button onClick={() => moveCaptain(c.id, -1)} disabled={idx === 0} style={S.btnGhost}>↑</button>
-                  <button onClick={() => moveCaptain(c.id, 1)} disabled={idx === captains.length - 1} style={S.btnGhost}>↓</button>
                   <button onClick={() => { setEditId(c.id); setEditData({ name: c.name, position: c.position, bio: c.bio, sort_order: c.sort_order }); }} style={S.btnGhost}>Edit</button>
                   <button onClick={() => deleteCaptain(c.id)} style={S.btnDanger}>Remove</button>
                 </div>
@@ -977,7 +1015,7 @@ const S = {
   statLabel: { fontSize: 12, color: "#64748b", fontFamily: "monospace", marginTop: 4 },
   alertBanner: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: 6, padding: "10px 16px", marginTop: 16, fontSize: 13 },
   quickLinks: { display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" },
-  quickBtn: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", padding: "8px 16px", borderRadius: 6, textDecoration: "none", fontSize: 13 },
+  quickBtn: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", padding: "12px 20px", borderRadius: 8, textDecoration: "none", fontSize: 14, minWidth: 160, textAlign: "center" },
   formRow: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" },
   formCol: { display: "flex", flexDirection: "column", gap: 10 },
   input: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none", marginBottom: 0 },
@@ -985,7 +1023,9 @@ const S = {
   btnPrimary: { background: "#ef4444", border: "none", borderRadius: 6, padding: "9px 18px", color: "#fff", cursor: "pointer", fontSize: 13, fontFamily: "'Exo 2', sans-serif", fontWeight: 600, whiteSpace: "nowrap" },
   btnGhost: { background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "9px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" },
   btnDanger: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "9px 14px", color: "#ef4444", cursor: "pointer", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" },
-  memberRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" },
+  memberRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", transition: "background 0.2s ease, border 0.2s ease, opacity 0.2s ease", minHeight: 80 },
+  dragHandle: { width: 36, height: 36, borderRadius: 10, border: "1px solid rgba(148,163,184,0.2)", background: "rgba(255,255,255,0.03)", color: "#94a3b8", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "'Orbitron', sans-serif", fontSize: 16, cursor: "grab", flexShrink: 0, transition: "background 0.2s" },
+  dragHandle: { width: 36, height: 36, borderRadius: 10, border: "1px solid rgba(148,163,184,0.2)", background: "rgba(255,255,255,0.03)", color: "#94a3b8", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "'Orbitron', sans-serif", fontSize: 16, cursor: "grab", flexShrink: 0, transition: "background 0.2s" },
   memberInfo: { display: "flex", alignItems: "center", gap: 10 },
   memberName: { color: "#f1f5f9", fontWeight: 600 },
   memberUser: { color: "#64748b", fontSize: 12, fontFamily: "monospace" },
