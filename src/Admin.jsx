@@ -1,93 +1,91 @@
 import { useState, useEffect, useRef } from "react";
 
-const ADMIN_PASSWORD = "Admin@4550";
 const SUPABASE_URL = "https://ehkwxzumgizryvhkeusr.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc";
+const DEFAULT_ADMIN_PASSWORD = "Admin@4550";
+const ROLES = ["Member", "Captain", "Admin"];
+const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];
 
 async function sbFetch(path, opts = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-      ...opts.headers,
-    },
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation", ...opts.headers },
     ...opts,
   });
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("sbFetch error", res.status, text);
-    return null;
-  }
+  if (!res.ok) { console.error("sbFetch", res.status, path, await res.text().catch(() => "")); return null; }
   try { return await res.json(); } catch { return null; }
 }
 
 async function uploadImageToSupabase(file) {
-  const safeFileName = `${Date.now()}-${file.name}`
-    .replace(/\s+/g, "_")
-    .replace(/[^a-zA-Z0-9._-]/g, "_");
-  const res = await fetch(
-    `${SUPABASE_URL}/storage/v1/object/team-assets/${encodeURIComponent(safeFileName)}`,
-    {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": file.type,
-        "x-upsert": "true",
-      },
-      body: file,
-    }
-  );
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("Supabase image upload failed", res.status, text);
-    return null;
-  }
-  return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${encodeURIComponent(safeFileName)}`;
+  const safeFileName = `${Date.now()}-${file.name}`.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/team-assets/${safeFileName}`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": file.type, "x-upsert": "true" },
+    body: file,
+  });
+  if (!res.ok) return null;
+  // Return WITHOUT encodeURIComponent — simpler, works for safe filenames
+  return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${safeFileName}`;
 }
 
-function normalizeCaptainPhotoUrl(photoUrl) {
-  if (!photoUrl) return "";
-  const trimmed = photoUrl.trim();
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    try {
-      const url = new URL(trimmed);
-      const pathname = url.pathname;
-      if (pathname.includes("/storage/v1/object/team-assets/")) {
-        const name = pathname.split("/storage/v1/object/team-assets/").pop();
-        return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${encodeURIComponent(name)}`;
-      }
-      if (pathname.includes("/storage/v1/object/public/team-assets/")) {
-        return url.href;
-      }
-      if (pathname.includes("/team-assets/")) {
-        const name = pathname.split("/team-assets/").pop();
-        return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${encodeURIComponent(name)}`;
-      }
-      return url.href;
-    } catch {
-      // fallback to relative path handling below
-    }
-  }
+/**
+ * FIXED: Extract filename and reconstruct URL cleanly.
+ * Fetches with auth header to bypass bucket policy issues.
+ */
+function CaptainPhoto({ photoUrl, name, size = 48 }) {
+  const [src, setSrc] = useState(null);
+  const [failed, setFailed] = useState(false);
 
-  let path = trimmed.replace(/^\/+/, "");
-  if (path.includes("storage/v1/object/team-assets/")) {
-    path = path.split("storage/v1/object/team-assets/").pop();
+  useEffect(() => {
+    setSrc(null); setFailed(false);
+    if (!photoUrl) { setFailed(true); return; }
+
+    // Extract just the filename from whatever URL format is stored
+    const getFilename = (url) => {
+      const markers = ["/public/team-assets/", "/object/team-assets/", "/team-assets/"];
+      for (const m of markers) {
+        const idx = url.indexOf(m);
+        if (idx !== -1) {
+          let fn = url.slice(idx + m.length).split("?")[0];
+          try { fn = decodeURIComponent(fn); } catch {}
+          return fn;
+        }
+      }
+      return url.replace(/^.*\//, "");
+    };
+
+    const filename = getFilename(photoUrl);
+    const canonicalUrl = `${SUPABASE_URL}/storage/v1/object/public/team-assets/${filename}`;
+
+    // Try public URL first
+    const img = new Image();
+    img.onload = () => setSrc(canonicalUrl);
+    img.onerror = () => {
+      // Fall back: fetch with auth header → blob URL
+      fetch(canonicalUrl, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } })
+        .then(r => r.ok ? r.blob() : Promise.reject())
+        .then(blob => setSrc(URL.createObjectURL(blob)))
+        .catch(() => setFailed(true));
+    };
+    img.src = canonicalUrl;
+
+    return () => { img.onload = null; img.onerror = null; };
+  }, [photoUrl]);
+
+  if (failed || !photoUrl) {
+    return (
+      <div style={{ width: size, height: size, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "2px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", fontWeight: 700, fontSize: size * 0.4 }}>
+        {name?.[0] || "?"}
+      </div>
+    );
   }
-  if (path.includes("storage/v1/object/public/team-assets/")) {
-    path = path.split("storage/v1/object/public/team-assets/").pop();
+  if (!src) {
+    return <div style={{ width: size, height: size, borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "2px solid rgba(255,255,255,0.1)", animation: "pulse 1.5s ease infinite" }} />;
   }
-  if (path.includes("/team-assets/")) {
-    path = path.split("/team-assets/").pop();
-  }
-  if (path.startsWith("team-assets/")) {
-    path = path.slice("team-assets/".length);
-  }
-  return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${encodeURIComponent(path)}`;
+  return <img src={src} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.3)" }} />;
 }
+
+const ROLE_COLORS = { Member: "#64748b", Captain: "#3b82f6", Admin: "#ef4444" };
+const SUBTEAM_COLORS = { Build: "#f59e0b", Programming: "#3b82f6", "Marketing & Outreach": "#22c55e", General: "#64748b" };
 
 const NAV = [
   { id: "overview", label: "📊 Overview" },
@@ -95,9 +93,10 @@ const NAV = [
   { id: "hub-tasks", label: "📋 Hub Tasks" },
   { id: "hub-calendar", label: "📅 Hub Calendar" },
   { id: "sponsors-assign", label: "🤝 Sponsor Assignment" },
-  { id: "captains", label: "🏆 Captains & Roles" },
+  { id: "captains", label: "🏆 Leadership" },
   { id: "suggestions", label: "💡 Suggestions" },
   { id: "site", label: "⚙️ Site Config" },
+  { id: "settings", label: "🔐 Admin Settings" },
 ];
 
 export default function Admin() {
@@ -114,15 +113,13 @@ export default function Admin() {
   const [config, setConfig] = useState({});
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [toast, setToast] = useState("");
+  const [adminPassword, setAdminPassword] = useState(DEFAULT_ADMIN_PASSWORD);
 
   useEffect(() => {
     if (localStorage.getItem("admin_authed") === "true") { setAuthed(true); loadAll(); }
   }, []);
 
-  function showToast(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3000);
-  }
+  function showToast(msg, color = "#22c55e") { setToast({ msg, color }); setTimeout(() => setToast(""), 3000); }
 
   async function loadAll() {
     const [m, t, cals, sg, sp, cap, cfg] = await Promise.all([
@@ -145,31 +142,36 @@ export default function Admin() {
       cfg.forEach(r => { obj[r.key] = r.value; });
       setConfig(obj);
       if (obj.logo_url) setLogoUrl(obj.logo_url);
+      if (obj.admin_password) setAdminPassword(obj.admin_password);
     }
   }
 
-  function handleLogin(e) {
+  async function handleLogin(e) {
     e.preventDefault();
-    if (pw === ADMIN_PASSWORD) {
+    // Check stored admin password first, fall back to default
+    const cfgRows = await sbFetch("site_config?key=eq.admin_password&select=value");
+    const storedPw = cfgRows?.[0]?.value || DEFAULT_ADMIN_PASSWORD;
+    if (pw === storedPw) {
       localStorage.setItem("admin_authed", "true");
-      setAuthed(true);
-      loadAll();
+      setAuthed(true); loadAll();
     } else setErr("Incorrect password.");
   }
 
-  function handleLogout() {
-    localStorage.removeItem("admin_authed");
-    setAuthed(false);
-  }
+  function handleLogout() { localStorage.removeItem("admin_authed"); setAuthed(false); }
 
   if (!authed) {
     return (
       <div style={S.loginBg}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Exo+2:wght@400;600&display=swap');
+          *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:#080a0f;}
+          @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+          @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+        `}</style>
         <div style={S.loginCard}>
           <div style={S.loginTitle}>ADMIN PANEL</div>
           <div style={S.loginSub}>FRC Team 4550 · Something's Bruin</div>
           <form onSubmit={handleLogin} style={S.loginForm}>
-            <input type="password" placeholder="Admin password" value={pw} onChange={e => setPw(e.target.value)}
+            <input type="password" placeholder="Admin password" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }}
               style={S.loginInput} autoFocus />
             {err && <div style={S.loginErr}>{err}</div>}
             <button type="submit" style={S.loginBtn}>ENTER →</button>
@@ -180,12 +182,19 @@ export default function Admin() {
     );
   }
 
-  const unread = suggestions.length;
   const overdue = tasks.filter(t => t.due_date && t.status !== "Done" && new Date(t.due_date) < new Date()).length;
 
   return (
     <div style={S.layout}>
-      {toast && <div style={S.toast}>{toast}</div>}
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:#080a0f;color:#f1f5f9;font-family:'Exo 2',sans-serif;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+        input,select,textarea{outline:none;}
+        ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:#ef4444;border-radius:3px;}
+      `}</style>
+
+      {toast && <div style={{ position: "fixed", bottom: 24, right: 24, background: toast.color || "#22c55e", color: "#fff", padding: "12px 20px", borderRadius: 8, fontFamily: "monospace", fontSize: 13, zIndex: 9999, animation: "fadeUp 0.3s ease", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>{toast.msg}</div>}
 
       {/* Sidebar */}
       <aside style={S.sidebar}>
@@ -198,23 +207,15 @@ export default function Admin() {
         </div>
         <nav style={S.sidebarNav}>
           {NAV.map(n => (
-            <button key={n.id} onClick={() => setPage(n.id)} style={{
-              ...S.navItem,
-              background: page === n.id ? "rgba(239,68,68,0.15)" : "transparent",
-              color: page === n.id ? "#ef4444" : "#94a3b8",
-              borderLeft: page === n.id ? "3px solid #ef4444" : "3px solid transparent",
-            }}>
+            <button key={n.id} onClick={() => setPage(n.id)} style={{ ...S.navItem, background: page === n.id ? "rgba(239,68,68,0.15)" : "transparent", color: page === n.id ? "#ef4444" : "#94a3b8", borderLeft: page === n.id ? "3px solid #ef4444" : "3px solid transparent" }}>
               {n.label}
-              {n.id === "suggestions" && unread > 0 && (
-                <span style={S.badge}>{unread}</span>
-              )}
+              {n.id === "suggestions" && suggestions.length > 0 && <span style={S.badge}>{suggestions.length}</span>}
             </button>
           ))}
         </nav>
         <button onClick={handleLogout} style={S.logoutBtn}>Log Out</button>
       </aside>
 
-      {/* Main */}
       <main style={S.main}>
         {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} events={hubCalendar} overdue={overdue} />}
         {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} />}
@@ -224,161 +225,178 @@ export default function Admin() {
         {page === "captains" && <CaptainsAdmin captains={captains} reload={loadAll} showToast={showToast} />}
         {page === "suggestions" && <Suggestions suggestions={suggestions} reload={loadAll} showToast={showToast} />}
         {page === "site" && <SiteConfig config={config} logoUrl={logoUrl} setLogoUrl={setLogoUrl} reload={loadAll} showToast={showToast} />}
+        {page === "settings" && <AdminSettings showToast={showToast} />}
       </main>
     </div>
   );
 }
 
-// ── OVERVIEW ──────────────────────────────────────────────────────────────
+// ── OVERVIEW ──────────────────────────────────────────────
 function Overview({ members, tasks, suggestions, sponsors, events, overdue }) {
-  const [hovered, setHovered] = useState(null);
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
   const openTasks = tasks.filter(t => t.status !== "Done");
-  const dueToday = openTasks.filter(t => t.due_date === todayStr).length;
-  const overdueTasks = openTasks.filter(t => t.due_date && new Date(t.due_date) < today);
-  const overdueDays = overdueTasks.reduce((sum, task) => {
-    const diff = Math.floor((today - new Date(task.due_date)) / 86400000);
-    return sum + Math.max(0, diff);
-  }, 0);
-  const weekAhead = new Date(today);
-  weekAhead.setDate(weekAhead.getDate() + 7);
-  const upcomingEvents = events.filter(e => {
-    if (!e?.date) return false;
-    const d = new Date(e.date);
-    return d >= today && d <= weekAhead;
-  }).length;
-
+  const weekAhead = new Date(today); weekAhead.setDate(weekAhead.getDate() + 7);
+  const upcomingEvents = events.filter(e => e?.date && new Date(e.date) >= today && new Date(e.date) <= weekAhead).length;
   const stats = [
     { label: "Members", val: members.length, color: "#3b82f6" },
     { label: "Open Tasks", val: openTasks.length, color: "#f59e0b" },
-    { label: "Due Today", val: dueToday, color: "#22c55e" },
-    { label: "Overdue Tasks", val: overdueDays, color: "#ef4444" },
-    { label: "Upcoming Events", val: upcomingEvents, color: "#3b82f6" },
+    { label: "Overdue", val: overdue, color: "#ef4444" },
+    { label: "Events (7d)", val: upcomingEvents, color: "#22c55e" },
     { label: "Suggestions", val: suggestions.length, color: "#a855f7" },
     { label: "Sponsors", val: sponsors.length, color: "#64748b" },
   ];
-
   return (
     <div>
       <h1 style={S.pageTitle}>Overview</h1>
-      <div style={{ ...S.statRow, gap: 18 }}>
+      <div style={S.statRow}>
         {stats.map(s => (
-          <div
-            key={s.label}
-            onMouseEnter={() => setHovered(s.label)}
-            onMouseLeave={() => setHovered(null)}
-            style={{
-              ...S.statCard,
-              borderColor: s.color,
-              cursor: "default",
-              boxShadow: hovered === s.label ? `0 0 24px ${s.color}33` : "none",
-              transform: hovered === s.label ? "translateY(-4px) scale(1.01)" : "none",
-            }}
-          >
+          <div key={s.label} style={{ ...S.statCard, borderColor: s.color }}>
             <div style={{ ...S.statNum, color: s.color }}>{s.val}</div>
             <div style={S.statLabel}>{s.label}</div>
           </div>
         ))}
       </div>
-      {overdue > 0 && (
-        <div style={S.alertBanner}>⚠️ {overdue} overdue task{overdue !== 1 ? "s" : ""}</div>
-      )}
+      {overdue > 0 && <div style={S.alertBanner}>⚠️ {overdue} overdue task{overdue !== 1 ? "s" : ""}</div>}
       <div style={S.quickLinks}>
         <a href="/" target="_blank" style={S.quickBtn}>Public Site ↗</a>
         <a href="/member-hub" target="_blank" style={S.quickBtn}>Member Hub ↗</a>
+        <a href="/member-hub/scouting" target="_blank" style={S.quickBtn}>Scouting ↗</a>
       </div>
     </div>
   );
 }
 
-// ── ACCOUNTS ─────────────────────────────────────────────────────────────
+// ── ACCOUNTS ──────────────────────────────────────────────
 function Accounts({ members, reload, showToast }) {
-  const [form, setForm] = useState({ username: "", password: "", full_name: "", role: "Member" });
+  const [form, setForm] = useState({ username: "", password: "", confirmPassword: "", full_name: "", role: "Member", subteam: "General" });
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
+  const [pwError, setPwError] = useState("");
 
   async function createMember() {
+    setPwError("");
     if (!form.username || !form.password) return;
-    await sbFetch("members", { method: "POST", body: JSON.stringify(form) });
-    setForm({ username: "", password: "", full_name: "", role: "Member" });
-    reload(); showToast("Member created.");
+    if (form.password !== form.confirmPassword) { setPwError("Passwords do not match."); return; }
+    await sbFetch("members", { method: "POST", body: JSON.stringify({ username: form.username, password: form.password, full_name: form.full_name, role: form.role, subteam: form.subteam }) });
+    setForm({ username: "", password: "", confirmPassword: "", full_name: "", role: "Member", subteam: "General" });
+    reload(); showToast("✅ Member created.");
   }
 
   async function updateMember(id) {
-    await sbFetch(`members?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(editData) });
-    setEditId(null); reload(); showToast("Member updated.");
+    setPwError("");
+    if (editData.password && editData.password !== editData.confirmPassword) { setPwError("Passwords do not match."); return; }
+    const payload = { full_name: editData.full_name, role: editData.role, subteam: editData.subteam };
+    if (editData.password) payload.password = editData.password;
+    await sbFetch(`members?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+    setEditId(null); setEditData({}); reload(); showToast("✅ Member updated.");
   }
 
   async function deleteMember(id) {
     if (!confirm("Delete this member?")) return;
     await sbFetch(`members?id=eq.${id}`, { method: "DELETE" });
-    reload(); showToast("Member deleted.");
+    reload(); showToast("🗑️ Member deleted.", "#ef4444");
   }
 
-  const roleColor = { Member: "#64748b", Captain: "#3b82f6", Mentor: "#22c55e", Admin: "#ef4444" };
+  // Group by subteam
+  const bySubteam = {};
+  SUBTEAMS.forEach(s => { bySubteam[s] = members.filter(m => (m.subteam || "General") === s); });
 
   return (
     <div>
       <h1 style={S.pageTitle}>Account Management</h1>
       <div style={S.card}>
         <div style={S.cardTitle}>Create Account</div>
-        <div style={S.formRow}>
-          {[["Username", "username"], ["Password", "password"], ["Full Name", "full_name"]].map(([lbl, key]) => (
-            <input key={key} placeholder={lbl} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })}
-              style={S.input} type={key === "password" ? "password" : "text"} />
-          ))}
-          <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={S.select}>
-            {["Member", "Captain", "Mentor", "Admin"].map(r => <option key={r}>{r}</option>)}
-          </select>
-          <button onClick={createMember} style={S.btnPrimary}>Create</button>
+        <div style={S.formCol}>
+          <div style={S.formRow}>
+            <input placeholder="Username *" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={S.input} />
+            <input placeholder="Full Name" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} style={S.input} />
+          </div>
+          <div style={S.formRow}>
+            <input type="password" placeholder="Password *" value={form.password} onChange={e => { setForm({ ...form, password: e.target.value }); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined }} />
+            <input type="password" placeholder="Confirm Password *" value={form.confirmPassword} onChange={e => { setForm({ ...form, confirmPassword: e.target.value }); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined }} />
+          </div>
+          {pwError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "monospace" }}>{pwError}</div>}
+          <div style={S.formRow}>
+            <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={S.select}>
+              {ROLES.map(r => <option key={r}>{r}</option>)}
+            </select>
+            <select value={form.subteam} onChange={e => setForm({ ...form, subteam: e.target.value })} style={S.select}>
+              {SUBTEAMS.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <button onClick={createMember} style={S.btnPrimary}>Create Account</button>
+          </div>
         </div>
       </div>
-      <div style={S.card}>
-        <div style={S.cardTitle}>All Members ({members.length})</div>
-        {members.map(m => (
-          <div key={m.id} style={S.memberRow}>
-            {editId === m.id ? (
-              <div style={S.formRow}>
-                <input placeholder="Full Name" value={editData.full_name || ""} onChange={e => setEditData({ ...editData, full_name: e.target.value })} style={S.input} />
-                <input placeholder="New Password" value={editData.password || ""} onChange={e => setEditData({ ...editData, password: e.target.value })} style={S.input} type="password" />
-                <select value={editData.role || m.role} onChange={e => setEditData({ ...editData, role: e.target.value })} style={S.select}>
-                  {["Member", "Captain", "Mentor", "Admin"].map(r => <option key={r}>{r}</option>)}
-                </select>
-                <button onClick={() => updateMember(m.id)} style={S.btnPrimary}>Save</button>
-                <button onClick={() => setEditId(null)} style={S.btnGhost}>Cancel</button>
+
+      {/* By subteam */}
+      {SUBTEAMS.map(st => {
+        const sub = bySubteam[st];
+        if (!sub.length) return null;
+        return (
+          <div key={st} style={S.card}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: SUBTEAM_COLORS[st] }} />
+              <div style={{ ...S.cardTitle, marginBottom: 0 }}>{st} <span style={{ color: "#64748b", fontSize: 11 }}>({sub.length})</span></div>
+            </div>
+            {sub.map(m => (
+              <div key={m.id} style={S.memberRow}>
+                {editId === m.id ? (
+                  <div style={{ ...S.formCol, flex: 1 }}>
+                    <div style={S.formRow}>
+                      <input placeholder="Full Name" value={editData.full_name || ""} onChange={e => setEditData({ ...editData, full_name: e.target.value })} style={S.input} />
+                      <select value={editData.role || m.role} onChange={e => setEditData({ ...editData, role: e.target.value })} style={S.select}>
+                        {ROLES.map(r => <option key={r}>{r}</option>)}
+                      </select>
+                      <select value={editData.subteam || m.subteam || "General"} onChange={e => setEditData({ ...editData, subteam: e.target.value })} style={S.select}>
+                        {SUBTEAMS.map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div style={S.formRow}>
+                      <input type="password" placeholder="New Password (leave blank to keep)" value={editData.password || ""} onChange={e => { setEditData({ ...editData, password: e.target.value }); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined }} />
+                      <input type="password" placeholder="Confirm New Password" value={editData.confirmPassword || ""} onChange={e => { setEditData({ ...editData, confirmPassword: e.target.value }); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined }} />
+                    </div>
+                    {pwError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "monospace" }}>{pwError}</div>}
+                    <div style={S.formRow}>
+                      <button onClick={() => updateMember(m.id)} style={S.btnPrimary}>Save</button>
+                      <button onClick={() => { setEditId(null); setPwError(""); }} style={S.btnGhost}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={S.memberInfo}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${ROLE_COLORS[m.role] || "#64748b"}22`, border: `1px solid ${ROLE_COLORS[m.role] || "#64748b"}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: ROLE_COLORS[m.role] || "#64748b" }}>{(m.full_name || m.username)[0]}</div>
+                      <div>
+                        <span style={S.memberName}>{m.full_name || m.username}</span>
+                        <span style={S.memberUser}> @{m.username}</span>
+                      </div>
+                      <span style={{ ...S.roleBadge, background: `${ROLE_COLORS[m.role] || "#64748b"}22`, color: ROLE_COLORS[m.role] || "#64748b" }}>{m.role}</span>
+                    </div>
+                    <div style={S.memberActions}>
+                      <button onClick={() => { setEditId(m.id); setEditData({ full_name: m.full_name, role: m.role, subteam: m.subteam || "General" }); setPwError(""); }} style={S.btnGhost}>Edit</button>
+                      <button onClick={() => deleteMember(m.id)} style={S.btnDanger}>Delete</button>
+                    </div>
+                  </>
+                )}
               </div>
-            ) : (
-              <>
-                <div style={S.memberInfo}>
-                  <span style={S.memberName}>{m.full_name || m.username}</span>
-                  <span style={S.memberUser}>@{m.username}</span>
-                  <span style={{ ...S.roleBadge, background: `${roleColor[m.role] || "#64748b"}22`, color: roleColor[m.role] || "#64748b" }}>{m.role}</span>
-                </div>
-                <div style={S.memberActions}>
-                  <button onClick={() => { setEditId(m.id); setEditData({ full_name: m.full_name, role: m.role }); }} style={S.btnGhost}>Edit</button>
-                  <button onClick={() => deleteMember(m.id)} style={S.btnDanger}>Delete</button>
-                </div>
-              </>
-            )}
+            ))}
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
 
-// ── TASKS ─────────────────────────────────────────────────────────────────
+// ── TASKS ─────────────────────────────────────────────────
 function Tasks({ tasks, members, reload, showToast }) {
-  const [form, setForm] = useState({ title: "", description: "", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status: "To Do" });
+  const [form, setForm] = useState({ title: "", description: "", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status: "To Do", subteam: "General" });
 
   async function createTask() {
     if (!form.title) return;
     const member = members.find(m => m.id === form.assigned_to);
-    const payload = { ...form, assigned_name: member ? member.full_name || member.username : "" };
-    await sbFetch("hub_tasks", { method: "POST", body: JSON.stringify(payload) });
-    setForm({ title: "", description: "", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status: "To Do" });
-    reload(); showToast("Task created.");
+    await sbFetch("hub_tasks", { method: "POST", body: JSON.stringify({ ...form, assigned_name: member ? member.full_name || member.username : "" }) });
+    setForm({ title: "", description: "", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status: "To Do", subteam: "General" });
+    reload(); showToast("✅ Task created.");
   }
 
   async function updateStatus(id, status) {
@@ -388,7 +406,7 @@ function Tasks({ tasks, members, reload, showToast }) {
 
   async function deleteTask(id) {
     await sbFetch(`hub_tasks?id=eq.${id}`, { method: "DELETE" });
-    reload(); showToast("Task deleted.");
+    reload(); showToast("🗑️ Task deleted.", "#ef4444");
   }
 
   const groups = { "To Do": [], "In Progress": [], Done: [] };
@@ -405,9 +423,12 @@ function Tasks({ tasks, members, reload, showToast }) {
           <input placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={S.input} />
           <input placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={S.input} />
           <div style={S.formRow}>
+            <select value={form.subteam} onChange={e => setForm({ ...form, subteam: e.target.value })} style={S.select}>
+              {SUBTEAMS.map(s => <option key={s}>{s}</option>)}
+            </select>
             <select value={form.assigned_to} onChange={e => setForm({ ...form, assigned_to: e.target.value })} style={S.select}>
               <option value="">Unassigned</option>
-              {members.map(m => <option key={m.id} value={m.id}>{m.full_name || m.username}</option>)}
+              {members.map(m => <option key={m.id} value={m.id}>{m.full_name || m.username} ({m.subteam || "General"})</option>)}
             </select>
             <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} style={S.input} />
             <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={S.select}>
@@ -425,6 +446,7 @@ function Tasks({ tasks, members, reload, showToast }) {
               <div key={t.id} style={{ ...S.taskCard, borderLeft: `3px solid ${pColor[t.priority] || "#64748b"}`, background: isOverdue(t) ? "rgba(239,68,68,0.07)" : "rgba(255,255,255,0.03)" }}>
                 <div style={S.taskTitle}>{t.title}</div>
                 {t.description && <div style={S.taskDesc}>{t.description}</div>}
+                {t.subteam && t.subteam !== "General" && <div style={{ fontSize: 10, color: SUBTEAM_COLORS[t.subteam], marginBottom: 4, fontFamily: "monospace" }}>{t.subteam}</div>}
                 <div style={S.taskMeta}>
                   {t.assigned_name && <span>👤 {t.assigned_name}</span>}
                   {t.due_date && <span style={{ color: isOverdue(t) ? "#ef4444" : "#64748b" }}>📅 {t.due_date}</span>}
@@ -444,48 +466,33 @@ function Tasks({ tasks, members, reload, showToast }) {
   );
 }
 
+// ── HUB CALENDAR ──────────────────────────────────────────
 function HubCalendarAdmin({ events, reload, showToast }) {
   const [form, setForm] = useState({ title: "", type: "event", date: "", end_date: "", time: "", description: "", all_day: true });
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [filterType, setFilterType] = useState("All");
-  const EVENT_TYPES = [
-    { value: "event", label: "Event" },
-    { value: "deadline", label: "Deadline" },
-    { value: "meeting", label: "Meeting" },
-    { value: "competition", label: "Competition" },
-    { value: "other", label: "Other" },
-  ];
+  const EVENT_TYPES = [{ value: "event", label: "Event" }, { value: "deadline", label: "Deadline" }, { value: "meeting", label: "Meeting" }, { value: "competition", label: "Competition" }, { value: "other", label: "Other" }];
 
   async function saveEvent() {
-    if (!form.title || !form.date) return showToast("Title and date required.");
+    if (!form.title || !form.date) return showToast("Title and date required.", "#ef4444");
     setSaving(true);
     if (editingId) {
       await sbFetch(`hub_calendar?id=eq.${editingId}`, { method: "PATCH", body: JSON.stringify(form) });
-      showToast("Event updated.");
+      showToast("✅ Event updated.");
     } else {
       await sbFetch("hub_calendar", { method: "POST", body: JSON.stringify(form) });
-      showToast("Event created.");
+      showToast("✅ Event created.");
     }
-    setSaving(false);
-    setEditingId(null);
+    setSaving(false); setEditingId(null);
     setForm({ title: "", type: "event", date: "", end_date: "", time: "", description: "", all_day: true });
     reload();
-  }
-
-  function beginEdit(event) {
-    setEditingId(event.id);
-    setForm({ title: event.title || "", type: event.type || "event", date: event.date || "", end_date: event.end_date || "", time: event.time || "", description: event.description || "", all_day: event.all_day !== false });
   }
 
   async function deleteEvent(id) {
     if (!confirm("Delete this event?")) return;
     await sbFetch(`hub_calendar?id=eq.${id}`, { method: "DELETE" });
-    showToast("Event deleted.");
-    reload();
+    showToast("🗑️ Deleted.", "#ef4444"); reload();
   }
-
-  const filtered = filterType === "All" ? events : events.filter(e => e.type === filterType);
 
   return (
     <div>
@@ -504,49 +511,39 @@ function HubCalendarAdmin({ events, reload, showToast }) {
             <input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} style={S.input} />
             <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} style={S.input} />
           </div>
-          <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={{ ...S.input, minHeight: 100, resize: "vertical" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <label style={{ color: "#94a3b8", fontSize: 13, fontFamily: "monospace" }}>
-              <input type="checkbox" checked={form.all_day} onChange={e => setForm({ ...form, all_day: e.target.checked })} style={{ marginRight: 6 }} /> All day event
+          <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={{ ...S.input, minHeight: 80, resize: "vertical" }} />
+          <div style={S.formRow}>
+            <label style={{ color: "#94a3b8", fontSize: 13, fontFamily: "monospace", display: "flex", alignItems: "center", gap: 8 }}>
+              <input type="checkbox" checked={form.all_day} onChange={e => setForm({ ...form, all_day: e.target.checked })} /> All day
             </label>
             <button onClick={saveEvent} disabled={saving} style={S.btnPrimary}>{saving ? "Saving..." : editingId ? "Save" : "Add Event"}</button>
-            {editingId && <button onClick={() => { setEditingId(null); setForm({ title: "", type: "event", date: "", end_date: "", time: "", description: "", all_day: true }) }} style={S.btnGhost}>Cancel</button>}
+            {editingId && <button onClick={() => { setEditingId(null); setForm({ title: "", type: "event", date: "", end_date: "", time: "", description: "", all_day: true }); }} style={S.btnGhost}>Cancel</button>}
           </div>
         </div>
       </div>
       <div style={S.card}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-          <div style={S.cardTitle}>Upcoming Events</div>
-          <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ ...S.select, width: 180 }}>
-            <option value="All">All Types</option>
-            {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-          </select>
-        </div>
-        {filtered.length === 0 ? (
-          <div style={{ color: "#64748b", fontSize: 14 }}>No events yet.</div>
-        ) : (
-          filtered.map(event => (
-            <div key={event.id} style={{ marginBottom: 14, padding: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-                <div>
-                  <div style={{ fontSize: 15, fontFamily: "'Orbitron', sans-serif", color: "#f1f5f9", fontWeight: 700 }}>{event.title}</div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: "monospace", marginTop: 4 }}>{event.type?.toUpperCase()} · {event.date}{event.time ? ` · ${event.time}` : ""}{event.end_date ? ` → ${event.end_date}` : ""}</div>
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => beginEdit(event)} style={S.btnGhost}>Edit</button>
-                  <button onClick={() => deleteEvent(event.id)} style={S.btnDanger}>Delete</button>
-                </div>
+        <div style={S.cardTitle}>All Events</div>
+        {events.map(ev => (
+          <div key={ev.id} style={{ marginBottom: 12, padding: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 14, fontFamily: "'Orbitron', sans-serif", color: "#f1f5f9", fontWeight: 700 }}>{ev.title}</div>
+                <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: "monospace", marginTop: 2 }}>{ev.type?.toUpperCase()} · {ev.date}{ev.time ? ` · ${ev.time}` : ""}</div>
               </div>
-              {event.description && <div style={{ marginTop: 10, color: "#94a3b8", lineHeight: 1.6 }}>{event.description}</div>}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => { setEditingId(ev.id); setForm({ title: ev.title || "", type: ev.type || "event", date: ev.date || "", end_date: ev.end_date || "", time: ev.time || "", description: ev.description || "", all_day: ev.all_day !== false }); }} style={S.btnGhost}>Edit</button>
+                <button onClick={() => deleteEvent(ev.id)} style={S.btnDanger}>Delete</button>
+              </div>
             </div>
-          ))
-        )}
+          </div>
+        ))}
+        {events.length === 0 && <div style={{ color: "#64748b", fontSize: 14 }}>No events yet.</div>}
       </div>
     </div>
   );
 }
 
-// ── SPONSOR ASSIGNMENT ────────────────────────────────────────────────────
+// ── SPONSOR ASSIGNMENT ────────────────────────────────────
 function SponsorAssign({ sponsors, members, reload, showToast }) {
   const [assignments, setAssignments] = useState({});
   const [filter, setFilter] = useState("");
@@ -560,169 +557,63 @@ function SponsorAssign({ sponsors, members, reload, showToast }) {
 
   async function saveAssignment(sponsorId, memberId) {
     const member = members.find(m => m.id === memberId);
-    await sbFetch(`sponsors?id=eq.${sponsorId}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        assigned_member_id: memberId || null,
-        assigned_member_name: member ? member.full_name || member.username : null,
-      }),
-    });
+    await sbFetch(`sponsors?id=eq.${sponsorId}`, { method: "PATCH", body: JSON.stringify({ assigned_member_id: memberId || null, assigned_member_name: member ? member.full_name || member.username : null }) });
     reload();
   }
 
   async function autoAssign() {
-    if (!members.length) return showToast("No members to assign.");
+    if (!members.length) return;
     setAutoLoading(true);
     const unassigned = sponsors.filter(s => !s.assigned_member_id);
-    if (!unassigned.length) { setAutoLoading(false); return showToast("All sponsors already assigned."); }
-
-    let idx = 0;
-    for (const sponsor of unassigned) {
-      const member = members[idx % members.length];
-      await sbFetch(`sponsors?id=eq.${sponsor.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          assigned_member_id: member.id,
-          assigned_member_name: member.full_name || member.username,
-        }),
-      });
-      idx++;
+    for (let i = 0; i < unassigned.length; i++) {
+      const member = members[i % members.length];
+      await sbFetch(`sponsors?id=eq.${unassigned[i].id}`, { method: "PATCH", body: JSON.stringify({ assigned_member_id: member.id, assigned_member_name: member.full_name || member.username }) });
     }
-    reload();
-    setAutoLoading(false);
-    showToast(`Auto-assigned ${unassigned.length} sponsors evenly across ${members.length} members.`);
+    reload(); setAutoLoading(false);
+    showToast(`✅ Auto-assigned ${unassigned.length} sponsors.`);
   }
-
-  async function clearAll() {
-    if (!confirm("Clear all sponsor assignments?")) return;
-    for (const s of sponsors) {
-      await sbFetch(`sponsors?id=eq.${s.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ assigned_member_id: null, assigned_member_name: null }),
-      });
-    }
-    reload(); showToast("All assignments cleared.");
-  }
-
-  // Group by member
-  const byMember = {};
-  members.forEach(m => { byMember[m.id] = { member: m, sponsors: [] }; });
-  byMember["unassigned"] = { member: null, sponsors: [] };
-  sponsors.forEach(s => {
-    if (s.assigned_member_id && byMember[s.assigned_member_id]) {
-      byMember[s.assigned_member_id].sponsors.push(s);
-    } else {
-      byMember["unassigned"].sponsors.push(s);
-    }
-  });
 
   const filtered = sponsors.filter(s => s.company.toLowerCase().includes(filter.toLowerCase()));
 
   return (
     <div>
       <h1 style={S.pageTitle}>Sponsor Assignment</h1>
-
-      {/* Summary */}
       <div style={S.card}>
-        <div style={S.cardTitle}>Assignment Overview</div>
         <div style={S.statRow}>
-          <div style={S.statCard}>
-            <div style={{ ...S.statNum, color: "#3b82f6" }}>{sponsors.length}</div>
-            <div style={S.statLabel}>Total Sponsors</div>
-          </div>
-          <div style={S.statCard}>
-            <div style={{ ...S.statNum, color: "#22c55e" }}>{sponsors.filter(s => s.assigned_member_id).length}</div>
-            <div style={S.statLabel}>Assigned</div>
-          </div>
-          <div style={S.statCard}>
-            <div style={{ ...S.statNum, color: "#f59e0b" }}>{sponsors.filter(s => !s.assigned_member_id).length}</div>
-            <div style={S.statLabel}>Unassigned</div>
-          </div>
-          <div style={S.statCard}>
-            <div style={{ ...S.statNum, color: "#a855f7" }}>{members.length}</div>
-            <div style={S.statLabel}>Members</div>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
-          <button onClick={autoAssign} disabled={autoLoading} style={{ ...S.btnPrimary, opacity: autoLoading ? 0.6 : 1 }}>
-            {autoLoading ? "Assigning..." : "⚡ Auto-Assign Evenly"}
-          </button>
-          <button onClick={clearAll} style={S.btnDanger}>Clear All Assignments</button>
-        </div>
-        {members.length > 0 && (
-          <div style={{ marginTop: 12, color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>
-            Each member gets ~{Math.ceil(sponsors.filter(s => !s.assigned_member_id).length / members.length)} unassigned sponsors
-          </div>
-        )}
-      </div>
-
-      {/* By Member breakdown */}
-      <div style={S.card}>
-        <div style={S.cardTitle}>By Member</div>
-        {Object.values(byMember).map(({ member, sponsors: mSponsors }) => {
-          if (!mSponsors.length && member) return null;
-          return (
-            <div key={member ? member.id : "unassigned"} style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, color: member ? "#f1f5f9" : "#f59e0b", fontWeight: 700 }}>
-                  {member ? member.full_name || member.username : "⚠️ Unassigned"}
-                </span>
-                <span style={{ ...S.roleBadge, background: "rgba(255,255,255,0.05)", color: "#64748b" }}>
-                  {mSponsors.length} sponsor{mSponsors.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {mSponsors.map(s => (
-                  <span key={s.id} style={S.sponsorChip}>{s.company}</span>
-                ))}
-              </div>
+          {[{ label: "Total", val: sponsors.length, color: "#3b82f6" }, { label: "Assigned", val: sponsors.filter(s => s.assigned_member_id).length, color: "#22c55e" }, { label: "Unassigned", val: sponsors.filter(s => !s.assigned_member_id).length, color: "#f59e0b" }].map(s => (
+            <div key={s.label} style={S.statCard}>
+              <div style={{ ...S.statNum, color: s.color }}>{s.val}</div>
+              <div style={S.statLabel}>{s.label}</div>
             </div>
-          );
-        })}
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+          <button onClick={autoAssign} disabled={autoLoading} style={S.btnPrimary}>{autoLoading ? "Assigning..." : "⚡ Auto-Assign Evenly"}</button>
+        </div>
       </div>
-
-      {/* Individual assignment table */}
       <div style={S.card}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
           <div style={S.cardTitle}>Individual Assignments</div>
-          <input placeholder="Search sponsors..." value={filter} onChange={e => setFilter(e.target.value)} style={{ ...S.input, maxWidth: 220, marginBottom: 0 }} />
+          <input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} style={{ ...S.input, maxWidth: 220, marginBottom: 0 }} />
         </div>
         <div style={{ overflowX: "auto" }}>
           <table style={S.table}>
-            <thead>
-              <tr>
-                <th style={S.th}>Company</th>
-                <th style={S.th}>Status</th>
-                <th style={S.th}>Assigned To</th>
-                <th style={S.th}>Save</th>
-              </tr>
-            </thead>
+            <thead><tr>
+              <th style={S.th}>Company</th><th style={S.th}>Status</th><th style={S.th}>Assigned To</th><th style={S.th}>Save</th>
+            </tr></thead>
             <tbody>
               {filtered.map(s => (
                 <tr key={s.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                   <td style={S.td}>{s.company}</td>
+                  <td style={S.td}><span style={{ ...S.roleBadge, background: "rgba(255,255,255,0.05)", color: "#64748b" }}>{s.status || "Not Contacted"}</span></td>
                   <td style={S.td}>
-                    <span style={{ ...S.roleBadge, background: "rgba(255,255,255,0.05)", color: "#64748b", fontSize: 11 }}>
-                      {s.status || "Not Contacted"}
-                    </span>
-                  </td>
-                  <td style={S.td}>
-                    <select
-                      value={assignments[s.id] || ""}
-                      onChange={e => setAssignments({ ...assignments, [s.id]: e.target.value })}
-                      style={{ ...S.select, fontSize: 12 }}
-                    >
+                    <select value={assignments[s.id] || ""} onChange={e => setAssignments({ ...assignments, [s.id]: e.target.value })} style={{ ...S.select, fontSize: 12 }}>
                       <option value="">Unassigned</option>
-                      {members.map(m => (
-                        <option key={m.id} value={m.id}>{m.full_name || m.username}</option>
-                      ))}
+                      {members.map(m => <option key={m.id} value={m.id}>{m.full_name || m.username}</option>)}
                     </select>
                   </td>
                   <td style={S.td}>
-                    <button
-                      onClick={() => { saveAssignment(s.id, assignments[s.id]); showToast(`Saved: ${s.company}`); }}
-                      style={{ ...S.btnGhost, fontSize: 11, padding: "4px 10px" }}
-                    >Save</button>
+                    <button onClick={() => { saveAssignment(s.id, assignments[s.id]); showToast(`✅ Saved: ${s.company}`); }} style={{ ...S.btnGhost, fontSize: 11, padding: "4px 10px" }}>Save</button>
                   </td>
                 </tr>
               ))}
@@ -734,7 +625,7 @@ function SponsorAssign({ sponsors, members, reload, showToast }) {
   );
 }
 
-// ── CAPTAINS ADMIN ────────────────────────────────────────────────────────
+// ── CAPTAINS ADMIN ────────────────────────────────────────
 function CaptainsAdmin({ captains, reload, showToast }) {
   const [form, setForm] = useState({ name: "", position: "", bio: "", sort_order: 0 });
   const [photoFile, setPhotoFile] = useState(null);
@@ -748,161 +639,76 @@ function CaptainsAdmin({ captains, reload, showToast }) {
   const editFileRef = useRef(null);
 
   async function createCaptain() {
-    if (!form.name || !form.position) return showToast("Name and position required.");
+    if (!form.name || !form.position) return;
     setUploading(true);
     let photo_url = "";
-    if (photoFile) {
-      const url = await uploadImageToSupabase(photoFile);
-      if (!url) {
-        setUploading(false);
-        return showToast("Photo upload failed. Please try again.");
-      }
-      photo_url = url;
-    }
+    if (photoFile) { photo_url = await uploadImageToSupabase(photoFile) || ""; }
     await sbFetch("captains", { method: "POST", body: JSON.stringify({ ...form, photo_url }) });
-    setForm({ name: "", position: "", bio: "", sort_order: 0 });
-    setPhotoFile(null);
-    setUploading(false);
-    reload(); showToast("Captain added.");
+    setForm({ name: "", position: "", bio: "", sort_order: 0 }); setPhotoFile(null);
+    setUploading(false); reload(); showToast("✅ Person added.");
   }
 
   async function updateCaptain(id) {
     setUploading(true);
     let update = { ...editData };
-    if (editPhotoFile) {
-      const url = await uploadImageToSupabase(editPhotoFile);
-      if (!url) {
-        setUploading(false);
-        return showToast("Photo upload failed. Please try again.");
-      }
-      update.photo_url = url;
-    }
+    if (editPhotoFile) { const url = await uploadImageToSupabase(editPhotoFile); if (url) update.photo_url = url; }
     await sbFetch(`captains?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(update) });
-    setEditId(null); setEditPhotoFile(null);
-    setUploading(false);
-    reload(); showToast("Captain updated.");
+    setEditId(null); setEditPhotoFile(null); setUploading(false); reload(); showToast("✅ Updated.");
   }
 
   async function deleteCaptain(id) {
-    if (!confirm("Remove this person?")) return;
+    if (!confirm("Remove?")) return;
     await sbFetch(`captains?id=eq.${id}`, { method: "DELETE" });
-    reload(); showToast("Removed.");
+    reload(); showToast("🗑️ Removed.", "#ef4444");
   }
 
-  async function reorderCaptains(sourceId, targetId) {
+  async function handleDrop(e, targetId) {
+    e.preventDefault();
+    const sourceId = draggingId;
     if (!sourceId || sourceId === targetId) return;
     const ordered = [...captains].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-    const sourceIndex = ordered.findIndex(c => c.id === sourceId);
-    const targetIndex = ordered.findIndex(c => c.id === targetId);
-    if (sourceIndex < 0 || targetIndex < 0) return;
-
-    const [moved] = ordered.splice(sourceIndex, 1);
-    ordered.splice(targetIndex, 0, moved);
-
-    const updates = ordered.map((captain, index) => {
-      const newOrder = index;
-      if ((captain.sort_order ?? 0) === newOrder) return null;
-      return sbFetch(`captains?id=eq.${captain.id}`, { method: "PATCH", body: JSON.stringify({ sort_order: newOrder }) });
-    }).filter(Boolean);
-
-    if (updates.length) await Promise.all(updates);
-    setDraggingId(null);
-    setDragOverId(null);
-    reload();
-    showToast("Captain order updated.");
-  }
-
-  function handleDragStart(e, id) {
-    setDraggingId(id);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", id);
-  }
-
-  function handleDragOver(e, id) {
-    e.preventDefault();
-    if (dragOverId !== id) setDragOverId(id);
-    e.dataTransfer.dropEffect = "move";
-  }
-
-  function handleDrop(e, targetId) {
-    e.preventDefault();
-    const sourceId = draggingId || e.dataTransfer.getData("text/plain");
-    reorderCaptains(sourceId, targetId);
-  }
-
-  function handleDragLeave() {
-    setDragOverId(null);
-  }
-
-  function handleDragEnd() {
-    setDraggingId(null);
-    setDragOverId(null);
+    const si = ordered.findIndex(c => c.id === sourceId);
+    const ti = ordered.findIndex(c => c.id === targetId);
+    const [moved] = ordered.splice(si, 1);
+    ordered.splice(ti, 0, moved);
+    await Promise.all(ordered.map((c, i) => sbFetch(`captains?id=eq.${c.id}`, { method: "PATCH", body: JSON.stringify({ sort_order: i }) })));
+    setDraggingId(null); setDragOverId(null); reload(); showToast("✅ Order saved.");
   }
 
   return (
     <div>
-      <h1 style={S.pageTitle}>Captains & Leadership</h1>
-
+      <h1 style={S.pageTitle}>Leadership</h1>
       <div style={S.card}>
         <div style={S.cardTitle}>Add Person</div>
         <div style={S.formCol}>
           <div style={S.formRow}>
             <input placeholder="Full Name *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={S.input} />
-            <input placeholder="Position / Role *" value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} style={S.input} />
-            <input placeholder="Display Order (0, 1, 2…)" type="number" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })} style={{ ...S.input, maxWidth: 160 }} />
+            <input placeholder="Position *" value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} style={S.input} />
+            <input placeholder="Order" type="number" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })} style={{ ...S.input, maxWidth: 100 }} />
           </div>
-          <textarea placeholder="Short bio (optional)" value={form.bio} onChange={e => setForm({ ...form, bio: e.target.value })}
-            style={{ ...S.input, minHeight: 60, resize: "vertical" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={() => fileRef.current?.click()} style={S.btnGhost}>
-              {photoFile ? `📸 ${photoFile.name}` : "Upload Photo"}
-            </button>
+          <textarea placeholder="Bio (optional)" value={form.bio} onChange={e => setForm({ ...form, bio: e.target.value })} style={{ ...S.input, minHeight: 60, resize: "vertical" }} />
+          <div style={S.formRow}>
+            <button onClick={() => fileRef.current?.click()} style={S.btnGhost}>{photoFile ? `📸 ${photoFile.name}` : "Upload Photo"}</button>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setPhotoFile(e.target.files[0])} />
-            <button onClick={createCaptain} disabled={uploading} style={{ ...S.btnPrimary, opacity: uploading ? 0.6 : 1 }}>
-              {uploading ? "Uploading..." : "Add Person"}
-            </button>
+            <button onClick={createCaptain} disabled={uploading} style={{ ...S.btnPrimary, opacity: uploading ? 0.6 : 1 }}>{uploading ? "Uploading..." : "Add Person"}</button>
           </div>
         </div>
       </div>
 
       <div style={S.card}>
-        <div style={S.cardTitle}>Current Leadership ({captains.length})</div>
-        <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 12, fontFamily: "monospace" }}>
-          Drag and drop the captain rows to reorder leadership. Release to save the new order.
-        </div>
-        {captains.length === 0 && <div style={{ color: "#64748b", fontSize: 14 }}>No captains added yet.</div>}
-        {captains.map((c, idx) => {
-          const isDragging = draggingId === c.id;
-          const isDragOver = dragOverId === c.id && draggingId !== c.id;
-          return (
-            <div
-              key={c.id}
-              draggable
-              onDragStart={e => handleDragStart(e, c.id)}
-              onDragOver={e => handleDragOver(e, c.id)}
-              onDragLeave={handleDragLeave}
-              onDrop={e => handleDrop(e, c.id)}
-              onDragEnd={handleDragEnd}
-              style={{
-                ...S.memberRow,
-                cursor: "grab",
-                opacity: isDragging ? 0.45 : 1,
-                background: isDragOver ? "rgba(239,68,68,0.08)" : "transparent",
-                border: isDragOver ? "1px dashed rgba(239,68,68,0.4)" : "1px solid transparent",
-              }}
-            >
-              {editId === c.id ? (
-              <div style={S.formCol}>
+        <div style={S.cardTitle}>Current Leadership — Drag to reorder</div>
+        {captains.map(c => (
+          <div key={c.id} draggable onDragStart={() => setDraggingId(c.id)} onDragOver={e => { e.preventDefault(); setDragOverId(c.id); }} onDrop={e => handleDrop(e, c.id)} onDragEnd={() => { setDraggingId(null); setDragOverId(null); }}
+            style={{ ...S.memberRow, opacity: draggingId === c.id ? 0.4 : 1, background: dragOverId === c.id && draggingId !== c.id ? "rgba(239,68,68,0.06)" : "transparent", border: dragOverId === c.id && draggingId !== c.id ? "1px dashed rgba(239,68,68,0.4)" : "1px solid transparent", cursor: "grab" }}>
+            {editId === c.id ? (
+              <div style={{ ...S.formCol, flex: 1 }}>
                 <div style={S.formRow}>
-                  <input placeholder="Name" value={editData.name || ""} onChange={e => setEditData({ ...editData, name: e.target.value })} style={S.input} />
-                  <input placeholder="Position" value={editData.position || ""} onChange={e => setEditData({ ...editData, position: e.target.value })} style={S.input} />
-                  <input placeholder="Order" type="number" value={editData.sort_order ?? ""} onChange={e => setEditData({ ...editData, sort_order: parseInt(e.target.value) || 0 })} style={{ ...S.input, maxWidth: 100 }} />
+                  <input value={editData.name || ""} onChange={e => setEditData({ ...editData, name: e.target.value })} style={S.input} placeholder="Name" />
+                  <input value={editData.position || ""} onChange={e => setEditData({ ...editData, position: e.target.value })} style={S.input} placeholder="Position" />
                 </div>
-                <textarea placeholder="Bio" value={editData.bio || ""} onChange={e => setEditData({ ...editData, bio: e.target.value })} style={{ ...S.input, minHeight: 60, resize: "vertical" }} />
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <button onClick={() => editFileRef.current?.click()} style={S.btnGhost}>
-                    {editPhotoFile ? `📸 ${editPhotoFile.name}` : "Change Photo"}
-                  </button>
+                <textarea value={editData.bio || ""} onChange={e => setEditData({ ...editData, bio: e.target.value })} style={{ ...S.input, minHeight: 50, resize: "vertical" }} placeholder="Bio" />
+                <div style={S.formRow}>
+                  <button onClick={() => editFileRef.current?.click()} style={S.btnGhost}>{editPhotoFile ? `📸 ${editPhotoFile.name}` : "Change Photo"}</button>
                   <input ref={editFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setEditPhotoFile(e.target.files[0])} />
                   <button onClick={() => updateCaptain(c.id)} disabled={uploading} style={S.btnPrimary}>Save</button>
                   <button onClick={() => setEditId(null)} style={S.btnGhost}>Cancel</button>
@@ -910,19 +716,13 @@ function CaptainsAdmin({ captains, reload, showToast }) {
               </div>
             ) : (
               <>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, minWidth: 0 }}>
-                  <div style={S.dragHandle} title="Drag to reorder">⠿</div>
-                  {c.photo_url ? (
-                    <img src={normalizeCaptainPhotoUrl(c.photo_url)} alt={c.name} onError={e => { e.target.onerror = null; e.target.src = "/logo.jpg"; }} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.3)" }} />
-                  ) : (
-                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", fontWeight: 700 }}>
-                      {c.name[0]}
-                    </div>
-                  )}
-                  <div style={{ minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+                  <span style={{ color: "#475569", fontSize: 18, cursor: "grab" }}>⠿</span>
+                  <CaptainPhoto photoUrl={c.photo_url} name={c.name} size={48} />
+                  <div>
                     <div style={S.memberName}>{c.name}</div>
                     <div style={{ fontSize: 12, color: "#ef4444", fontFamily: "monospace" }}>{c.position}</div>
-                    {c.bio && <div style={{ fontSize: 12, color: "#64748b", maxWidth: 400 }}>{c.bio}</div>}
+                    {c.bio && <div style={{ fontSize: 11, color: "#64748b", maxWidth: 360 }}>{c.bio}</div>}
                   </div>
                 </div>
                 <div style={S.memberActions}>
@@ -932,17 +732,17 @@ function CaptainsAdmin({ captains, reload, showToast }) {
               </>
             )}
           </div>
-        )})}
+        ))}
       </div>
     </div>
   );
 }
 
-// ── SUGGESTIONS ───────────────────────────────────────────────────────────
+// ── SUGGESTIONS ───────────────────────────────────────────
 function Suggestions({ suggestions, reload, showToast }) {
-  async function deleteSuggestion(id) {
+  async function del(id) {
     await sbFetch(`suggestions?id=eq.${id}`, { method: "DELETE" });
-    reload(); showToast("Deleted.");
+    reload(); showToast("🗑️ Deleted.", "#ef4444");
   }
   return (
     <div>
@@ -950,10 +750,10 @@ function Suggestions({ suggestions, reload, showToast }) {
       {suggestions.length === 0 && <div style={{ color: "#64748b" }}>No suggestions yet.</div>}
       {suggestions.map(s => (
         <div key={s.id} style={{ ...S.card, marginBottom: 12 }}>
-          <div style={{ color: "#f1f5f9", marginBottom: 8 }}>{s.message}</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ color: "#f1f5f9", marginBottom: 8, lineHeight: 1.6 }}>{s.message}</div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
             <div style={{ color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>{new Date(s.submitted_at).toLocaleString()}</div>
-            <button onClick={() => deleteSuggestion(s.id)} style={S.btnDanger}>Delete</button>
+            <button onClick={() => del(s.id)} style={S.btnDanger}>Delete</button>
           </div>
         </div>
       ))}
@@ -961,84 +761,57 @@ function Suggestions({ suggestions, reload, showToast }) {
   );
 }
 
-// ── SITE CONFIG ───────────────────────────────────────────────────────────
+// ── SITE CONFIG ───────────────────────────────────────────
 function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
   const [vals, setVals] = useState({});
   const [logoFile, setLogoFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
-
   useEffect(() => { setVals({ ...config }); }, [config]);
 
   async function saveKey(key) {
     const existing = await sbFetch(`site_config?key=eq.${key}&select=key`);
-    if (existing && existing.length > 0) {
-      await sbFetch(`site_config?key=eq.${key}`, { method: "PATCH", body: JSON.stringify({ value: vals[key] }) });
-    } else {
-      await sbFetch("site_config", { method: "POST", body: JSON.stringify({ key, value: vals[key] }) });
-    }
-    reload(); showToast(`Saved: ${key}`);
+    if (existing?.length) await sbFetch(`site_config?key=eq.${key}`, { method: "PATCH", body: JSON.stringify({ value: vals[key] }) });
+    else await sbFetch("site_config", { method: "POST", body: JSON.stringify({ key, value: vals[key] }) });
+    reload(); showToast(`✅ Saved: ${key}`);
   }
 
   async function uploadLogo() {
     if (!logoFile) return;
     setUploading(true);
     const url = await uploadImageToSupabase(logoFile);
-    if (!url) { showToast("Upload failed."); setUploading(false); return; }
+    if (!url) { showToast("Upload failed.", "#ef4444"); setUploading(false); return; }
     const existing = await sbFetch("site_config?key=eq.logo_url&select=key");
-    if (existing && existing.length > 0) {
-      await sbFetch("site_config?key=eq.logo_url", { method: "PATCH", body: JSON.stringify({ value: url }) });
-    } else {
-      await sbFetch("site_config", { method: "POST", body: JSON.stringify({ key: "logo_url", value: url }) });
-    }
-    setLogoUrl(url);
-    setLogoFile(null);
-    setUploading(false);
-    reload(); showToast("Logo updated! Refresh the site to see it.");
+    if (existing?.length) await sbFetch("site_config?key=eq.logo_url", { method: "PATCH", body: JSON.stringify({ value: url }) });
+    else await sbFetch("site_config", { method: "POST", body: JSON.stringify({ key: "logo_url", value: url }) });
+    setLogoUrl(url); setLogoFile(null); setUploading(false); reload(); showToast("✅ Logo updated!");
   }
 
   const fields = [
-    { key: "site_title", label: "Site Title" },
-    { key: "team_email", label: "Team Email" },
-    { key: "instagram", label: "Instagram URL" },
-    { key: "youtube", label: "YouTube URL" },
-    { key: "donate_url", label: "Donate URL" },
-    { key: "redirect_url", label: "Redirect URL" },
-    { key: "season_year", label: "Season Year" },
+    { key: "site_title", label: "Site Title" }, { key: "team_email", label: "Team Email" },
+    { key: "instagram", label: "Instagram URL" }, { key: "youtube", label: "YouTube URL" },
+    { key: "donate_url", label: "Donate URL" }, { key: "season_year", label: "Season Year" },
   ];
 
   return (
     <div>
       <h1 style={S.pageTitle}>Site Configuration</h1>
-
-      {/* Logo upload */}
       <div style={S.card}>
         <div style={S.cardTitle}>Team Logo</div>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <img src={logoUrl} alt="Current logo" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)" }} />
-          <div>
-            <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 8 }}>Upload a new logo to replace the current one site-wide.</div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <button onClick={() => fileRef.current?.click()} style={S.btnGhost}>
-                {logoFile ? `📸 ${logoFile.name}` : "Choose Image"}
-              </button>
-              <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setLogoFile(e.target.files[0])} />
-              {logoFile && (
-                <button onClick={uploadLogo} disabled={uploading} style={{ ...S.btnPrimary, opacity: uploading ? 0.6 : 1 }}>
-                  {uploading ? "Uploading..." : "Upload Logo"}
-                </button>
-              )}
-            </div>
+          <img src={logoUrl} alt="logo" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)" }} />
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => fileRef.current?.click()} style={S.btnGhost}>{logoFile ? `📸 ${logoFile.name}` : "Choose Image"}</button>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setLogoFile(e.target.files[0])} />
+            {logoFile && <button onClick={uploadLogo} disabled={uploading} style={S.btnPrimary}>{uploading ? "Uploading..." : "Upload"}</button>}
           </div>
         </div>
       </div>
-
-      {/* Config fields */}
       <div style={S.card}>
         <div style={S.cardTitle}>Site Details</div>
         {fields.map(f => (
-          <div key={f.key} style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center" }}>
-            <label style={{ color: "#94a3b8", fontSize: 13, minWidth: 120, fontFamily: "monospace" }}>{f.label}</label>
+          <div key={f.key} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "center" }}>
+            <label style={{ color: "#94a3b8", fontSize: 12, minWidth: 120, fontFamily: "monospace" }}>{f.label}</label>
             <input value={vals[f.key] || ""} onChange={e => setVals({ ...vals, [f.key]: e.target.value })} style={{ ...S.input, flex: 1, marginBottom: 0 }} />
             <button onClick={() => saveKey(f.key)} style={S.btnGhost}>Save</button>
           </div>
@@ -1048,71 +821,147 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
   );
 }
 
-// ── STYLES ────────────────────────────────────────────────────────────────
+// ── ADMIN SETTINGS ────────────────────────────────────────
+function AdminSettings({ showToast }) {
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function changePassword() {
+    setPwError("");
+    if (!newPw) { setPwError("Password cannot be empty."); return; }
+    if (newPw !== confirmPw) { setPwError("Passwords do not match."); return; }
+    if (newPw.length < 6) { setPwError("Password must be at least 6 characters."); return; }
+    setSaving(true);
+    const existing = await sbFetch("site_config?key=eq.admin_password&select=key");
+    if (existing?.length) {
+      await sbFetch("site_config?key=eq.admin_password", { method: "PATCH", body: JSON.stringify({ value: newPw }) });
+    } else {
+      await sbFetch("site_config", { method: "POST", body: JSON.stringify({ key: "admin_password", value: newPw }) });
+    }
+    setSaving(false); setNewPw(""); setConfirmPw("");
+    showToast("✅ Admin password changed! Log out to test.");
+  }
+
+  return (
+    <div>
+      <h1 style={S.pageTitle}>Admin Settings</h1>
+      <div style={S.card}>
+        <div style={S.cardTitle}>Change Admin Password</div>
+        <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 16, fontFamily: "monospace" }}>
+          This password is used to log into this admin panel. Current default: <code style={{ color: "#ef4444" }}>Admin@4550</code>
+        </div>
+        <div style={S.formCol}>
+          <input type="password" placeholder="New admin password" value={newPw} onChange={e => { setNewPw(e.target.value); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined, maxWidth: 360 }} />
+          <input type="password" placeholder="Confirm new password" value={confirmPw} onChange={e => { setConfirmPw(e.target.value); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined, maxWidth: 360 }} />
+          {pwError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "monospace" }}>{pwError}</div>}
+          <button onClick={changePassword} disabled={saving} style={{ ...S.btnPrimary, maxWidth: 200, opacity: saving ? 0.6 : 1 }}>
+            {saving ? "Saving..." : "Change Password"}
+          </button>
+        </div>
+      </div>
+      <div style={S.card}>
+        <div style={S.cardTitle}>Database Setup</div>
+        <div style={{ color: "#94a3b8", fontSize: 13, fontFamily: "monospace", lineHeight: 1.8 }}>
+          Run this SQL in your Supabase SQL editor if you haven't already:<br />
+          <code style={{ display: "block", background: "rgba(0,0,0,0.4)", padding: 12, borderRadius: 6, marginTop: 10, fontSize: 11, whiteSpace: "pre-wrap", color: "#93c5fd" }}>{`ALTER TABLE members ADD COLUMN IF NOT EXISTS subteam TEXT DEFAULT 'General';
+
+CREATE TABLE IF NOT EXISTS scouting_matches (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  team_number INT, match_number INT,
+  alliance TEXT DEFAULT 'Red', scouter_name TEXT,
+  auto_leave BOOLEAN DEFAULT FALSE,
+  auto_coral_l1 INT DEFAULT 0, auto_coral_l2 INT DEFAULT 0,
+  auto_coral_l3 INT DEFAULT 0, auto_coral_l4 INT DEFAULT 0,
+  auto_algae_processor INT DEFAULT 0, auto_algae_net INT DEFAULT 0,
+  teleop_coral_l1 INT DEFAULT 0, teleop_coral_l2 INT DEFAULT 0,
+  teleop_coral_l3 INT DEFAULT 0, teleop_coral_l4 INT DEFAULT 0,
+  teleop_algae_processor INT DEFAULT 0, teleop_algae_net INT DEFAULT 0,
+  endgame TEXT DEFAULT 'None', defense BOOLEAN DEFAULT FALSE,
+  defended BOOLEAN DEFAULT FALSE, died BOOLEAN DEFAULT FALSE,
+  notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS scouting_pits (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  team_number INT, team_name TEXT, drivetrain TEXT,
+  weight_lbs NUMERIC, auto_capabilities TEXT,
+  teleop_capabilities TEXT, climb_type TEXT, notes TEXT,
+  scouter_name TEXT, can_score_l1 BOOLEAN DEFAULT FALSE,
+  can_score_l2 BOOLEAN DEFAULT FALSE, can_score_l3 BOOLEAN DEFAULT FALSE,
+  can_score_l4 BOOLEAN DEFAULT FALSE, can_score_processor BOOLEAN DEFAULT FALSE,
+  can_score_net BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS scouting_picklist (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  team_number INT, rank INT
+);`}</code>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── STYLES ────────────────────────────────────────────────
 const S = {
   layout: { display: "flex", minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" },
-  sidebar: { width: 220, background: "#0d1117", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0 },
-  sidebarBrand: { display: "flex", alignItems: "center", gap: 10, padding: "20px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" },
-  sidebarLogo: { width: 36, height: 36, borderRadius: "50%", objectFit: "cover" },
+  sidebar: { width: 224, background: "#0a0e18", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh", overflowY: "auto" },
+  sidebarBrand: { display: "flex", alignItems: "center", gap: 10, padding: "18px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" },
+  sidebarLogo: { width: 34, height: 34, borderRadius: "50%", objectFit: "cover" },
   sidebarTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#ef4444", letterSpacing: 2 },
   sidebarSub: { fontSize: 10, color: "#64748b", fontFamily: "monospace" },
-  sidebarNav: { flex: 1, padding: "12px 0" },
+  sidebarNav: { flex: 1, padding: "10px 0" },
   navItem: { display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px", border: "none", cursor: "pointer", fontFamily: "'Exo 2', sans-serif", fontSize: 13, textAlign: "left", transition: "all 0.15s" },
   badge: { background: "#ef4444", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 700 },
-  logoutBtn: { margin: "12px 16px", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "8px", borderRadius: 4, cursor: "pointer", fontSize: 12, fontFamily: "monospace" },
-  main: { flex: 1, padding: "32px 40px", overflowY: "auto", maxHeight: "100vh" },
-  pageTitle: { fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 22, color: "#f1f5f9", marginBottom: 28 },
-  card: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "24px", marginBottom: 20 },
-  cardTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#94a3b8", letterSpacing: 1, marginBottom: 18 },
-  statRow: { display: "flex", gap: 16, flexWrap: "wrap" },
-  statCard: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: "24px 22px", minWidth: 180, minHeight: 140, textAlign: "center", transition: "all 0.22s ease", display: "flex", flexDirection: "column", justifyContent: "center" },
-  statNum: { fontFamily: "'Orbitron', sans-serif", fontSize: 26, fontWeight: 700 },
-  statLabel: { fontSize: 12, color: "#64748b", fontFamily: "monospace", marginTop: 4 },
-  alertBanner: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: 6, padding: "10px 16px", marginTop: 16, fontSize: 13 },
-  quickLinks: { display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" },
-  quickBtn: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", padding: "12px 20px", borderRadius: 8, textDecoration: "none", fontSize: 14, minWidth: 160, textAlign: "center" },
+  logoutBtn: { margin: "12px 16px", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: 8, borderRadius: 4, cursor: "pointer", fontSize: 12, fontFamily: "monospace" },
+  main: { flex: 1, padding: "32px 36px", overflowY: "auto" },
+  pageTitle: { fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 20, color: "#f1f5f9", marginBottom: 24 },
+  card: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "22px", marginBottom: 18 },
+  cardTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 12, fontWeight: 700, color: "#94a3b8", letterSpacing: 1, marginBottom: 16 },
+  statRow: { display: "flex", gap: 14, flexWrap: "wrap" },
+  statCard: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "20px", minWidth: 140, textAlign: "center" },
+  statNum: { fontFamily: "'Orbitron', sans-serif", fontSize: 24, fontWeight: 700 },
+  statLabel: { fontSize: 11, color: "#64748b", fontFamily: "monospace", marginTop: 4 },
+  alertBanner: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: 6, padding: "10px 16px", marginTop: 14, fontSize: 13 },
+  quickLinks: { display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" },
+  quickBtn: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", padding: "10px 18px", borderRadius: 8, textDecoration: "none", fontSize: 13 },
   formRow: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" },
   formCol: { display: "flex", flexDirection: "column", gap: 10 },
-  input: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none", marginBottom: 0 },
-  select: { background: "#0d1117", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", cursor: "pointer" },
-  btnPrimary: { background: "#ef4444", border: "none", borderRadius: 6, padding: "9px 18px", color: "#fff", cursor: "pointer", fontSize: 13, fontFamily: "'Exo 2', sans-serif", fontWeight: 600, whiteSpace: "nowrap" },
+  input: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none", flex: 1, minWidth: 120 },
+  select: { background: "#0a0e18", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", cursor: "pointer", flex: 1, minWidth: 120 },
+  btnPrimary: { background: "#ef4444", border: "none", borderRadius: 6, padding: "9px 18px", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" },
   btnGhost: { background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "9px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" },
   btnDanger: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "9px 14px", color: "#ef4444", cursor: "pointer", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" },
-  memberRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", transition: "background 0.2s ease, border 0.2s ease, opacity 0.2s ease", minHeight: 80 },
-  dragHandle: { width: 36, height: 36, borderRadius: 10, border: "1px solid rgba(148,163,184,0.2)", background: "rgba(255,255,255,0.03)", color: "#94a3b8", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "'Orbitron', sans-serif", fontSize: 16, cursor: "grab", flexShrink: 0, transition: "background 0.2s" },
-  dragHandle: { width: 36, height: 36, borderRadius: 10, border: "1px solid rgba(148,163,184,0.2)", background: "rgba(255,255,255,0.03)", color: "#94a3b8", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "'Orbitron', sans-serif", fontSize: 16, cursor: "grab", flexShrink: 0, transition: "background 0.2s" },
+  memberRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", minHeight: 64, gap: 10 },
   memberInfo: { display: "flex", alignItems: "center", gap: 10 },
-  memberName: { color: "#f1f5f9", fontWeight: 600 },
+  memberName: { color: "#f1f5f9", fontWeight: 600, fontSize: 14 },
   memberUser: { color: "#64748b", fontSize: 12, fontFamily: "monospace" },
-  memberActions: { display: "flex", gap: 8 },
-  roleBadge: { borderRadius: 10, padding: "2px 10px", fontSize: 11, fontFamily: "monospace" },
-  taskColumns: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 },
-  taskCol: { background: "rgba(255,255,255,0.02)", borderRadius: 8, padding: 16 },
-  taskColHeader: { fontFamily: "'Orbitron', sans-serif", fontSize: 12, fontWeight: 700, color: "#94a3b8", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 },
+  memberActions: { display: "flex", gap: 8, flexShrink: 0 },
+  roleBadge: { borderRadius: 10, padding: "2px 10px", fontSize: 11, fontFamily: "monospace", flexShrink: 0 },
+  taskColumns: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 },
+  taskCol: { background: "rgba(255,255,255,0.02)", borderRadius: 8, padding: 14 },
+  taskColHeader: { fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 },
   taskCount: { background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "1px 8px", fontSize: 11 },
-  taskCard: { borderRadius: 6, padding: "12px", marginBottom: 10, border: "1px solid rgba(255,255,255,0.06)" },
+  taskCard: { borderRadius: 6, padding: 12, marginBottom: 8, border: "1px solid rgba(255,255,255,0.06)" },
   taskTitle: { color: "#f1f5f9", fontSize: 13, fontWeight: 600, marginBottom: 4 },
-  taskDesc: { color: "#64748b", fontSize: 11, marginBottom: 8 },
-  taskMeta: { display: "flex", gap: 12, fontSize: 11, color: "#64748b", fontFamily: "monospace", marginBottom: 8 },
+  taskDesc: { color: "#64748b", fontSize: 11, marginBottom: 6 },
+  taskMeta: { display: "flex", gap: 10, fontSize: 11, color: "#64748b", fontFamily: "monospace", marginBottom: 6, flexWrap: "wrap" },
   taskActions: { display: "flex", gap: 6 },
-  sponsorChip: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, padding: "2px 8px", fontSize: 12, color: "#94a3b8", fontFamily: "monospace" },
   table: { width: "100%", borderCollapse: "collapse" },
   th: { textAlign: "left", padding: "8px 12px", fontFamily: "monospace", fontSize: 11, color: "#64748b", borderBottom: "1px solid rgba(255,255,255,0.08)" },
   td: { padding: "8px 12px", fontSize: 13, color: "#f1f5f9" },
-  toast: {
-    position: "fixed", bottom: 24, right: 24, background: "#22c55e", color: "#fff",
-    padding: "12px 20px", borderRadius: 8, fontFamily: "monospace", fontSize: 13,
-    zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
-    animation: "fadeUp 0.3s ease",
-  },
-  // login
-  loginBg: { minHeight: "100vh", background: "#080a0f", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Exo 2', sans-serif" },
+  loginBg: { minHeight: "100vh", background: "#080a0f", display: "flex", alignItems: "center", justifyContent: "center" },
   loginCard: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: "48px 40px", textAlign: "center", width: "100%", maxWidth: 360 },
-  loginTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 22, fontWeight: 700, color: "#ef4444", letterSpacing: 4, marginBottom: 6 },
-  loginSub: { fontSize: 12, color: "#64748b", fontFamily: "monospace", marginBottom: 32 },
+  loginTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 20, fontWeight: 700, color: "#ef4444", letterSpacing: 4, marginBottom: 6 },
+  loginSub: { fontSize: 12, color: "#64748b", fontFamily: "monospace", marginBottom: 28 },
   loginForm: { display: "flex", flexDirection: "column", gap: 12 },
   loginInput: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "12px 16px", color: "#fff", fontSize: 14, fontFamily: "monospace", outline: "none", textAlign: "center" },
   loginErr: { color: "#ef4444", fontSize: 12, fontFamily: "monospace" },
-  loginBtn: { background: "#ef4444", border: "none", borderRadius: 6, padding: "12px", color: "#fff", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, cursor: "pointer" },
+  loginBtn: { background: "#ef4444", border: "none", borderRadius: 6, padding: 12, color: "#fff", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, cursor: "pointer" },
   loginBack: { display: "block", marginTop: 24, color: "#64748b", fontSize: 12, fontFamily: "monospace", textDecoration: "none" },
 };

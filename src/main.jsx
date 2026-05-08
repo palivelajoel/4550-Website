@@ -10,6 +10,7 @@ import HubMedia from './HubMedia.jsx'
 import HubAnnouncements from './HubAnnouncements.jsx'
 import HubResources from './HubResources.jsx'
 import HubProjector from './HubProjector.jsx'
+import HubScouting from './HubScouting.jsx'
 
 const path = window.location.pathname
 
@@ -23,6 +24,7 @@ const Page =
   : path === '/member-hub/announcements'       ? HubAnnouncements
   : path === '/member-hub/resources'           ? HubResources
   : path === '/member-hub/projector'           ? HubProjector
+  : path === '/member-hub/scouting'            ? HubScouting
   : Landing
 
 createRoot(document.getElementById('root')).render(
