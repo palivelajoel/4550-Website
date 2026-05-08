@@ -25,6 +25,7 @@ const Page =
   : path === '/member-hub/resources'           ? HubResources
   : path === '/member-hub/projector'           ? HubProjector
   : path === '/member-hub/scouting'            ? HubScouting
+  : path === '/member-hub/venuemap'            ? HubScouting
   : Landing
 
 createRoot(document.getElementById('root')).render(

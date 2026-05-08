@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import Starfield from './Starfield.jsx'
 
 const supabase = createClient(
   'https://ehkwxzumgizryvhkeusr.supabase.co',
@@ -501,7 +502,8 @@ export default function App() {
   )
 
   return (
-    <div style={{ ...styles.app, background: bg, color: textColor }}>
+    <div style={{ ...styles.app, background: bg, color: textColor, position: 'relative' }}>
+      <Starfield density={12000} opacity={darkMode ? 0.28 : 0.12} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -513,7 +515,7 @@ export default function App() {
         select option { background: #0d1b3e; }
       `}</style>
 
-      <div style={styles.header}>
+      <div style={{ ...styles.header, position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <img src='/logo.jpg' alt='Team 4550' style={{ height: '68px', width: '68px', objectFit: 'contain', borderRadius: '8px' }} />
           <h1 style={styles.title}>4550 - Something's Bruin | SPONSOR TRACKER</h1>
@@ -524,7 +526,7 @@ export default function App() {
         </div>
       </div>
 
-      <div style={styles.main}>
+      <div style={{ ...styles.main, position: 'relative', zIndex: 1 }}>
         {followUpDue.length > 0 && (
           <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', fontSize: '12px', color: '#fbbf24' }}>
             ⏰ <strong>{followUpDue.length} sponsor{followUpDue.length > 1 ? 's' : ''}</strong> due for follow-up: {followUpDue.map(s => s.company).join(', ')}

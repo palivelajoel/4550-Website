@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Starfield from "./Starfield.jsx";
 
 const SUPABASE_URL = "https://ehkwxzumgizryvhkeusr.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc";
@@ -30,6 +31,10 @@ function useScrollY(disabled) {
     return () => window.removeEventListener("scroll", fn);
   }, [disabled]);
   return y;
+}
+
+async function fetchCompetitions() {
+  return await sbFetch("competitions?attending=eq.true&order=start_date.asc");
 }
 
 function ParticleCanvas({ isMobile }) {
@@ -92,6 +97,7 @@ export default function Landing() {
   const scrollY = useScrollY(isMobile);
   const [config, setConfig] = useState({});
   const [captains, setCaptains] = useState([]);
+  const [competitions, setCompetitions] = useState([]);
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -105,6 +111,7 @@ export default function Landing() {
       if (obj.logo_url) setLogoUrl(obj.logo_url);
     });
     sbFetch("captains?select=*&order=sort_order.asc").then(r => { if (r) setCaptains(r); });
+    fetchCompetitions().then(r => { if (r) setCompetitions(r); });
   }, []);
 
   useEffect(() => { if (menuOpen) setMenuOpen(false); }, [scrollY]);
@@ -154,7 +161,7 @@ export default function Landing() {
   const yt = config.youtube || "https://www.youtube.com/channel/UC4_P1A5xYb7A7rCdEXdKzBQ";
   const donate = config.donate_url || "https://www.vancoevents.com/us/events/landing/46671";
 
-  const navItems = ["About", "Team", "Sub-Teams", "Outreach", "Sponsors", "Contact"];
+  const navItems = ["About", "Team", "Sub-Teams", "Outreach", "Competitions", "Sponsors", "Contact"];
 
   const SUB_TEAMS = [
     {
@@ -178,7 +185,8 @@ export default function Landing() {
   ];
 
   return (
-    <div style={{ background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden" }}>
+    <div style={{ background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", position: "relative" }}>
+      <Starfield density={9000} opacity={0.38} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&family=Bebas+Neue&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -188,7 +196,8 @@ export default function Landing() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
         @keyframes menuSlide{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
         a{-webkit-tap-highlight-color:transparent;}
-        .sec{padding:80px 24px;max-width:1100px;margin:0 auto;}
+        section,footer,nav{position:relative;z-index:1;}
+        .sec{padding:80px 24px;max-width:1100px;margin:0 auto;position:relative;z-index:1;}
         .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;}
         .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
         .subteams-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
@@ -251,7 +260,7 @@ export default function Landing() {
       </nav>
 
       {/* HERO */}
-      <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(180deg,#080a0f 0%,#0d1117 100%)", paddingTop: 70, position: "relative", overflow: "hidden" }}>
+      <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(180deg,rgba(8,10,15,0.55) 0%,rgba(13,17,23,0.66) 100%)", paddingTop: 70, position: "relative", overflow: "hidden" }}>
         <ParticleCanvas isMobile={isMobile} />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(239,68,68,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.04) 1px,transparent 1px)", backgroundSize: isMobile ? "40px 40px" : "60px 60px", pointerEvents: "none" }} />
         <div style={{ textAlign: "center", zIndex: 1, padding: isMobile ? "0 20px" : "0 24px", transform: isMobile ? "none" : `translateY(${scrollY * 0.22}px)` }}>
@@ -373,6 +382,28 @@ export default function Landing() {
           </div>
         </FadeSection>
       </div></section>
+
+      {/* COMPETITIONS */}
+      {competitions.length > 0 && (
+        <section id="competitions" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">
+          <FadeSection>
+            <Eyebrow>// WHERE WE'LL BE</Eyebrow>
+            <SectionTitle>Upcoming Competitions</SectionTitle>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 14 }}>
+              {competitions.slice(0, 6).map(c => (
+                <div key={c.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: isMobile ? "18px 16px" : "22px 20px" }}>
+                  <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 13, color: "#f1f5f9", marginBottom: 8 }}>{c.name}</div>
+                  <div style={{ color: "#64748b", fontFamily: "'Share Tech Mono',monospace", fontSize: 12, lineHeight: 1.6 }}>{c.start_date}{c.end_date ? ` to ${c.end_date}` : ""}<br />{c.location}</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                    {c.venue_map_url && <a href={c.venue_map_url} target="_blank" rel="noreferrer" style={{ color: "#93c5fd", fontSize: 12, fontFamily: "'Share Tech Mono',monospace", textDecoration: "none" }}>Venue map</a>}
+                    {c.pit_map_url && <a href={c.pit_map_url} target="_blank" rel="noreferrer" style={{ color: "#fca5a5", fontSize: 12, fontFamily: "'Share Tech Mono',monospace", textDecoration: "none" }}>Pit map</a>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </FadeSection>
+        </div></section>
+      )}
 
       {/* SPONSORS */}
       <section id="sponsors" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">

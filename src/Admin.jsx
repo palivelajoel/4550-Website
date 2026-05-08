@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import Starfield from "./Starfield.jsx";
 
 const SUPABASE_URL = "https://ehkwxzumgizryvhkeusr.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc";
@@ -90,6 +91,7 @@ const SUBTEAM_COLORS = { Build: "#f59e0b", Programming: "#3b82f6", "Marketing & 
 const NAV = [
   { id: "overview", label: "📊 Overview" },
   { id: "accounts", label: "👥 Accounts" },
+  { id: "competitions", label: "🏆 Competitions" },
   { id: "hub-tasks", label: "📋 Hub Tasks" },
   { id: "hub-calendar", label: "📅 Hub Calendar" },
   { id: "sponsors-assign", label: "🤝 Sponsor Assignment" },
@@ -110,6 +112,7 @@ export default function Admin() {
   const [suggestions, setSuggestions] = useState([]);
   const [sponsors, setSponsors] = useState([]);
   const [captains, setCaptains] = useState([]);
+  const [competitions, setCompetitions] = useState([]);
   const [config, setConfig] = useState({});
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [toast, setToast] = useState("");
@@ -122,13 +125,14 @@ export default function Admin() {
   function showToast(msg, color = "#22c55e") { setToast({ msg, color }); setTimeout(() => setToast(""), 3000); }
 
   async function loadAll() {
-    const [m, t, cals, sg, sp, cap, cfg] = await Promise.all([
+    const [m, t, cals, sg, sp, cap, comp, cfg] = await Promise.all([
       sbFetch("members?select=*&order=created_at.asc"),
       sbFetch("hub_tasks?select=*&order=created_at.desc"),
       sbFetch("hub_calendar?select=*&order=date.asc"),
       sbFetch("suggestions?select=*&order=submitted_at.desc"),
       sbFetch("sponsors?select=*&order=company.asc"),
       sbFetch("captains?select=*&order=sort_order.asc"),
+      sbFetch("competitions?select=*&order=start_date.asc"),
       sbFetch("site_config?select=key,value"),
     ]);
     if (m) setMembers(m);
@@ -137,6 +141,7 @@ export default function Admin() {
     if (sg) setSuggestions(sg);
     if (sp) setSponsors(sp);
     if (cap) setCaptains(cap);
+    if (comp) setCompetitions(comp);
     if (cfg) {
       const obj = {};
       cfg.forEach(r => { obj[r.key] = r.value; });
@@ -185,19 +190,28 @@ export default function Admin() {
   const overdue = tasks.filter(t => t.due_date && t.status !== "Done" && new Date(t.due_date) < new Date()).length;
 
   return (
-    <div style={S.layout}>
+    <div className="admin-layout" style={S.layout}>
+      <Starfield density={11500} opacity={0.25} />
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:#080a0f;color:#f1f5f9;font-family:'Exo 2',sans-serif;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
         @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
         input,select,textarea{outline:none;}
         ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:#ef4444;border-radius:3px;}
+        @media(max-width:760px){
+          .admin-layout{display:block!important;}
+          .admin-sidebar{position:relative!important;width:100%!important;height:auto!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,0.08)!important;}
+          .admin-nav{display:flex!important;overflow-x:auto!important;padding:8px!important;gap:6px!important;}
+          .admin-nav button{min-width:max-content!important;border-left:0!important;border-bottom:2px solid transparent!important;border-radius:8px!important;}
+          .admin-main{padding:18px 12px!important;}
+          .admin-card{padding:16px!important;}
+        }
       `}</style>
 
       {toast && <div style={{ position: "fixed", bottom: 24, right: 24, background: toast.color || "#22c55e", color: "#fff", padding: "12px 20px", borderRadius: 8, fontFamily: "monospace", fontSize: 13, zIndex: 9999, animation: "fadeUp 0.3s ease", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>{toast.msg}</div>}
 
       {/* Sidebar */}
-      <aside style={S.sidebar}>
+      <aside className="admin-sidebar" style={S.sidebar}>
         <div style={S.sidebarBrand}>
           <img src={logoUrl} alt="logo" style={S.sidebarLogo} />
           <div>
@@ -205,7 +219,7 @@ export default function Admin() {
             <div style={S.sidebarSub}>Team 4550</div>
           </div>
         </div>
-        <nav style={S.sidebarNav}>
+        <nav className="admin-nav" style={S.sidebarNav}>
           {NAV.map(n => (
             <button key={n.id} onClick={() => setPage(n.id)} style={{ ...S.navItem, background: page === n.id ? "rgba(239,68,68,0.15)" : "transparent", color: page === n.id ? "#ef4444" : "#94a3b8", borderLeft: page === n.id ? "3px solid #ef4444" : "3px solid transparent" }}>
               {n.label}
@@ -216,9 +230,10 @@ export default function Admin() {
         <button onClick={handleLogout} style={S.logoutBtn}>Log Out</button>
       </aside>
 
-      <main style={S.main}>
-        {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} events={hubCalendar} overdue={overdue} />}
+      <main className="admin-main" style={S.main}>
+        {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} events={hubCalendar} overdue={overdue} competitions={competitions} />}
         {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} />}
+        {page === "competitions" && <CompetitionsAdmin competitions={competitions} config={config} reload={loadAll} showToast={showToast} />}
         {page === "hub-tasks" && <Tasks tasks={tasks} members={members} reload={loadAll} showToast={showToast} />}
         {page === "hub-calendar" && <HubCalendarAdmin events={hubCalendar} reload={loadAll} showToast={showToast} />}
         {page === "sponsors-assign" && <SponsorAssign sponsors={sponsors} members={members} reload={loadAll} showToast={showToast} />}
@@ -232,12 +247,17 @@ export default function Admin() {
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────
-function Overview({ members, tasks, suggestions, sponsors, events, overdue }) {
+function Overview({ members, tasks, suggestions, sponsors, events, overdue, competitions }) {
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
   const openTasks = tasks.filter(t => t.status !== "Done");
   const weekAhead = new Date(today); weekAhead.setDate(weekAhead.getDate() + 7);
   const upcomingEvents = events.filter(e => e?.date && new Date(e.date) >= today && new Date(e.date) <= weekAhead).length;
+  const nextEvents = events.filter(e => e?.date && e.date >= todayStr).slice(0, 5);
+  const dueTasks = openTasks.filter(t => t.due_date).sort((a, b) => String(a.due_date).localeCompare(String(b.due_date))).slice(0, 5);
+  const mapNeeds = competitions.filter(c => c.attending && (!c.pit_map_url || !c.venue_map_url)).slice(0, 5);
+  const nextComp = competitions.filter(c => c.attending && c.start_date >= todayStr).sort((a, b) => String(a.start_date).localeCompare(String(b.start_date)))[0];
+  const attendingComps = competitions.filter(c => c.attending).length;
   const stats = [
     { label: "Members", val: members.length, color: "#3b82f6" },
     { label: "Open Tasks", val: openTasks.length, color: "#f59e0b" },
@@ -245,6 +265,7 @@ function Overview({ members, tasks, suggestions, sponsors, events, overdue }) {
     { label: "Events (7d)", val: upcomingEvents, color: "#22c55e" },
     { label: "Suggestions", val: suggestions.length, color: "#a855f7" },
     { label: "Sponsors", val: sponsors.length, color: "#64748b" },
+    { label: "Attending Comps", val: attendingComps, color: "#eab308" },
   ];
   return (
     <div>
@@ -790,6 +811,7 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
   const fields = [
     { key: "site_title", label: "Site Title" }, { key: "team_email", label: "Team Email" },
     { key: "instagram", label: "Instagram URL" }, { key: "youtube", label: "YouTube URL" },
+    { key: "tba_api_key", label: "TBA API Key" },
     { key: "donate_url", label: "Donate URL" }, { key: "season_year", label: "Season Year" },
   ];
 
@@ -900,8 +922,171 @@ CREATE TABLE IF NOT EXISTS scouting_picklist (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   team_number INT, rank INT
-);`}</code>
+);
+
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS stream_url TEXT DEFAULT '';
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS map_status TEXT DEFAULT 'Pit map not posted yet.';
+ALTER TABLE competitions ADD COLUMN IF NOT EXISTS last_map_check TIMESTAMPTZ;
+ALTER TABLE scouting_matches ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'human';`}</code>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── COMPETITIONS ADMIN ────────────────────────────────────
+function CompetitionsAdmin({ competitions, config, reload, showToast }) {
+  const [search, setSearch] = useState("");
+  const [eventSearch, setEventSearch] = useState("");
+  const [frcEvents, setFrcEvents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [savingKey, setSavingKey] = useState(false);
+  const [tbaKey, setTbaKey] = useState(config.tba_api_key || "");
+
+  async function saveTbaKey() {
+    if (!tbaKey.trim()) return;
+    setSavingKey(true);
+    const existing = await sbFetch("site_config?key=eq.tba_api_key&select=key");
+    if (existing?.length) await sbFetch("site_config?key=eq.tba_api_key", { method: "PATCH", body: JSON.stringify({ value: tbaKey.trim() }) });
+    else await sbFetch("site_config", { method: "POST", body: JSON.stringify({ key: "tba_api_key", value: tbaKey.trim() }) });
+    setSavingKey(false);
+    reload();
+    showToast("TBA key saved.");
+  }
+
+  async function fetchFrcEvents() {
+    if (!tbaKey) { showToast("TBA API key required.", "#ef4444"); return; }
+    setLoading(true);
+    try {
+      const year = new Date().getFullYear();
+      const res = await fetch(`https://www.thebluealliance.com/api/v3/events/${year}/simple`, { headers: { "X-TBA-Auth-Key": tbaKey } });
+      if (!res.ok) throw new Error("Failed to fetch");
+      const events = await res.json();
+      setFrcEvents(events);
+      showToast(`✅ Fetched ${events.length} events.`);
+    } catch (e) {
+      showToast("Failed to fetch events.", "#ef4444");
+    }
+    setLoading(false);
+  }
+
+  async function addCompetition(event) {
+    const existing = competitions.find(c => c.event_key === event.key);
+    if (existing) { showToast("Already added.", "#ef4444"); return; }
+    await sbFetch("competitions", { method: "POST", body: JSON.stringify({
+      event_key: event.key,
+      name: event.name,
+      start_date: event.start_date,
+      end_date: event.end_date,
+      location: `${event.city}, ${event.state_prov}, ${event.country}`,
+      attending: false,
+      venue_map_url: "",
+      pit_map_url: "",
+      stream_url: "",
+      map_status: "Pit map not posted yet.",
+      last_map_check: null
+    }) });
+    reload(); showToast("✅ Competition added.");
+  }
+
+  async function toggleAttending(id, attending) {
+    await sbFetch(`competitions?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ attending }) });
+    reload();
+    if (attending) {
+      // Add to calendar
+      const comp = competitions.find(c => c.id === id);
+      if (comp) {
+        const dupes = await sbFetch(`hub_calendar?title=eq.${encodeURIComponent(comp.name)}&date=eq.${comp.start_date}&select=id`);
+        if (!dupes?.length) {
+          await sbFetch("hub_calendar", { method: "POST", body: JSON.stringify({
+            title: comp.name,
+            type: "competition",
+            date: comp.start_date,
+            end_date: comp.end_date,
+            description: `FRC Competition at ${comp.location}`
+          }) });
+        }
+        showToast("✅ Added to calendar.");
+      }
+    }
+  }
+
+  async function updateMap(id, field, url) {
+    await sbFetch(`competitions?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ [field]: url }) });
+    reload(); showToast("✅ Map updated.");
+  }
+
+  async function saveCompetitionFields(id, payload, msg = "Competition updated.") {
+    await sbFetch(`competitions?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+    reload(); showToast(msg);
+  }
+
+  const filtered = competitions.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const eventFiltered = frcEvents.filter(ev => {
+    const q = eventSearch.toLowerCase();
+    return !q || ev.name?.toLowerCase().includes(q) || ev.city?.toLowerCase().includes(q) || ev.state_prov?.toLowerCase().includes(q) || ev.key?.toLowerCase().includes(q);
+  });
+
+  return (
+    <div>
+      <h1 style={S.pageTitle}>Competitions</h1>
+      <div style={S.card}>
+        <div style={S.cardTitle}>Fetch FRC Events</div>
+        <div style={S.formRow}>
+          <input placeholder="TBA API Key" value={tbaKey} onChange={e => setTbaKey(e.target.value)} style={S.input} />
+          <button onClick={saveTbaKey} disabled={savingKey} style={S.btnGhost}>{savingKey ? "Saving..." : "Save Key"}</button>
+          <button onClick={fetchFrcEvents} disabled={loading} style={S.btnPrimary}>{loading ? "Fetching..." : "Fetch Events"}</button>
+        </div>
+        {frcEvents.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{ ...S.formRow, marginBottom: 12 }}>
+              <input placeholder="Search FRC events by name, city, state, or key..." value={eventSearch} onChange={e => setEventSearch(e.target.value)} style={S.input} />
+              <div style={{ color: "#64748b", fontFamily: "monospace", fontSize: 12 }}>{eventFiltered.length} events</div>
+            </div>
+            <div style={S.cardTitle}>Available Events</div>
+            <div style={{ maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
+            {eventFiltered.map(ev => (
+              <div key={ev.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <div>
+                  <div style={{ color: "#f1f5f9", fontSize: 14 }}>{ev.name}</div>
+                  <div style={{ color: "#64748b", fontSize: 12 }}>{ev.start_date} - {ev.city}, {ev.state_prov}</div>
+                </div>
+                <button onClick={() => addCompetition(ev)} disabled={competitions.some(c => c.event_key === ev.key)} style={{ ...S.btnGhost, opacity: competitions.some(c => c.event_key === ev.key) ? 0.45 : 1 }}>{competitions.some(c => c.event_key === ev.key) ? "Added" : "Add"}</button>
+              </div>
+            ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div style={S.card}>
+        <div style={S.formRow}>
+          <input placeholder="Search competitions..." value={search} onChange={e => setSearch(e.target.value)} style={S.input} />
+        </div>
+        <div style={S.cardTitle}>Our Competitions</div>
+        {filtered.map(c => (
+          <div key={c.id} style={{ marginBottom: 16, padding: 16, background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div>
+                <div style={{ color: "#f1f5f9", fontSize: 16, fontWeight: 600 }}>{c.name}</div>
+                <div style={{ color: "#64748b", fontSize: 12 }}>{c.start_date} - {c.location}</div>
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input type="checkbox" checked={c.attending} onChange={e => toggleAttending(c.id, e.target.checked)} />
+                Attending
+              </label>
+            </div>
+            <div style={S.formRow}>
+              <input placeholder="Venue Map URL" defaultValue={c.venue_map_url || ""} onBlur={e => saveCompetitionFields(c.id, { venue_map_url: e.target.value }, "Venue map saved.")} style={S.input} />
+              <input placeholder="Pit Map URL" defaultValue={c.pit_map_url || ""} onBlur={e => saveCompetitionFields(c.id, { pit_map_url: e.target.value }, "Pit map saved.")} style={S.input} />
+              <input placeholder="Stream URL" defaultValue={c.stream_url || ""} onBlur={e => saveCompetitionFields(c.id, { stream_url: e.target.value }, "Stream saved.")} style={S.input} />
+            </div>
+            <div style={{ ...S.formRow, marginTop: 10 }}>
+              <input placeholder="Map check status" defaultValue={c.map_status || ""} onBlur={e => saveCompetitionFields(c.id, { map_status: e.target.value, last_map_check: new Date().toISOString() }, "Map check saved.")} style={S.input} />
+              <a href={`https://www.thebluealliance.com/event/${c.event_key}`} target="_blank" rel="noreferrer" style={S.quickBtn}>TBA Event</a>
+              <a href="/member-hub/venuemap" target="_blank" rel="noreferrer" style={S.quickBtn}>Preview Maps</a>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

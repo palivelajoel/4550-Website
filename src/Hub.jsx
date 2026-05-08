@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { FONTS, C, ROLE_COLORS, SUBTEAM_COLORS, TEAM_PASSWORD, sbFetch, isAdmin, isCaptainOrAbove, getRole, getUsername } from "./hubUtils.jsx";
+import Starfield from "./Starfield.jsx";
 
 // ── Animated particle canvas ──────────────────────────────
 function Particles({ count = 40 }) {
@@ -188,7 +189,8 @@ export default function Hub() {
 
   // ── HUB DASHBOARD ───────────────────────────────────────
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'Exo 2',sans-serif" }}>
+    <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'Exo 2',sans-serif", position:"relative" }}>
+      <Starfield density={11000} opacity={0.32} />
       <style>{FONTS + `
         @keyframes orbFloat{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
         .feat-card{transition:transform 0.22s ease,border-color 0.22s ease,box-shadow 0.22s ease;}
@@ -199,7 +201,7 @@ export default function Hub() {
       `}</style>
 
       {/* Header */}
-      <header style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding: isMobile ? "12px 14px" : "14px 28px", borderBottom:`1px solid ${C.border}`, background:"rgba(8,10,15,0.97)", backdropFilter:"blur(16px)", position:"sticky", top:0, zIndex:100, gap:10, flexWrap:"wrap" }}>
+      <header style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding: isMobile ? "12px 14px" : "14px 28px", borderBottom:`1px solid ${C.border}`, background:"rgba(8,10,15,0.88)", backdropFilter:"blur(16px)", position:"sticky", top:0, zIndex:100, gap:10, flexWrap:"wrap" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <img src={logoUrl} alt="logo" style={{ width:isMobile?30:36, height:isMobile?30:36, borderRadius:"50%", objectFit:"cover", border:"1px solid rgba(239,68,68,0.4)", flexShrink:0 }} />
           {!isMobile && (
@@ -224,7 +226,7 @@ export default function Hub() {
         </div>
       </header>
 
-      <main style={{ maxWidth:1200, margin:"0 auto", padding: isMobile ? "20px 14px" : "36px 24px" }}>
+      <main style={{ maxWidth:1200, margin:"0 auto", padding: isMobile ? "20px 14px" : "36px 24px", position:"relative", zIndex:1 }}>
         {/* Welcome + stats */}
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
           <div>

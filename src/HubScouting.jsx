@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { FONTS, C, sbFetch, isAuthed, canEditHub, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
+import Starfield from "./Starfield.jsx";
 
 // ─────────────────────────────────────────────────────────
 // REBUILT 2026 — game config (fetched dynamically, falls back to this)
@@ -345,13 +346,16 @@ function PitScout({ onSubmit, username, isMobile }) {
 // ─────────────────────────────────────────────────────────
 // AI STREAM ANALYSIS TAB
 // ─────────────────────────────────────────────────────────
-function StreamAnalysis({ isMobile }) {
+function StreamAnalysis({ isMobile, competitions = [] }) {
   const [img, setImg] = useState(null);
   const [imgB64, setImgB64] = useState(null);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedCompId, setSelectedCompId] = useState(competitions.find(c => c.attending)?.id || "");
   const fileRef = useRef(null);
+  const selectedComp = competitions.find(c => c.id === selectedCompId) || competitions.find(c => c.attending);
+  const streamSearch = selectedComp ? encodeURIComponent(`${selectedComp.name} ${selectedComp.event_key || ""} FRC webcast stream`) : "";
 
   function handleFile(e) {
     const file = e.target.files[0];
@@ -434,6 +438,15 @@ Return ONLY the JSON object. If you cannot determine a value, use null.` }
         <div style={{ fontSize:13, color:C.muted, fontFamily:"monospace", lineHeight:1.7 }}>
           Take a screenshot from a competition stream or scoreboard, upload it here, and Claude AI will analyze it to extract scores, Fuel totals, Tower status, and more — automatically.
         </div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr auto auto", gap:10, alignItems:"center", marginBottom:16 }}>
+        <select value={selectedCompId} onChange={e=>setSelectedCompId(e.target.value)} style={selectStyle}>
+          <option value="">Select competition</option>
+          {competitions.filter(c=>c.attending).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        {selectedComp?.stream_url && <a href={selectedComp.stream_url} target="_blank" rel="noreferrer" style={ghostBtn}>Open saved stream</a>}
+        {selectedComp && <a href={`https://www.google.com/search?q=${streamSearch}`} target="_blank" rel="noreferrer" style={ghostBtn}>Find stream</a>}
       </div>
 
       <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
@@ -753,11 +766,217 @@ function RawData({ matches, onDelete, cfg = DEFAULT_GAME_CONFIG, isMobile }) {
 }
 
 // ─────────────────────────────────────────────────────────
+// MAPS VIEW — Pit Maps & Venue Maps
+// ─────────────────────────────────────────────────────────
+function MapsView({ competitions, pits, matches, cfg, isMobile }) {
+  const [selectedComp, setSelectedComp] = useState(null);
+  const [selectedTeam, setSelectedTeam] = useState(null);
+
+  const attending = competitions.filter(c => c.attending);
+  const teamsAtComp = selectedComp ? [...new Set(matches.filter(m => m.event_key === selectedComp.event_key).map(m => m.team_number))] : [];
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, color: C.red, marginBottom: 12 }}>Competition Maps</h2>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          {attending.map(c => (
+            <button key={c.id} onClick={() => setSelectedComp(c)} style={{ padding: "10px 16px", border: `1px solid ${selectedComp?.id === c.id ? C.red : C.border}`, background: selectedComp?.id === c.id ? `${C.red}18` : "rgba(255,255,255,0.05)", color: selectedComp?.id === c.id ? C.red : C.text, borderRadius: 8, cursor: "pointer", fontSize: 14 }}>
+              {c.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {selectedComp && (
+        <div>
+          <h3 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 16, color: C.blue, marginBottom: 16 }}>{selectedComp.name} Maps</h3>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 20 }}>
+            {selectedComp.venue_map_url && (
+              <div>
+                <h4 style={{ fontSize: 14, color: C.text, marginBottom: 8 }}>Venue Map</h4>
+                <img src={selectedComp.venue_map_url} alt="Venue Map" style={{ width: "100%", borderRadius: 8, border: `1px solid ${C.border}` }} />
+              </div>
+            )}
+            {selectedComp.pit_map_url && (
+              <div>
+                <h4 style={{ fontSize: 14, color: C.text, marginBottom: 8 }}>Pit Map</h4>
+                <div style={{ position: "relative" }}>
+                  <img src={selectedComp.pit_map_url} alt="Pit Map" style={{ width: "100%", borderRadius: 8, border: `1px solid ${C.border}` }} />
+                  {teamsAtComp.map(team => {
+                    const pit = pits.find(p => p.team_number === team);
+                    if (!pit) return null;
+                    // Assume pit map has clickable areas, but for now, overlay buttons
+                    return (
+                      <button key={team} onClick={() => setSelectedTeam(team)} style={{ position: "absolute", top: Math.random() * 200, left: Math.random() * 300, width: 40, height: 40, borderRadius: "50%", background: C.red, color: "#fff", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                        {team}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {selectedTeam && (
+        <div style={{ marginTop: 24, padding: 16, background: "rgba(255,255,255,0.05)", borderRadius: 8 }}>
+          <h4 style={{ fontSize: 16, color: C.amber, marginBottom: 12 }}>Team {selectedTeam} Stats</h4>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+            <div>
+              <h5 style={{ fontSize: 14, color: C.text }}>Pit Report</h5>
+              {(() => {
+                const pit = pits.find(p => p.team_number === selectedTeam);
+                return pit ? (
+                  <div style={{ fontSize: 12, color: C.dim }}>
+                    <div>Drivetrain: {pit.drivetrain}</div>
+                    <div>Weight: {pit.weight_lbs} lbs</div>
+                    <div>Auto: {pit.auto_capabilities}</div>
+                    <div>Teleop: {pit.teleop_capabilities}</div>
+                  </div>
+                ) : <div style={{ color: C.muted }}>No pit report</div>;
+              })()}
+            </div>
+            <div>
+              <h5 style={{ fontSize: 14, color: C.text }}>Match Averages</h5>
+              {(() => {
+                const teamMatches = matches.filter(m => m.team_number === selectedTeam);
+                if (!teamMatches.length) return <div style={{ color: C.muted }}>No matches</div>;
+                const avgFuel = teamMatches.reduce((s, m) => s + (m.auto_fuel || 0) + (m.teleop_fuel || 0), 0) / teamMatches.length;
+                const avgClimb = teamMatches.filter(m => m.endgame !== "None").length / teamMatches.length * 100;
+                return (
+                  <div style={{ fontSize: 12, color: C.dim }}>
+                    <div>Avg Fuel: {avgFuel.toFixed(1)}</div>
+                    <div>Climb %: {avgClimb.toFixed(0)}%</div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+          <button onClick={() => setSelectedTeam(null)} style={{ marginTop: 12, padding: "6px 12px", border: `1px solid ${C.border}`, background: "transparent", color: C.muted, borderRadius: 4, cursor: "pointer" }}>Close</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MapsView2({ competitions, pits, matches, cfg, isMobile }) {
+  const attending = competitions.filter(c => c.attending);
+  const [selectedCompId, setSelectedCompId] = useState(attending[0]?.id || "");
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const selectedComp = attending.find(c => c.id === selectedCompId) || attending[0];
+  const teams = [...new Set([
+    ...pits.map(p => p.team_number).filter(Boolean),
+    ...matches.map(m => m.team_number).filter(Boolean),
+  ])].sort((a, b) => a - b);
+  const compTeams = selectedComp ? teams : [];
+
+  useEffect(() => {
+    if (!selectedCompId && attending[0]?.id) setSelectedCompId(attending[0].id);
+  }, [attending.length, selectedCompId]);
+
+  function teamSummary(team) {
+    const pit = pits.find(p => p.team_number === team);
+    const humanMatches = matches.filter(m => m.team_number === team && !m.source?.includes("ai"));
+    const aiMatches = matches.filter(m => m.team_number === team && m.source?.includes("ai"));
+    const all = matches.filter(m => m.team_number === team);
+    const avg = all.length ? all.reduce((s, m) => s + calcScore(m, cfg), 0) / all.length : 0;
+    const fuel = all.length ? all.reduce((s, m) => s + (m.auto_fuel || 0) + (m.teleop_fuel || 0), 0) / all.length : 0;
+    const climbPct = all.length ? (all.filter(m => m.endgame && m.endgame !== "None").length / all.length) * 100 : 0;
+    return { pit, humanMatches, aiMatches, all, avg, fuel, climbPct };
+  }
+
+  const selected = selectedTeam ? teamSummary(selectedTeam) : null;
+
+  return (
+    <div>
+      <div style={{ marginBottom: 18 }}>
+        <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 18, color: C.red, marginBottom: 12 }}>Competition Maps</h2>
+        {attending.length === 0 ? (
+          <div style={{ color: C.dim, fontFamily: "monospace", border: `1px dashed ${C.border}`, borderRadius: 10, padding: 18 }}>No attending competitions selected yet. Add them from the admin Competitions page.</div>
+        ) : (
+          <select value={selectedComp?.id || ""} onChange={e => { setSelectedCompId(e.target.value); setSelectedTeam(null); }} style={selectStyle}>
+            {attending.map(c => <option key={c.id} value={c.id}>{c.name} - {c.start_date}</option>)}
+          </select>
+        )}
+      </div>
+
+      {selectedComp && (
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.1fr 0.9fr", gap: 16, alignItems: "start" }}>
+          <div style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${C.border}`, borderRadius: 12, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 13, color: C.text }}>{selectedComp.name}</div>
+                <div style={{ fontSize: 11, color: C.dim, fontFamily: "monospace" }}>{selectedComp.location}</div>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {selectedComp.venue_map_url && <a href={selectedComp.venue_map_url} target="_blank" rel="noreferrer" style={ghostBtn}>Venue</a>}
+                {selectedComp.pit_map_url && <a href={selectedComp.pit_map_url} target="_blank" rel="noreferrer" style={ghostBtn}>Pit</a>}
+              </div>
+            </div>
+
+            <div style={{ position: "relative", minHeight: isMobile ? 260 : 420, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}>
+              {selectedComp.pit_map_url ? (
+                <img src={selectedComp.pit_map_url} alt="Pit map" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "transparent" }} />
+              ) : (
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.dim, fontFamily: "monospace", textAlign: "center", padding: 20 }}>
+                  Pit maps are usually posted shortly before the event. Track the latest status in Admin > Competitions.
+                </div>
+              )}
+              <div style={{ position: "absolute", inset: 0, padding: 12, display: "grid", gridTemplateColumns: isMobile ? "repeat(3,1fr)" : "repeat(5,1fr)", gap: 8, alignContent: "start", pointerEvents: "none" }}>
+                {compTeams.slice(0, isMobile ? 30 : 60).map(team => {
+                  const summary = teamSummary(team);
+                  return (
+                    <button key={team} type="button" onClick={() => setSelectedTeam(team)} style={{ pointerEvents: "auto", background: selectedTeam === team ? C.red : "rgba(8,10,15,0.78)", border: `1px solid ${selectedTeam === team ? C.red : C.border}`, borderRadius: 8, color: "#fff", cursor: "pointer", padding: "7px 6px", fontFamily: "'Orbitron',sans-serif", fontSize: 11, boxShadow: "0 8px 22px rgba(0,0,0,0.35)" }}>
+                      {team}
+                      <div style={{ fontFamily: "monospace", fontSize: 9, color: selectedTeam === team ? "#fff" : C.dim }}>{summary.all.length ? `${summary.avg.toFixed(0)} avg` : "no data"}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16 }}>
+            <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 12, color: C.amber, marginBottom: 12 }}>Team Details</div>
+            {!selectedTeam && <div style={{ color: C.dim, fontSize: 13, fontFamily: "monospace" }}>Tap a team on the pit map overlay to compare human scouting and AI-derived results.</div>}
+            {selectedTeam && selected && (
+              <div>
+                <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 24, color: C.text, marginBottom: 6 }}>Team {selectedTeam}</div>
+                {selected.pit?.team_name && <div style={{ color: C.muted, marginBottom: 12 }}>{selected.pit.team_name}</div>}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+                  {[["Avg score", selected.avg.toFixed(1), C.red], ["Avg fuel", selected.fuel.toFixed(1), C.blue], ["Climb rate", `${selected.climbPct.toFixed(0)}%`, C.purple], ["Reports", selected.all.length, C.green]].map(([l, v, color]) => (
+                    <div key={l} style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${C.border}`, borderRadius: 8, padding: 10 }}>
+                      <div style={{ color, fontFamily: "'Orbitron',sans-serif", fontSize: 18 }}>{v}</div>
+                      <div style={{ color: C.dim, fontSize: 10, fontFamily: "monospace" }}>{l}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ color: C.muted, fontSize: 12, lineHeight: 1.7, fontFamily: "monospace" }}>
+                  <div>Human entries: {selected.humanMatches.length}</div>
+                  <div>AI entries: {selected.aiMatches.length}</div>
+                  <div>Drivetrain: {selected.pit?.drivetrain || "No pit report"}</div>
+                  <div>Best climb: {selected.pit?.climb_type || "Unknown"}</div>
+                  {selected.pit?.auto_capabilities && <div>Auto: {selected.pit.auto_capabilities}</div>}
+                  {selected.pit?.teleop_capabilities && <div>Teleop: {selected.pit.teleop_capabilities}</div>}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────
 const TABS = [
   { id:"match", label:"🎯 Match Scout" },
   { id:"pit", label:"🔧 Pit Scout" },
+  { id:"maps", label:"🗺️ Maps" },
   { id:"stream", label:"🤖 AI Stream" },
   { id:"data", label:"📊 Team Data" },
   { id:"picklist", label:"🏆 Picklist" },
@@ -766,10 +985,11 @@ const TABS = [
 
 export default function HubScouting() {
   const [authed] = useState(isAuthed());
-  const [tab, setTab] = useState("match");
+  const [tab, setTab] = useState(window.location.pathname.includes("venuemap") ? "maps" : "match");
   const [matches, setMatches] = useState([]);
   const [pits, setPits] = useState([]);
   const [picklist, setPicklist] = useState([]);
+  const [competitions, setCompetitions] = useState([]);
   const [toast, setToast] = useState("");
   const [gameConfig, setGameConfig] = useState(DEFAULT_GAME_CONFIG);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
@@ -799,12 +1019,13 @@ export default function HubScouting() {
   }
 
   async function loadAll() {
-    const [m, p, pk] = await Promise.all([
+    const [m, p, pk, comp] = await Promise.all([
       sbFetch("scouting_matches?select=*&order=created_at.desc") || [],
       sbFetch("scouting_pits?select=*&order=team_number.asc") || [],
       sbFetch("scouting_picklist?select=*&order=rank.asc") || [],
+      sbFetch("competitions?select=*&order=start_date.asc") || [],
     ]);
-    setMatches(m||[]); setPits(p||[]); setPicklist(pk||[]);
+    setMatches(m||[]); setPits(p||[]); setPicklist(pk||[]); setCompetitions(comp||[]);
   }
 
   async function deleteMatch(id) {
@@ -818,7 +1039,8 @@ export default function HubScouting() {
   const totalTeams = [...new Set(matches.map(m=>m.team_number))].length;
 
   return (
-    <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'Exo 2',sans-serif" }}>
+    <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'Exo 2',sans-serif", position:"relative" }}>
+      <Starfield density={11500} opacity={0.3} />
       <style>{FONTS}</style>
       {toast && <div style={toastStyle}>{toast}</div>}
       <HubHeader title="🔭 Scouting" />
@@ -844,10 +1066,11 @@ export default function HubScouting() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth:900, margin:"0 auto", padding: isMobile?"18px 14px":"28px 20px" }}>
+      <div style={{ maxWidth:900, margin:"0 auto", padding: isMobile?"18px 14px":"28px 20px", position:"relative", zIndex:1 }}>
         {tab==="match" && <MatchScout onSubmit={()=>{loadAll();showToast("✅ Match submitted!");}} username={username} cfg={gameConfig} isMobile={isMobile} />}
         {tab==="pit" && <PitScout onSubmit={()=>{loadAll();showToast("✅ Pit report saved!");}} username={username} isMobile={isMobile} />}
-        {tab==="stream" && <StreamAnalysis isMobile={isMobile} />}
+        {tab==="maps" && <MapsView2 competitions={competitions} pits={pits} matches={matches} cfg={gameConfig} isMobile={isMobile} />}
+        {tab==="stream" && <StreamAnalysis isMobile={isMobile} competitions={competitions} />}
         {tab==="data" && <TeamData matches={matches} pits={pits} cfg={gameConfig} isMobile={isMobile} />}
         {tab==="picklist" && <Picklist matches={matches} picklist={picklist} onReload={loadAll} cfg={gameConfig} isMobile={isMobile} />}
         {tab==="raw" && <RawData matches={matches} onDelete={deleteMatch} cfg={gameConfig} isMobile={isMobile} />}

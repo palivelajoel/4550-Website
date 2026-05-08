@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { FONTS, C, sbFetch, isAuthed, canEditHub, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
+import Starfield from "./Starfield.jsx";
 
 const EVENT_TYPES = [
   { value: "event", label: "Event", color: "#3b82f6" },
@@ -25,11 +26,18 @@ export default function HubCalendar() {
   const [saving, setSaving] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
   const [toast, setToast] = useState("");
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 760);
 
   useEffect(() => {
     if (!authed) { window.location.href = "/member-hub"; return; }
     document.title = "Calendar · Team 4550";
     loadEvents();
+  }, []);
+
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 760);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
   }, []);
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(""), 3000); }
@@ -96,14 +104,15 @@ export default function HubCalendar() {
   if (!authed) return null;
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'Exo 2', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "'Exo 2', sans-serif", position: "relative" }}>
+      <Starfield density={11500} opacity={0.28} />
       <style>{FONTS}</style>
       {toast && <div style={toastStyle}>{toast}</div>}
 
       {/* Header */}
       <HubHeader title="📅 Team Calendar" />
 
-      <div style={{ maxWidth: 1300, margin: "0 auto", padding: "28px 20px", display: "grid", gridTemplateColumns: "1fr 320px", gap: 24, alignItems: "start" }}>
+      <div style={{ maxWidth: 1300, margin: "0 auto", padding: isMobile ? "18px 12px" : "28px 20px", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 320px", gap: isMobile ? 16 : 24, alignItems: "start", position: "relative", zIndex: 1 }}>
 
         {/* Left: Calendar */}
         <div>
@@ -133,11 +142,11 @@ export default function HubCalendar() {
                   key={day}
                   onClick={() => setSelectedDay(selected ? null : day)}
                   style={{
-                    minHeight: 80,
+                    minHeight: isMobile ? 58 : 80,
                     background: selected ? "rgba(239,68,68,0.12)" : todayCell ? "rgba(59,130,246,0.1)" : C.surface,
                     border: `1px solid ${selected ? "rgba(239,68,68,0.5)" : todayCell ? "rgba(59,130,246,0.4)" : C.border}`,
                     borderRadius: 8,
-                    padding: "6px 7px",
+                    padding: isMobile ? "5px 4px" : "6px 7px",
                     cursor: "pointer",
                     transition: "all 0.15s",
                   }}
