@@ -940,6 +940,7 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
   const [frcEvents, setFrcEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [savingKey, setSavingKey] = useState(false);
+  const [findingId, setFindingId] = useState(null);
   const [tbaKey, setTbaKey] = useState(config.tba_api_key || "");
 
   async function saveTbaKey() {
@@ -1027,6 +1028,30 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
     reload(); showToast(msg);
   }
 
+  async function autoFindLinks(comp) {
+    setFindingId(comp.id);
+    try {
+      const res = await fetch("/api/find-event-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: comp, tbaKey }),
+      });
+      const links = await res.json();
+      if (!res.ok) throw new Error(links.error || "Lookup failed");
+      const payload = {
+        venue_map_url: links.venue_map_url || comp.venue_map_url || "",
+        pit_map_url: links.pit_map_url || comp.pit_map_url || "",
+        stream_url: links.stream_url || comp.stream_url || "",
+        map_status: links.map_status || "AI assist checked likely sources.",
+        last_map_check: new Date().toISOString(),
+      };
+      await saveCompetitionFields(comp.id, payload, "AI link search saved.");
+    } catch (e) {
+      showToast("AI link search failed.", "#ef4444");
+    }
+    setFindingId(null);
+  }
+
   const filtered = competitions.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
   const eventFiltered = frcEvents.filter(ev => {
     const q = eventSearch.toLowerCase();
@@ -1088,6 +1113,7 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
             </div>
             <div style={{ ...S.formRow, marginTop: 10 }}>
               <input placeholder="Map check status" defaultValue={c.map_status || ""} onBlur={e => saveCompetitionFields(c.id, { map_status: e.target.value, last_map_check: new Date().toISOString() }, "Map check saved.")} style={S.input} />
+              <button onClick={() => autoFindLinks(c)} disabled={findingId === c.id} style={{ ...S.btnPrimary, opacity: findingId === c.id ? 0.65 : 1 }}>{findingId === c.id ? "Finding..." : "AI Find Links"}</button>
               <a href={`https://www.thebluealliance.com/event/${c.event_key}`} target="_blank" rel="noreferrer" style={S.quickBtn}>TBA Event</a>
               <a href="/member-hub/venuemap" target="_blank" rel="noreferrer" style={S.quickBtn}>Preview Maps</a>
             </div>
