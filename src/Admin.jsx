@@ -53,7 +53,6 @@ function CaptainPhoto({ photoUrl, name, size = 48 }) {
       }
       return url.replace(/^.*\//, "");
     };
-
     const filename = getFilename(photoUrl);
     const canonicalUrl = `${SUPABASE_URL}/storage/v1/object/public/team-assets/${filename}`;
 
@@ -973,7 +972,7 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
   async function addCompetition(event) {
     const existing = competitions.find(c => c.event_key === event.key);
     if (existing) { showToast("Already added.", "#ef4444"); return; }
-    await sbFetch("competitions", { method: "POST", body: JSON.stringify({
+    const basePayload = {
       event_key: event.key,
       name: event.name,
       start_date: event.start_date,
@@ -981,11 +980,17 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
       location: `${event.city}, ${event.state_prov}, ${event.country}`,
       attending: false,
       venue_map_url: "",
-      pit_map_url: "",
+      pit_map_url: ""
+    };
+    const fullPayload = {
+      ...basePayload,
       stream_url: "",
       map_status: "Pit map not posted yet.",
       last_map_check: null
-    }) });
+    };
+    let saved = await sbFetch("competitions", { method: "POST", body: JSON.stringify(fullPayload) });
+    if (!saved) saved = await sbFetch("competitions", { method: "POST", body: JSON.stringify(basePayload) });
+    if (!saved) { showToast("Competition save failed. Check Supabase table columns/RLS.", "#ef4444"); return; }
     reload(); showToast("✅ Competition added.");
   }
 
@@ -1017,7 +1022,8 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
   }
 
   async function saveCompetitionFields(id, payload, msg = "Competition updated.") {
-    await sbFetch(`competitions?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+    const saved = await sbFetch(`competitions?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+    if (!saved) { showToast("Save failed. Run the Admin Settings SQL for the new columns.", "#ef4444"); return; }
     reload(); showToast(msg);
   }
 
