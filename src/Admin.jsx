@@ -10,6 +10,7 @@ const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];
 
 async function adminProxy(table, action, payload) {
   const token = localStorage.getItem("admin_token");
+  console.log("adminProxy called. Token found:", !!token);
   if (!token) {
     throw new Error("Missing admin auth session. Sign in with your username and password.");
   }
@@ -197,7 +198,7 @@ export default function Admin() {
 
       <main className="admin-main" style={S.main}>
         {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} events={hubCalendar} overdue={overdue} competitions={competitions} />}
-        {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} />}
+        {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} adminProxy={adminProxy} />}
         {page === "competitions" && <CompetitionsAdmin competitions={competitions} config={config} reload={loadAll} showToast={showToast} />}
         {page === "hub-tasks" && <Tasks tasks={tasks} members={members} reload={loadAll} showToast={showToast} />}
         {page === "hub-calendar" && <HubCalendarAdmin events={hubCalendar} reload={loadAll} showToast={showToast} />}
@@ -253,7 +254,7 @@ function Overview({ members, tasks, suggestions, sponsors, events, overdue, comp
 }
 
 // ── ACCOUNTS ──────────────────────────────────────────────
-function Accounts({ members, reload, showToast }) {
+function Accounts({ members, reload, showToast, adminProxy }) {
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
   const [savingMemberId, setSavingMemberId] = useState(null);
