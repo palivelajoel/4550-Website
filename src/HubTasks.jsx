@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { FONTS, C, sbFetch, isAuthed, canEditHub, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
+import supabase from "./supabaseClient.js";
 
 const STATUSES = ["Backlog", "To Do", "In Progress", "Review", "Done"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
@@ -51,12 +52,16 @@ export default function HubTasks() {
     setSaving(true);
     const member = members.find(m => m.id === form.assigned_to);
     const payload = { ...form, assigned_name: member ? member.full_name || member.username : form.assigned_name };
-    if (modal.mode === "add") {
-      await sbFetch("hub_tasks", { method: "POST", body: JSON.stringify(payload) });
-      showToast("Task created.");
-    } else {
-      await sbFetch(`hub_tasks?id=eq.${modal.task.id}`, { method: "PATCH", body: JSON.stringify(payload) });
-      showToast("Task updated.");
+    try {
+      if (modal.mode === "add") {
+        await supabase.from("hub_tasks").insert(payload);
+        showToast("Task created.");
+      } else {
+        await supabase.from("hub_tasks").update(payload).eq("id", modal.task.id);
+        showToast("Task updated.");
+      }
+    } catch (e) {
+      showToast("Save failed: " + (e.message || e));
     }
     setSaving(false);
     setModal(null);
@@ -64,14 +69,18 @@ export default function HubTasks() {
   }
 
   async function deleteTask(id) {
-    await sbFetch(`hub_tasks?id=eq.${id}`, { method: "DELETE" });
-    showToast("Deleted.");
+    try {
+      await supabase.from("hub_tasks").delete().eq("id", id);
+      showToast("Deleted.");
+    } catch (e) {
+      showToast("Delete failed: " + (e.message || e));
+    }
     load();
     setModal(null);
   }
 
   async function moveTask(id, newStatus) {
-    await sbFetch(`hub_tasks?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ status: newStatus }) });
+    await supabase.from("hub_tasks").update({ status: newStatus }).eq("id", id);
     setTasks(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
   }
 
@@ -128,7 +137,7 @@ export default function HubTasks() {
                     <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1 }}>{status.toUpperCase()}</span>
                     <span style={{ background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "1px 7px", fontSize: 11, color: C.dim }}>{col.length}</span>
                   </div>
-                  <button onClick={() => openAdd(status)} style={{ background: "transparent", border: "none", color: C.dim, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>+</button>
+                  {canEdit && <button onClick={() => openAdd(status)} style={{ background: "transparent", border: "none", color: C.dim, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>+</button>}
                 </div>
 
                 {/* Cards */}
