@@ -257,9 +257,29 @@ function Accounts({ members, reload, showToast }) {
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
   const [savingMemberId, setSavingMemberId] = useState(null);
+  const [pwError, setPwError] = useState("");
+  const [createForm, setCreateForm] = useState({ username: "", full_name: "", password: "", confirmPassword: "", role: "Member", subteam: "General" });
+
+  async function createMember() {
+    if (!createForm.username.trim() || !createForm.password) { showToast("Username and password required.", "#ef4444"); return; }
+    if (createForm.password !== createForm.confirmPassword) { showToast("Passwords do not match.", "#ef4444"); return; }
+    try {
+      await adminProxy('members', 'insert', {
+        username: createForm.username.trim(),
+        full_name: createForm.full_name.trim() || createForm.username.trim(),
+        password: createForm.password,
+        role: createForm.role,
+        subteam: createForm.subteam,
+      });
+      setCreateForm({ username: "", full_name: "", password: "", confirmPassword: "", role: "Member", subteam: "General" });
+      reload();
+      showToast("✅ Account created.");
+    } catch (e) { showToast("Create failed: " + (e.message || e), "#ef4444"); }
+  }
 
   async function updateMember(id) {
     const payload = { full_name: editData.full_name, role: editData.role, subteam: editData.subteam };
+    if (editData.password) payload.password = editData.password;
     await adminProxy('members', 'update_member', { id, updates: payload });
     setEditId(null); setEditData({}); reload(); showToast("✅ Member updated.");
   }
@@ -270,7 +290,6 @@ function Accounts({ members, reload, showToast }) {
     reload(); showToast("🗑️ Member deleted.", "#ef4444");
   }
 
-  /** Save role or subteam from inline dropdowns (no need to open Edit). */
   async function patchMemberQuick(id, updates) {
     setSavingMemberId(id);
     try {
@@ -285,13 +304,35 @@ function Accounts({ members, reload, showToast }) {
     }
   }
 
-  // Group by subteam
   const bySubteam = {};
   SUBTEAMS.forEach(s => { bySubteam[s] = members.filter(m => (m.subteam || "General") === s); });
 
   return (
     <div>
       <h1 style={S.pageTitle}>Account Management</h1>
+
+      {/* Create Account */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>Create Account</div>
+        <div style={S.formCol}>
+          <div style={S.formRow}>
+            <input placeholder="Username *" value={createForm.username} onChange={e => setCreateForm({ ...createForm, username: e.target.value })} style={S.input} />
+            <input placeholder="Full Name" value={createForm.full_name} onChange={e => setCreateForm({ ...createForm, full_name: e.target.value })} style={S.input} />
+          </div>
+          <div style={S.formRow}>
+            <input type="password" placeholder="Password *" value={createForm.password} onChange={e => setCreateForm({ ...createForm, password: e.target.value })} style={S.input} />
+            <input type="password" placeholder="Confirm Password *" value={createForm.confirmPassword} onChange={e => setCreateForm({ ...createForm, confirmPassword: e.target.value })} style={S.input} />
+            <select value={createForm.role} onChange={e => setCreateForm({ ...createForm, role: e.target.value })} style={S.select}>
+              {ROLES.map(r => <option key={r}>{r}</option>)}
+            </select>
+            <select value={createForm.subteam} onChange={e => setCreateForm({ ...createForm, subteam: e.target.value })} style={S.select}>
+              {SUBTEAMS.map(s => <option key={s}>{s}</option>)}
+            </select>
+            <button onClick={createMember} style={S.btnPrimary}>Create</button>
+          </div>
+        </div>
+      </div>
+
       {/* By subteam */}
       {SUBTEAMS.map(st => {
         const sub = bySubteam[st];
@@ -308,6 +349,7 @@ function Accounts({ members, reload, showToast }) {
                   <div style={{ ...S.formCol, flex: 1 }}>
                     <div style={S.formRow}>
                       <input placeholder="Full Name" value={editData.full_name || ""} onChange={e => setEditData({ ...editData, full_name: e.target.value })} style={S.input} />
+                      <input type="password" placeholder="New password (leave blank to keep)" value={editData.password || ""} onChange={e => setEditData({ ...editData, password: e.target.value })} style={{ ...S.input, maxWidth: 200 }} />
                       <select value={editData.role || m.role} onChange={e => setEditData({ ...editData, role: e.target.value })} style={S.select}>
                         {ROLES.map(r => <option key={r}>{r}</option>)}
                       </select>
@@ -354,7 +396,7 @@ function Accounts({ members, reload, showToast }) {
                       </div>
                     </div>
                     <div style={S.memberActions}>
-                      <button onClick={() => { setEditId(m.id); setEditData({ full_name: m.full_name, role: m.role, subteam: m.subteam || "General" }); setPwError(""); }} style={S.btnGhost}>Edit</button>
+                      <button onClick={() => { setEditId(m.id); setEditData({ full_name: m.full_name, role: m.role, subteam: m.subteam || "General", password: "" }); setPwError(""); }} style={S.btnGhost}>Edit</button>
                       <button onClick={() => deleteMember(m.id)} style={S.btnDanger}>Delete</button>
                     </div>
                   </>
