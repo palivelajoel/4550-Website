@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export default function Starfield({ density = 12000, opacity = 0.45 }) {
+export default function Starfield({ density = 8000, opacity = 0.55 }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -11,36 +11,111 @@ export default function Starfield({ density = 12000, opacity = 0.45 }) {
     let width = 0;
     let height = 0;
     let stars = [];
+    let shootingStars = [];
+    let time = 0;
 
     function reset() {
       width = canvas.width = window.innerWidth;
       height = canvas.height = Math.max(window.innerHeight, document.documentElement.scrollHeight || 0);
-      const count = Math.max(45, Math.floor((width * window.innerHeight) / density));
-      stars = Array.from({ length: count }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.18,
-        vy: (Math.random() - 0.5) * 0.18,
-        r: Math.random() * 1.35 + 0.35,
-        a: Math.random() * 0.45 + 0.22,
-      }));
+      const count = Math.max(60, Math.floor((width * window.innerHeight) / density));
+      stars = Array.from({ length: count }, () => {
+        const layer = Math.random();
+        const speed = layer < 0.6 ? 0.08 : layer < 0.85 ? 0.22 : 0.45;
+        return {
+          x: Math.random() * width,
+          y: Math.random() * height,
+          vx: (Math.random() - 0.5) * speed,
+          vy: (Math.random() - 0.5) * speed,
+          r: Math.random() * 1.4 + 0.3,
+          a: Math.random() * 0.5 + 0.25,
+          twinkleSpeed: Math.random() * 0.025 + 0.008,
+          twinkleOffset: Math.random() * Math.PI * 2,
+          layer,
+          color: Math.random() < 0.08 ? "#ef4444" : Math.random() < 0.06 ? "#3b82f6" : null,
+        };
+      });
+    }
+
+    function spawnShootingStar() {
+      if (Math.random() < 0.003 && shootingStars.length < 2) {
+        shootingStars.push({
+          x: Math.random() * width,
+          y: Math.random() * height * 0.6,
+          vx: Math.random() * 2.5 + 1.5,
+          vy: Math.random() * 1.2 + 0.4,
+          len: Math.random() * 60 + 30,
+          a: 1,
+          decay: Math.random() * 0.018 + 0.012,
+        });
+      }
     }
 
     function draw() {
+      time += 1;
       ctx.clearRect(0, 0, width, height);
+      
       for (let i = 0; i < stars.length; i += 1) {
         const s = stars[i];
         s.x += s.vx;
         s.y += s.vy;
+        
+        // Wrap around
         if (s.x < 0) s.x = width;
         if (s.x > width) s.x = 0;
         if (s.y < 0) s.y = height;
         if (s.y > height) s.y = 0;
+        
+        // Twinkle effect
+        const twinkle = Math.sin(time * s.twinkleSpeed + s.twinkleOffset) * 0.35 + 0.65;
+        const alpha = s.a * twinkle;
+        
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+        
+        if (s.color) {
+          ctx.fillStyle = s.color;
+          ctx.globalAlpha = alpha * 0.7;
+        } else {
+          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+          ctx.globalAlpha = alpha;
+        }
         ctx.fill();
+        ctx.globalAlpha = 1;
+        
+        // Glow for some stars
+        if (s.r > 1 && Math.random() < 0.015) {
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r * 2.2, 0, Math.PI * 2);
+          ctx.fillStyle = s.color ? s.color : "rgba(255,255,255,0.08)";
+          ctx.fill();
+        }
       }
+      
+      // Shooting stars
+      spawnShootingStar();
+      for (let i = shootingStars.length - 1; i >= 0; i -= 1) {
+        const ss = shootingStars[i];
+        ss.x += ss.vx;
+        ss.y += ss.vy;
+        ss.a -= ss.decay;
+        
+        if (ss.a <= 0 || ss.y > height) {
+          shootingStars.splice(i, 1);
+          continue;
+        }
+        
+        // Trail
+        const grad = ctx.createLinearGradient(ss.x, ss.y, ss.x - ss.len, ss.y - ss.len * 0.5);
+        grad.addColorStop(0, `rgba(255,255,255,${ss.a})`);
+        grad.addColorStop(1, "transparent");
+        ctx.beginPath();
+        ctx.moveTo(ss.x, ss.y);
+        ctx.lineTo(ss.x - ss.len, ss.y - ss.len * 0.5);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      
       raf = requestAnimationFrame(draw);
     }
 
