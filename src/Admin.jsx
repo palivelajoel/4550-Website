@@ -220,10 +220,15 @@ export default function Admin() {
             <button type="submit" style={S.loginBtn}>ENTER →</button>
           </form>
           <a href="/" style={S.loginBack}>← Back to site</a>
-        </div>
       </div>
-    );
-  }
+      {editMapId && (
+        <div style={{ marginTop: 24, borderTop: "2px solid #ef4444", paddingTop: 24 }}>
+          <PitMapEditor comp={competitions.find(c => c.id === editMapId)} reload={loadAll} showToast={showToast} />
+        </div>
+      )}
+    </div>
+  );
+}
 
   const overdue = tasks.filter(t => t.due_date && t.status !== "Done" && new Date(t.due_date) < new Date()).length;
 
@@ -976,14 +981,69 @@ ALTER TABLE scouting_matches ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'human
   );
 }
 
-// ── COMPETITIONS ADMIN ────────────────────────────────────
-function CompetitionsAdmin({ competitions, config, reload, showToast }) {
+// ── PIT MAP EDITOR ────────────────────────────────────────
+function PitMapEditor({ comp, reload, showToast }) {
+  const [pits, setPits] = useState(comp.schematic_data?.pits || []);
+  const [img, setImg] = useState(null);
+  const [dragging, setDragging] = useState(null);
+
+  const addPit = (e) => {
+    const rect = e.target.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setPits([...pits, { x, y, team: "" }]);
+  };
+
+  async function save() {
+    await adminProxy('competitions', 'update', { id: comp.id, updates: { schematic_data: { pits } } });
+    reload(); showToast("✅ Schematic saved.");
+  }
+
+  async function traceMap() {
+    if (!comp.pit_map_url) return showToast("No pit map URL found to trace.", "#ef4444");
+    showToast("🤖 AI is analyzing map... please wait.");
+    try {
+      const res = await fetch('/api/trace-pit-map', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ imageUrl: comp.pit_map_url }) 
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { pits: aiPits } = await res.json();
+      // Convert normalized (0-1) to percentage (0-100)
+      const normalizedPits = aiPits.map(p => ({ ...p, x: p.x * 100, y: p.y * 100 }));
+      setPits([...pits, ...normalizedPits]);
+      showToast("✅ AI trace complete!");
+    } catch (err) {
+      showToast("AI Trace failed: " + err.message, "#ef4444");
+    }
+  }
+
+  return (
+    <div style={S.card}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={S.cardTitle}>Map: {comp.name}</div>
+        <button onClick={traceMap} style={{ ...S.btnGhost, fontSize: 11, color: "#a855f7", border: "1px solid #a855f7" }}>✨ AI Trace Map</button>
+      </div>
+      <div style={{ position: "relative", cursor: "crosshair", border: "1px solid #444" }} onClick={addPit}>
+        {comp.pit_map_url && <img src={comp.pit_map_url} style={{ width: "100%", opacity: 0.5 }} />}
+        {pits.map((p, i) => (
+          <div key={i} style={{ position: "absolute", left: `${p.x}%`, top: `${p.y}%`, background: "red", color: "white", padding: "2px 5px", fontSize: "10px", borderRadius: 4, transform: "translate(-50%, -50%)" }}>
+            <input value={p.team} onChange={e => { pits[i].team = e.target.value; setPits([...pits]); }} style={{ width: 30, background: "transparent", border: "none", color: "white", textAlign: "center" }} placeholder="#" />
+          </div>
+        ))}
+      </div>
+      <button onClick={save} style={{ ...S.btnPrimary, marginTop: 10 }}>Save Layout</button>
+    </div>
+  );
+}
   const [search, setSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
   const [frcEvents, setFrcEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [savingKey, setSavingKey] = useState(false);
   const [findingId, setFindingId] = useState(null);
+  const [editMapId, setEditMapId] = useState(null);
   const [tbaKey, setTbaKey] = useState(config.tba_api_key || "");
 
   async function saveTbaKey() {
@@ -1157,8 +1217,9 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
             <div style={{ ...S.formRow, marginTop: 10 }}>
               <input placeholder="Map check status" defaultValue={c.map_status || ""} onBlur={e => saveCompetitionFields(c.id, { map_status: e.target.value, last_map_check: new Date().toISOString() }, "Map check saved.")} style={S.input} />
               <button onClick={() => autoFindLinks(c)} disabled={findingId === c.id} style={{ ...S.btnPrimary, opacity: findingId === c.id ? 0.65 : 1 }}>{findingId === c.id ? "Finding..." : "AI Find Links"}</button>
-              <a href={`https://www.thebluealliance.com/event/${c.event_key}`} target="_blank" rel="noreferrer" style={S.quickBtn}>TBA Event</a>
-              <a href="/member-hub/venuemap" target="_blank" rel="noreferrer" style={S.quickBtn}>Preview Maps</a>
+               <button onClick={() => setEditMapId(c.id)} style={S.btnGhost}>{editMapId === c.id ? "Close Editor" : "Map Editor"}</button>
+               <a href={`https://www.thebluealliance.com/event/${c.event_key}`} target="_blank" rel="noreferrer" style={S.quickBtn}>TBA Event</a>
+               <a href="/member-hub/venuemap" target="_blank" rel="noreferrer" style={S.quickBtn}>Preview Maps</a>
             </div>
           </div>
         ))}
