@@ -796,7 +796,7 @@ function CaptainsAdmin({ captains, reload, showToast }) {
                   <button onClick={() => deleteCaptain(c.id)} style={S.btnDanger}>Remove</button>
                 </div>
               </>
-            ))}
+            )}
           </div>
         ))}
       </div>
