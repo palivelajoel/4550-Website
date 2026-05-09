@@ -188,6 +188,7 @@ export default function Landing() {
         @keyframes menuSlide{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
         @keyframes orbFloat{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
         @keyframes scanline{0%{top:-4px;}100%{top:100%;}}
+        @keyframes glitch{0%,90%,100%{text-shadow:none;}92%{text-shadow:-3px 0 #ef4444,3px 0 #3b82f6;}95%{text-shadow:3px 0 #ef4444,-3px 0 #3b82f6;}97%{text-shadow:none;}}
         a{-webkit-tap-highlight-color:transparent;}
         /* Make sections semi-transparent to show the grid */
         section,footer,nav{position:relative;z-index:1;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
@@ -260,8 +261,8 @@ export default function Landing() {
         <div style={{ textAlign: "center", zIndex: 1, padding: isMobile ? "0 20px" : "0 24px", transform: isMobile ? "none" : `translateY(${scrollY * 0.15}px)` }}>
           <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: isMobile ? 9 : 11, color: "#64748b", letterSpacing: isMobile ? 2 : 3, marginBottom: 20 }}>FRC ROBOTICS · CHERRY CREEK HIGH SCHOOL · GREENWOOD VILLAGE, CO</div>
           <img src={logoUrl} alt="Team Logo" style={{ width: isMobile ? 88 : 110, height: isMobile ? 88 : 110, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)", boxShadow: "0 0 40px rgba(239,68,68,0.2)", marginBottom: isMobile ? 20 : 28, animation: "fadeUp 0.8s ease both" }} />
-          <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: isMobile ? "clamp(22px,8vw,40px)" : "clamp(32px,6vw,72px)", letterSpacing: isMobile ? 2 : 4, color: "#f1f5f9", animation: "fadeUp 0.8s ease 0.15s both" }}>SOMETHING'S BRUIN</h1>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: isMobile ? "clamp(16px,5vw,24px)" : "clamp(18px,3vw,32px)", color: "#ef4444", letterSpacing: isMobile ? 6 : 8, marginTop: 6, animation: "fadeUp 0.8s ease 0.25s both" }}>FRC TEAM 4550</div>
+          <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: isMobile ? "clamp(22px,8vw,40px)" : "clamp(32px,6vw,72px)", letterSpacing: isMobile ? 2 : 4, color: "#f1f5f9", animation: "fadeUp 0.8s ease 0.15s both, glitch 10s ease-in-out infinite" }}>SOMETHING'S BRUIN</h1>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: isMobile ? "clamp(16px,5vw,24px)" : "clamp(18px,3vw,32px)", color: "#ef4444", letterSpacing: isMobile ? 6 : 8, marginTop: 6, animation: "fadeUp 0.8s ease 0.25s both, glitch 12s ease-in-out infinite 2s" }}>FRC TEAM 4550</div>
           <div style={{ width: 50, height: 2, background: "linear-gradient(90deg,transparent,#ef4444,transparent)", margin: isMobile ? "18px auto" : "24px auto", animation: "fadeUp 0.8s ease 0.35s both" }} />
           <p style={{ color: "#94a3b8", fontSize: isMobile ? 14 : 16, maxWidth: 420, margin: "0 auto", marginBottom: isMobile ? 28 : 36, lineHeight: 1.7, animation: "fadeUp 0.8s ease 0.4s both", padding: "0 8px" }}>
             Engineering excellence. Community impact. Championship mindset.
