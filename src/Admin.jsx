@@ -1220,12 +1220,12 @@ function PitMapEditor({ comp, reload, showToast }) {
                <button onClick={() => setEditMapId(c.id)} style={S.btnGhost}>{editMapId === c.id ? "Close Editor" : "Map Editor"}</button>
                <a href={`https://www.thebluealliance.com/event/${c.event_key}`} target="_blank" rel="noreferrer" style={S.quickBtn}>TBA Event</a>
                <a href="/member-hub/venuemap" target="_blank" rel="noreferrer" style={S.quickBtn}>Preview Maps</a>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+             </div>
+           </div>
+         )}
+       </div>
+     </div>
+   );
 }
 
 // ── STYLES ────────────────────────────────────────────────
