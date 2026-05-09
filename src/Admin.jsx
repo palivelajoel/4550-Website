@@ -3,29 +3,11 @@ import Starfield from "./Starfield.jsx";
 import { RulerMarks } from "./Starfield.jsx";
 
 import supabase from './supabaseClient.js';
-import { CaptainPhoto } from './hubUtils.jsx';
+import { CaptainPhoto, sbFetch, SUPABASE_URL, SUPABASE_KEY } from './hubUtils.jsx';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 const ROLES = ["Member", "Captain", "Admin"];
 const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];
-
-async function sbFetch(path, opts = {}) {
-  // Use Supabase client for ease and to get auth helpers later
-  try {
-    const res = await supabase.rpc('rest_proxy', { path });
-    // fallback: use direct fetch when rpc not available
-  } catch (e) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation", ...opts.headers },
-      ...opts,
-    });
-    if (!res.ok) { console.error("sbFetch", res.status, path, await res.text().catch(() => "")); return null; }
-    try { return await res.json(); } catch { return null; }
-  }
-  return null;
-}
 
 // Admin proxy helper - calls serverless admin-proxy which uses the service_role key.
 async function adminProxy(table, action, payload) {

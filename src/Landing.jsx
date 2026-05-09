@@ -56,10 +56,6 @@ function useScrollY(disabled) {
   return y;
 }
 
-async function fetchCompetitions() {
-  return await sbFetch("competitions?attending=eq.true&order=start_date.asc");
-}
-
 function ParticleCanvas({ isMobile }) {
   const canvasRef = useRef(null);
   const animRef = useRef(null);
@@ -120,7 +116,6 @@ export default function Landing() {
   const [scrollY, setScrollY] = useState(0);
   const [config, setConfig] = useState({});
   const [captains, setCaptains] = useState([]);
-  const [competitions, setCompetitions] = useState([]);
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -134,8 +129,7 @@ export default function Landing() {
     if (obj.logo_url) setLogoUrl(obj.logo_url);
     });
     sbFetch("captains?select=*&order=sort_order.asc").then(r => { if (r) setCaptains(r); });
-    fetchCompetitions().then(r => { if (r) setCompetitions(r); });
-    
+
     // Track scroll position for grid distortion
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -150,7 +144,7 @@ export default function Landing() {
   const yt = config.youtube || "https://www.youtube.com/channel/UC4_P1A5xYb7A7rCdEXdKzBQ";
   const donate = config.donate_url || "https://www.vancoevents.com/us/events/landing/46671";
 
-  const navItems = ["About", "Team", "Sub-Teams", "Outreach", "Competitions", "Sponsors", "Contact"];
+  const navItems = ["About", "Team", "Sub-Teams", "Outreach", "Sponsors", "Contact"];
 
   const SUB_TEAMS = [
     {
@@ -371,28 +365,6 @@ export default function Landing() {
           </div>
         </FadeSection>
       </div></section>
-
-      {/* COMPETITIONS */}
-      {competitions.length > 0 && (
-        <section id="competitions" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">
-          <FadeSection>
-            <Eyebrow>// WHERE WE'LL BE</Eyebrow>
-            <SectionTitle>Upcoming Competitions</SectionTitle>
-            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3,1fr)", gap: 14 }}>
-              {competitions.slice(0, 6).map(c => (
-                <div key={c.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: isMobile ? "18px 16px" : "22px 20px" }}>
-                  <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 13, color: "#f1f5f9", marginBottom: 8 }}>{c.name}</div>
-                  <div style={{ color: "#64748b", fontFamily: "'Share Tech Mono',monospace", fontSize: 12, lineHeight: 1.6 }}>{c.start_date}{c.end_date ? ` to ${c.end_date}` : ""}<br />{c.location}</div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
-                    {c.venue_map_url && <a href={c.venue_map_url} target="_blank" rel="noreferrer" style={{ color: "#93c5fd", fontSize: 12, fontFamily: "'Share Tech Mono',monospace", textDecoration: "none" }}>Venue map</a>}
-                    {c.pit_map_url && <a href={c.pit_map_url} target="_blank" rel="noreferrer" style={{ color: "#fca5a5", fontSize: 12, fontFamily: "'Share Tech Mono',monospace", textDecoration: "none" }}>Pit map</a>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </FadeSection>
-        </div></section>
-      )}
 
       {/* SPONSORS */}
       <section id="sponsors" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">
