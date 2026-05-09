@@ -16,6 +16,16 @@ async function sbFetch(path, opts = {}) {
   try { return await res.json(); } catch { return null; }
 }
 
+// Admin proxy helper - calls serverless admin-proxy which uses the service_role key.
+async function adminProxy(table, action, payload) {
+  const res = await fetch('/api/admin-proxy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table, action, payload }) });
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '');
+    throw new Error(txt || `Proxy error ${res.status}`);
+  }
+  return res.json();
+}
+
 async function uploadImageToSupabase(file) {
   const safeFileName = `${Date.now()}-${file.name}`.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9._-]/g, "_");
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/team-assets/${safeFileName}`, {
@@ -152,13 +162,13 @@ export default function Admin() {
 
   async function handleLogin(e) {
     e.preventDefault();
-    // Check stored admin password first, fall back to default
-    const cfgRows = await sbFetch("site_config?key=eq.admin_password&select=value");
-    const storedPw = cfgRows?.[0]?.value || DEFAULT_ADMIN_PASSWORD;
-    if (pw === storedPw) {
+    // Server-side login via admin-login that sets HttpOnly cookie
+    try {
+      const r = await fetch('/api/admin-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+      if (!r.ok) { setErr('Incorrect password.'); return; }
       localStorage.setItem("admin_authed", "true");
       setAuthed(true); loadAll();
-    } else setErr("Incorrect password.");
+    } catch (err) { setErr('Login failed.'); }
   }
 
   function handleLogout() { localStorage.removeItem("admin_authed"); setAuthed(false); }
@@ -298,7 +308,7 @@ function Accounts({ members, reload, showToast }) {
     setPwError("");
     if (!form.username || !form.password) return;
     if (form.password !== form.confirmPassword) { setPwError("Passwords do not match."); return; }
-    await sbFetch("members", { method: "POST", body: JSON.stringify({ username: form.username, password: form.password, full_name: form.full_name, role: form.role, subteam: form.subteam }) });
+    await adminProxy('members', 'insert', { username: form.username, password: form.password, full_name: form.full_name, role: form.role, subteam: form.subteam });
     setForm({ username: "", password: "", confirmPassword: "", full_name: "", role: "Member", subteam: "General" });
     reload(); showToast("✅ Member created.");
   }
@@ -308,13 +318,13 @@ function Accounts({ members, reload, showToast }) {
     if (editData.password && editData.password !== editData.confirmPassword) { setPwError("Passwords do not match."); return; }
     const payload = { full_name: editData.full_name, role: editData.role, subteam: editData.subteam };
     if (editData.password) payload.password = editData.password;
-    await sbFetch(`members?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+    await adminProxy('members', 'update', { id, updates: payload });
     setEditId(null); setEditData({}); reload(); showToast("✅ Member updated.");
   }
 
   async function deleteMember(id) {
     if (!confirm("Delete this member?")) return;
-    await sbFetch(`members?id=eq.${id}`, { method: "DELETE" });
+    await adminProxy('members', 'delete', { id });
     reload(); showToast("🗑️ Member deleted.", "#ef4444");
   }
 
@@ -414,18 +424,18 @@ function Tasks({ tasks, members, reload, showToast }) {
   async function createTask() {
     if (!form.title) return;
     const member = members.find(m => m.id === form.assigned_to);
-    await sbFetch("hub_tasks", { method: "POST", body: JSON.stringify({ ...form, assigned_name: member ? member.full_name || member.username : "" }) });
+    await adminProxy('hub_tasks', 'insert', { ...form, assigned_name: member ? member.full_name || member.username : "" });
     setForm({ title: "", description: "", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status: "To Do", subteam: "General" });
     reload(); showToast("✅ Task created.");
   }
 
   async function updateStatus(id, status) {
-    await sbFetch(`hub_tasks?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+    await adminProxy('hub_tasks', 'update', { id, updates: { status } });
     reload();
   }
 
   async function deleteTask(id) {
-    await sbFetch(`hub_tasks?id=eq.${id}`, { method: "DELETE" });
+    await adminProxy('hub_tasks', 'delete', { id });
     reload(); showToast("🗑️ Task deleted.", "#ef4444");
   }
 
@@ -497,10 +507,10 @@ function HubCalendarAdmin({ events, reload, showToast }) {
     if (!form.title || !form.date) return showToast("Title and date required.", "#ef4444");
     setSaving(true);
     if (editingId) {
-      await sbFetch(`hub_calendar?id=eq.${editingId}`, { method: "PATCH", body: JSON.stringify(form) });
+      await adminProxy('hub_calendar', 'update', { id: editingId, updates: form });
       showToast("✅ Event updated.");
     } else {
-      await sbFetch("hub_calendar", { method: "POST", body: JSON.stringify(form) });
+      await adminProxy('hub_calendar', 'insert', form);
       showToast("✅ Event created.");
     }
     setSaving(false); setEditingId(null);
@@ -510,7 +520,7 @@ function HubCalendarAdmin({ events, reload, showToast }) {
 
   async function deleteEvent(id) {
     if (!confirm("Delete this event?")) return;
-    await sbFetch(`hub_calendar?id=eq.${id}`, { method: "DELETE" });
+    await adminProxy('hub_calendar', 'delete', { id });
     showToast("🗑️ Deleted.", "#ef4444"); reload();
   }
 
@@ -577,7 +587,7 @@ function SponsorAssign({ sponsors, members, reload, showToast }) {
 
   async function saveAssignment(sponsorId, memberId) {
     const member = members.find(m => m.id === memberId);
-    await sbFetch(`sponsors?id=eq.${sponsorId}`, { method: "PATCH", body: JSON.stringify({ assigned_member_id: memberId || null, assigned_member_name: member ? member.full_name || member.username : null }) });
+    await adminProxy('sponsors', 'update', { id: sponsorId, updates: { assigned_member_id: memberId || null, assigned_member_name: member ? member.full_name || member.username : null } });
     reload();
   }
 
@@ -585,10 +595,10 @@ function SponsorAssign({ sponsors, members, reload, showToast }) {
     if (!members.length) return;
     setAutoLoading(true);
     const unassigned = sponsors.filter(s => !s.assigned_member_id);
-    for (let i = 0; i < unassigned.length; i++) {
-      const member = members[i % members.length];
-      await sbFetch(`sponsors?id=eq.${unassigned[i].id}`, { method: "PATCH", body: JSON.stringify({ assigned_member_id: member.id, assigned_member_name: member.full_name || member.username }) });
-    }
+      for (let i = 0; i < unassigned.length; i++) {
+        const member = members[i % members.length];
+        await adminProxy('sponsors', 'update', { id: unassigned[i].id, updates: { assigned_member_id: member.id, assigned_member_name: member.full_name || member.username } });
+      }
     reload(); setAutoLoading(false);
     showToast(`✅ Auto-assigned ${unassigned.length} sponsors.`);
   }
@@ -663,7 +673,7 @@ function CaptainsAdmin({ captains, reload, showToast }) {
     setUploading(true);
     let photo_url = "";
     if (photoFile) { photo_url = await uploadImageToSupabase(photoFile) || ""; }
-    await sbFetch("captains", { method: "POST", body: JSON.stringify({ ...form, photo_url }) });
+    await adminProxy('captains', 'insert', { ...form, photo_url });
     setForm({ name: "", position: "", bio: "", sort_order: 0 }); setPhotoFile(null);
     setUploading(false); reload(); showToast("✅ Person added.");
   }
@@ -672,13 +682,13 @@ function CaptainsAdmin({ captains, reload, showToast }) {
     setUploading(true);
     let update = { ...editData };
     if (editPhotoFile) { const url = await uploadImageToSupabase(editPhotoFile); if (url) update.photo_url = url; }
-    await sbFetch(`captains?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(update) });
+    await adminProxy('captains', 'update', { id, updates: update });
     setEditId(null); setEditPhotoFile(null); setUploading(false); reload(); showToast("✅ Updated.");
   }
 
   async function deleteCaptain(id) {
     if (!confirm("Remove?")) return;
-    await sbFetch(`captains?id=eq.${id}`, { method: "DELETE" });
+    await adminProxy('captains', 'delete', { id });
     reload(); showToast("🗑️ Removed.", "#ef4444");
   }
 
@@ -761,7 +771,7 @@ function CaptainsAdmin({ captains, reload, showToast }) {
 // ── SUGGESTIONS ───────────────────────────────────────────
 function Suggestions({ suggestions, reload, showToast }) {
   async function del(id) {
-    await sbFetch(`suggestions?id=eq.${id}`, { method: "DELETE" });
+    await adminProxy('suggestions', 'delete', { id });
     reload(); showToast("🗑️ Deleted.", "#ef4444");
   }
   return (
@@ -790,9 +800,12 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
   useEffect(() => { setVals({ ...config }); }, [config]);
 
   async function saveKey(key) {
-    const existing = await sbFetch(`site_config?key=eq.${key}&select=key`);
-    if (existing?.length) await sbFetch(`site_config?key=eq.${key}`, { method: "PATCH", body: JSON.stringify({ value: vals[key] }) });
-    else await sbFetch("site_config", { method: "POST", body: JSON.stringify({ key, value: vals[key] }) });
+    const existing = (await sbFetch(`site_config?key=eq.${key}&select=key`)) || [];
+    if (existing?.length) {
+      await adminProxy('site_config', 'update', { id: existing[0].id, updates: { value: vals[key] } });
+    } else {
+      await adminProxy('site_config', 'insert', { key, value: vals[key] });
+    }
     reload(); showToast(`✅ Saved: ${key}`);
   }
 
@@ -855,11 +868,11 @@ function AdminSettings({ showToast }) {
     if (newPw !== confirmPw) { setPwError("Passwords do not match."); return; }
     if (newPw.length < 6) { setPwError("Password must be at least 6 characters."); return; }
     setSaving(true);
-    const existing = await sbFetch("site_config?key=eq.admin_password&select=key");
+    const existing = (await sbFetch("site_config?key=eq.admin_password&select=key")) || [];
     if (existing?.length) {
-      await sbFetch("site_config?key=eq.admin_password", { method: "PATCH", body: JSON.stringify({ value: newPw }) });
+      await adminProxy('site_config', 'update', { id: existing[0].id, updates: { value: newPw } });
     } else {
-      await sbFetch("site_config", { method: "POST", body: JSON.stringify({ key: "admin_password", value: newPw }) });
+      await adminProxy('site_config', 'insert', { key: 'admin_password', value: newPw });
     }
     setSaving(false); setNewPw(""); setConfirmPw("");
     showToast("✅ Admin password changed! Log out to test.");
