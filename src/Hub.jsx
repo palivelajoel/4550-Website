@@ -154,6 +154,7 @@ export default function Hub() {
     { id:"venuemap", icon:"🗺️", label:"Venue & Pit Map", description:"Interactive pit layout and venue map for competitions.", href:"/member-hub/venuemap", accent:"#0ea5e9" },
     { id:"media", icon:"📸", label:"Media Gallery", description:"Photos and videos from competitions and events.", href:"/member-hub/media", accent:"#ec4899" },
     { id:"resources", icon:"📁", label:"Resources", description:"CAD files, documents, and team guides.", href:"/member-hub/resources", accent:"#64748b" },
+    { id:"inventory", icon:"📦", label:"Inventory", description:"Track parts, tools, and supplies with AI identification.", href:"/member-hub/inventory", accent:"#22d3ee" },
     { id:"sponsor-tracker", icon:"🤝", label:"Sponsor Tracker", description:"Manage sponsors, contact info, and outreach status.", href:"/dashboard", accent:"#0ea5e9" },
   ];
 

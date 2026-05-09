@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 // 1) admin_token cookie matching ADMIN_API_TOKEN (legacy)
 // 2) Authorization: Bearer <access_token> (Supabase Auth access token)
 
-const ALLOWED_TABLES = ['sponsors', 'captains', 'site_config', 'members', 'hub_tasks', 'suggestions', 'hub_calendar'];
+const ALLOWED_TABLES = ['sponsors', 'captains', 'site_config', 'members', 'hub_tasks', 'suggestions', 'hub_calendar', 'inventory_items'];
 
 function parseCookie(header) {
   if (!header) return {};

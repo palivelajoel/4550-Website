@@ -1190,7 +1190,7 @@ function PitMapEditor({ comp, reload, showToast }) {
             ))}
             </div>
           </div>
-        )}
+        ))}
       </div>
       <div style={S.card}>
         <div style={S.formRow}>
@@ -1222,9 +1222,9 @@ function PitMapEditor({ comp, reload, showToast }) {
                <a href="/member-hub/venuemap" target="_blank" rel="noreferrer" style={S.quickBtn}>Preview Maps</a>
              </div>
            </div>
-         )}
-       </div>
-     </div>
+        ))}
+        </div>
+      </div>
    );
 }
 
