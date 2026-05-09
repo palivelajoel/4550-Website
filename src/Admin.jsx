@@ -229,7 +229,7 @@ export default function Admin() {
 
   return (
     <div className="admin-layout" style={S.layout}>
-      <Starfield density={11500} opacity={0.25} />
+      <Starfield density={8000} opacity={0.45} />
       <RulerMarks opacity={0.18} />
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:#080a0f;color:#f1f5f9;font-family:'Exo 2',sans-serif;}

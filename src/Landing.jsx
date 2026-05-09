@@ -213,7 +213,7 @@ export default function Landing() {
 
   return (
     <div style={{ background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", position: "relative", minHeight: "100vh" }}>
-      <Starfield density={9000} opacity={0.38} />
+      <Starfield density={6000} opacity={0.6} />
       <RulerMarks opacity={0.22} />
       {/* Distorted grid that warps on scroll */}
       <DistortedGrid scrollY={scrollY} />
