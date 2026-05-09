@@ -162,6 +162,7 @@ export default function Hub() {
   if (!authed) {
     return (
 <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Exo 2',sans-serif", position:"relative", overflow:"hidden", padding:16, zIndex:0 }}>
+        <style>{FONTS}</style>
         <Starfield density={6000} opacity={0.55} />
         <RulerMarks opacity={0.2} />
         {/* Animated background */}
@@ -182,7 +183,7 @@ export default function Hub() {
 
           <form onSubmit={handleLogin} style={{ display:"flex", flexDirection:"column", gap:12 }}>
             <input type="text" placeholder="Email" value={username} onChange={e => setUsername(e.target.value)} autoComplete="username"
-              style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:8, padding:"12px 16px", color:"#fff", fontSize:14, fontFamily:"monospace", textAlign:"center", width:"100%", WebkitAppearance:"none" }}
+              style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:8, padding:"12px 16px", color:"#fff", fontSize:14, fontFamily:"monospace", width:"100%", WebkitAppearance:"none" }}
               onFocus={e => e.target.style.borderColor="rgba(239,68,68,0.5)"} onBlur={e => e.target.style.borderColor="rgba(255,255,255,0.12)"} />
             <PwInput value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" />
             {err && <div style={{ color:C.red, fontSize:12, fontFamily:"monospace", animation:"fadeUp 0.3s ease" }}>{err}</div>}
