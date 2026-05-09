@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useIsMobile } from "./useIsMobile";
 import Starfield from "./Starfield.jsx";
 import { RulerMarks } from "./Starfield.jsx";
 
@@ -35,7 +34,7 @@ async function sbFetch(path) {
   return res.json();
 }
 
-function useIsMobile() {
+function useDeviceSize() {
   const [mobile, setMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const fn = () => setMobile(window.innerWidth < 768);
@@ -116,7 +115,7 @@ function FadeSection({ children, style }) {
 }
 
 export default function Landing() {
-  const isMobile = useIsMobile();
+  const isMobile = useDeviceSize();
   const [scrollY, setScrollY] = useState(0);
   const [config, setConfig] = useState({});
   const [captains, setCaptains] = useState([]);
