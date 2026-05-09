@@ -1194,7 +1194,7 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
             ))}
             </div>
           </div>
-        ))}
+        )}
       </div>
       <div style={S.card}>
         <div style={S.formRow}>
