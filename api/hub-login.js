@@ -8,9 +8,21 @@ export default async function handler(req, res) {
     if (!username || !password) return res.status(400).json({ error: 'Username and password required.' });
 
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE);
+    console.log("DEBUG: Hub login attempt for username:", username);
     const { data: member, error } = await supabase.from('members').select('id,username,password_hash,role,full_name,subteam').eq('username', username).maybeSingle();
-    if (error) return res.status(500).json({ error: error.message });
-    if (!member || !member.password_hash) return res.status(401).json({ error: 'Invalid credentials.' });
+    
+    if (error) {
+      console.error("DEBUG: DB error:", error);
+      return res.status(500).json({ error: error.message });
+    }
+    if (!member) {
+      console.log("DEBUG: No member found with username:", username);
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
+    if (!member.password_hash) {
+      console.log("DEBUG: Member found but no password_hash set for:", username);
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
 
     if (!verifyPassword(password, member.password_hash)) return res.status(401).json({ error: 'Invalid credentials.' });
 
