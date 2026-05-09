@@ -316,10 +316,9 @@ function Overview({ members, tasks, suggestions, sponsors, events, overdue, comp
         ))}
       </div>
       {overdue > 0 && <div style={S.alertBanner}>⚠️ {overdue} overdue task{overdue !== 1 ? "s" : ""}</div>}
-      <div style={S.quickLinks}>
-        <a href="/" target="_blank" style={S.quickBtn}>Public Site ↗</a>
-        <a href="/member-hub" target="_blank" style={S.quickBtn}>Member Hub ↗</a>
-        <a href="/member-hub/scouting" target="_blank" style={S.quickBtn}>Scouting ↗</a>
+      <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+        <a href="/" target="_blank" style={{ flex: 1, padding: '16px 24px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#94a3b8', textDecoration: 'none', fontSize: 14, fontFamily: "'Exo 2', sans-serif", textAlign: 'center' }}>Public Site ↗</a>
+        <a href="/member-hub" target="_blank" style={{ flex: 1, padding: '16px 24px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#94a3b8', textDecoration: 'none', fontSize: 14, fontFamily: "'Exo 2', sans-serif", textAlign: 'center' }}>Member Hub ↗</a>
       </div>
     </div>
   );
