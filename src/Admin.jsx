@@ -10,7 +10,9 @@ const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];
 
 async function adminProxy(table, action, payload) {
   const token = localStorage.getItem("admin_token");
-  console.log("adminProxy called. Token found:", !!token);
+  console.log("DEBUG: Admin panel localStorage keys:", Object.keys(localStorage));
+  console.log("DEBUG: Attempting to retrieve 'admin_token':", token);
+  
   if (!token) {
     throw new Error("Missing admin auth session. Sign in with your username and password.");
   }
