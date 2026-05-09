@@ -85,7 +85,7 @@ export function CaptainPhoto({ photoUrl, name = "?", size = 80, style: extraStyl
           img.onerror = () => res(false);
           img.src = url;
         });
-        if (ok && !cancelled) { setSrc(urls[0]); return; }
+        if (ok && !cancelled) { setSrc(url); return; }
       }
 
       // Try 2: authenticated fetch → blob URL

@@ -3,6 +3,10 @@ import Starfield from "./Starfield.jsx";
 import { RulerMarks } from "./Starfield.jsx";
 
 import supabase from './supabaseClient.js';
+import { CaptainPhoto } from './hubUtils.jsx';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 const ROLES = ["Member", "Captain", "Admin"];
 const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];
@@ -13,8 +17,6 @@ async function sbFetch(path, opts = {}) {
     const res = await supabase.rpc('rest_proxy', { path });
     // fallback: use direct fetch when rpc not available
   } catch (e) {
-    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-    const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation", ...opts.headers },
       ...opts,
@@ -36,6 +38,7 @@ async function adminProxy(table, action, payload) {
 }
 
 async function uploadImageToSupabase(file) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
   const safeFileName = `${Date.now()}-${file.name}`.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9._-]/g, "_");
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/team-assets/${safeFileName}`, {
     method: "POST",
@@ -45,62 +48,6 @@ async function uploadImageToSupabase(file) {
   if (!res.ok) return null;
   // Return WITHOUT encodeURIComponent — simpler, works for safe filenames
   return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${safeFileName}`;
-}
-
-/**
- * FIXED: Extract filename and reconstruct URL cleanly.
- * Fetches with auth header to bypass bucket policy issues.
- */
-function CaptainPhoto({ photoUrl, name, size = 48 }) {
-  const [src, setSrc] = useState(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    setSrc(null); setFailed(false);
-    if (!photoUrl) { setFailed(true); return; }
-
-    // Extract just the filename from whatever URL format is stored
-    const getFilename = (url) => {
-      const markers = ["/public/team-assets/", "/object/team-assets/", "/team-assets/"];
-      for (const m of markers) {
-        const idx = url.indexOf(m);
-        if (idx !== -1) {
-          let fn = url.slice(idx + m.length).split("?")[0];
-          try { fn = decodeURIComponent(fn); } catch {}
-          return fn;
-        }
-      }
-      return url.replace(/^.*\//, "");
-    };
-    const filename = getFilename(photoUrl);
-    const canonicalUrl = `${SUPABASE_URL}/storage/v1/object/public/team-assets/${filename}`;
-
-    // Try public URL first
-    const img = new Image();
-    img.onload = () => setSrc(canonicalUrl);
-    img.onerror = () => {
-      // Fall back: fetch with auth header → blob URL
-      fetch(canonicalUrl, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } })
-        .then(r => r.ok ? r.blob() : Promise.reject())
-        .then(blob => setSrc(URL.createObjectURL(blob)))
-        .catch(() => setFailed(true));
-    };
-    img.src = canonicalUrl;
-
-    return () => { img.onload = null; img.onerror = null; };
-  }, [photoUrl]);
-
-  if (failed || !photoUrl) {
-    return (
-      <div style={{ width: size, height: size, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "2px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#ef4444", fontWeight: 700, fontSize: size * 0.4 }}>
-        {name?.[0] || "?"}
-      </div>
-    );
-  }
-  if (!src) {
-    return <div style={{ width: size, height: size, borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "2px solid rgba(255,255,255,0.1)", animation: "pulse 1.5s ease infinite" }} />;
-  }
-  return <img src={src} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.3)" }} />;
 }
 
 const ROLE_COLORS = { Member: "#64748b", Captain: "#3b82f6", Admin: "#ef4444" };
