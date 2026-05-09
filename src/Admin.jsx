@@ -9,12 +9,31 @@ const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 const ROLES = ["Member", "Captain", "Admin"];
 const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];
 
-// Admin proxy helper - calls serverless admin-proxy which uses the service_role key.
+// Admin proxy helper — forwards the signed-in Supabase access token because /api/admin-proxy requires Bearer auth.
 async function adminProxy(table, action, payload) {
-  const res = await fetch('/api/admin-proxy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ table, action, payload }) });
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) {
+    throw new Error(
+      "Missing admin auth session. Sign in with your team email address and password so API requests can authenticate."
+    );
+  }
+  const res = await fetch("/api/admin-proxy", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ table, action, payload }),
+  });
   if (!res.ok) {
-    const txt = await res.text().catch(() => '');
-    throw new Error(txt || `Proxy error ${res.status}`);
+    const txt = await res.text().catch(() => "");
+    let msg = txt || `Proxy error ${res.status}`;
+    try {
+      const j = JSON.parse(txt);
+      if (j?.error) msg = typeof j.error === "string" ? j.error : JSON.stringify(j.error);
+    } catch { /* plain text body */ }
+    throw new Error(msg);
   }
   return res.json();
 }
@@ -267,6 +286,7 @@ function Accounts({ members, reload, showToast }) {
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
   const [pwError, setPwError] = useState("");
+  const [savingMemberId, setSavingMemberId] = useState(null);
 
   async function createMember() {
     setPwError("");
@@ -293,6 +313,21 @@ function Accounts({ members, reload, showToast }) {
     reload(); showToast("🗑️ Member deleted.", "#ef4444");
   }
 
+  /** Save role or subteam from inline dropdowns (no need to open Edit). */
+  async function patchMemberQuick(id, updates) {
+    setSavingMemberId(id);
+    try {
+      await adminProxy("members", "update_member", { id, updates });
+      await reload();
+      showToast("✅ Member updated.");
+    } catch (e) {
+      showToast(String(e.message || e), "#ef4444");
+      await reload();
+    } finally {
+      setSavingMemberId(null);
+    }
+  }
+
   // Group by subteam
   const bySubteam = {};
   SUBTEAMS.forEach(s => { bySubteam[s] = members.filter(m => (m.subteam || "General") === s); });
@@ -302,6 +337,9 @@ function Accounts({ members, reload, showToast }) {
       <h1 style={S.pageTitle}>Account Management</h1>
       <div style={S.card}>
         <div style={S.cardTitle}>Create Account</div>
+        <div style={{ color: "#64748b", fontSize: 12, fontFamily: "monospace", marginBottom: 12 }}>
+          <strong style={{ color: "#94a3b8" }}>Role</strong> and <strong style={{ color: "#94a3b8" }}>Sub-team</strong> save as soon as you change them per member; use Edit for name or password.
+        </div>
         <div style={S.formCol}>
           <div style={S.formRow}>
             <input placeholder="Username *" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={S.input} />
@@ -359,13 +397,36 @@ function Accounts({ members, reload, showToast }) {
                   </div>
                 ) : (
                   <>
-                    <div style={S.memberInfo}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${ROLE_COLORS[m.role] || "#64748b"}22`, border: `1px solid ${ROLE_COLORS[m.role] || "#64748b"}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: ROLE_COLORS[m.role] || "#64748b" }}>{(m.full_name || m.username)[0]}</div>
-                      <div>
+                    <div style={{ ...S.memberInfo, flexWrap: "wrap", gap: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${ROLE_COLORS[m.role] || "#64748b"}22`, border: `1px solid ${ROLE_COLORS[m.role] || "#64748b"}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: ROLE_COLORS[m.role] || "#64748b", flexShrink: 0 }}>{(m.full_name || m.username)[0]}</div>
+                      <div style={{ minWidth: 0 }}>
                         <span style={S.memberName}>{m.full_name || m.username}</span>
                         <span style={S.memberUser}> @{m.username}</span>
                       </div>
-                      <span style={{ ...S.roleBadge, background: `${ROLE_COLORS[m.role] || "#64748b"}22`, color: ROLE_COLORS[m.role] || "#64748b" }}>{m.role}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginLeft: "auto" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>
+                          Role
+                          <select
+                            value={m.role || "Member"}
+                            disabled={savingMemberId === m.id}
+                            onChange={e => patchMemberQuick(m.id, { role: e.target.value })}
+                            style={{ ...S.select, minWidth: 110, maxWidth: 140, fontSize: 12, padding: "6px 8px", opacity: savingMemberId === m.id ? 0.6 : 1 }}
+                          >
+                            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                        </label>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>
+                          Sub-team
+                          <select
+                            value={m.subteam || "General"}
+                            disabled={savingMemberId === m.id}
+                            onChange={e => patchMemberQuick(m.id, { subteam: e.target.value })}
+                            style={{ ...S.select, minWidth: 130, maxWidth: 220, fontSize: 12, padding: "6px 8px", opacity: savingMemberId === m.id ? 0.6 : 1 }}
+                          >
+                            {SUBTEAMS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </label>
+                      </div>
                     </div>
                     <div style={S.memberActions}>
                       <button onClick={() => { setEditId(m.id); setEditData({ full_name: m.full_name, role: m.role, subteam: m.subteam || "General" }); setPwError(""); }} style={S.btnGhost}>Edit</button>
@@ -636,19 +697,39 @@ function CaptainsAdmin({ captains, reload, showToast }) {
   async function createCaptain() {
     if (!form.name || !form.position) return;
     setUploading(true);
-    let photo_url = "";
-    if (photoFile) { photo_url = await uploadImageToSupabase(photoFile) || ""; }
-    await adminProxy('captains', 'insert', { ...form, photo_url });
-    setForm({ name: "", position: "", bio: "", sort_order: 0 }); setPhotoFile(null);
-    setUploading(false); reload(); showToast("✅ Person added.");
+    try {
+      let photo_url = "";
+      if (photoFile) photo_url = (await uploadImageToSupabase(photoFile)) || "";
+      await adminProxy("captains", "insert", { ...form, photo_url });
+      setForm({ name: "", position: "", bio: "", sort_order: 0 });
+      setPhotoFile(null);
+      reload();
+      showToast("✅ Person added.");
+    } catch (e) {
+      showToast(String(e.message || e), "#ef4444");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function updateCaptain(id) {
     setUploading(true);
-    let update = { ...editData };
-    if (editPhotoFile) { const url = await uploadImageToSupabase(editPhotoFile); if (url) update.photo_url = url; }
-    await adminProxy('captains', 'update', { id, updates: update });
-    setEditId(null); setEditPhotoFile(null); setUploading(false); reload(); showToast("✅ Updated.");
+    try {
+      const update = { ...editData };
+      if (editPhotoFile) {
+        const url = await uploadImageToSupabase(editPhotoFile);
+        if (url) update.photo_url = url;
+      }
+      await adminProxy("captains", "update", { id, updates: update });
+      setEditId(null);
+      setEditPhotoFile(null);
+      reload();
+      showToast("✅ Updated.");
+    } catch (e) {
+      showToast(String(e.message || e), "#ef4444");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function deleteCaptain(id) {
