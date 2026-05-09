@@ -217,7 +217,6 @@ export default function Landing() {
       <RulerMarks opacity={0.22} />
       {/* Distorted grid that warps on scroll */}
       <DistortedGrid scrollY={scrollY} />
-      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, backgroundImage: "linear-gradient(rgba(239,68,68,0.035) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.035) 1px,transparent 1px)", backgroundSize: "44px 44px" }} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&family=Bebas+Neue&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}

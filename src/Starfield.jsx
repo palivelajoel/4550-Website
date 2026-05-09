@@ -139,7 +139,7 @@ export default function Starfield({ density = 8000, opacity = 0.55 }) {
         height: "100vh",
         pointerEvents: "none",
         opacity,
-        zIndex: 0,
+        zIndex: -2,
       }}
     />
   );
