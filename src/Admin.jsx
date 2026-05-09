@@ -269,28 +269,13 @@ function Overview({ members, tasks, suggestions, sponsors, events, overdue, comp
 
 // ── ACCOUNTS ──────────────────────────────────────────────
 function Accounts({ members, reload, showToast }) {
-  const [form, setForm] = useState({ username: "", password: "", confirmPassword: "", full_name: "", role: "Member", subteam: "General" });
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
-  const [pwError, setPwError] = useState("");
   const [savingMemberId, setSavingMemberId] = useState(null);
 
-  async function createMember() {
-    setPwError("");
-    if (!form.username || !form.password) return;
-    if (form.password !== form.confirmPassword) { setPwError("Passwords do not match."); return; }
-    // Use special admin-proxy flow to create Supabase auth user and members row
-    await adminProxy('members', 'create_user', { email: form.username, password: form.password, full_name: form.full_name, role: form.role, subteam: form.subteam, username: form.username });
-    setForm({ username: "", password: "", confirmPassword: "", full_name: "", role: "Member", subteam: "General" });
-    reload(); showToast("✅ Member created.");
-  }
-
   async function updateMember(id) {
-    setPwError("");
-    if (editData.password && editData.password !== editData.confirmPassword) { setPwError("Passwords do not match."); return; }
     const payload = { full_name: editData.full_name, role: editData.role, subteam: editData.subteam };
-    // If password provided, use special update_member action to change Auth password
-    await adminProxy('members', 'update_member', { id, updates: payload, password: editData.password });
+    await adminProxy('members', 'update_member', { id, updates: payload });
     setEditId(null); setEditData({}); reload(); showToast("✅ Member updated.");
   }
 
@@ -322,33 +307,6 @@ function Accounts({ members, reload, showToast }) {
   return (
     <div>
       <h1 style={S.pageTitle}>Account Management</h1>
-      <div style={S.card}>
-        <div style={S.cardTitle}>Create Account</div>
-        <div style={{ color: "#64748b", fontSize: 12, fontFamily: "monospace", marginBottom: 12 }}>
-          <strong style={{ color: "#94a3b8" }}>Role</strong> and <strong style={{ color: "#94a3b8" }}>Sub-team</strong> save as soon as you change them per member; use Edit for name or password.
-        </div>
-        <div style={S.formCol}>
-          <div style={S.formRow}>
-            <input placeholder="Username *" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={S.input} />
-            <input placeholder="Full Name" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} style={S.input} />
-          </div>
-          <div style={S.formRow}>
-            <input type="password" placeholder="Password *" value={form.password} onChange={e => { setForm({ ...form, password: e.target.value }); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined }} />
-            <input type="password" placeholder="Confirm Password *" value={form.confirmPassword} onChange={e => { setForm({ ...form, confirmPassword: e.target.value }); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined }} />
-          </div>
-          {pwError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "monospace" }}>{pwError}</div>}
-          <div style={S.formRow}>
-            <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={S.select}>
-              {ROLES.map(r => <option key={r}>{r}</option>)}
-            </select>
-            <select value={form.subteam} onChange={e => setForm({ ...form, subteam: e.target.value })} style={S.select}>
-              {SUBTEAMS.map(s => <option key={s}>{s}</option>)}
-            </select>
-            <button onClick={createMember} style={S.btnPrimary}>Create Account</button>
-          </div>
-        </div>
-      </div>
-
       {/* By subteam */}
       {SUBTEAMS.map(st => {
         const sub = bySubteam[st];
@@ -372,11 +330,6 @@ function Accounts({ members, reload, showToast }) {
                         {SUBTEAMS.map(s => <option key={s}>{s}</option>)}
                       </select>
                     </div>
-                    <div style={S.formRow}>
-                      <input type="password" placeholder="New Password (leave blank to keep)" value={editData.password || ""} onChange={e => { setEditData({ ...editData, password: e.target.value }); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined }} />
-                      <input type="password" placeholder="Confirm New Password" value={editData.confirmPassword || ""} onChange={e => { setEditData({ ...editData, confirmPassword: e.target.value }); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined }} />
-                    </div>
-                    {pwError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "monospace" }}>{pwError}</div>}
                     <div style={S.formRow}>
                       <button onClick={() => updateMember(m.id)} style={S.btnPrimary}>Save</button>
                       <button onClick={() => { setEditId(null); setPwError(""); }} style={S.btnGhost}>Cancel</button>
