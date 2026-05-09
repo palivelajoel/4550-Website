@@ -745,11 +745,26 @@ function CaptainsAdmin({ captains, reload, showToast }) {
     const ordered = [...captains].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
     const si = ordered.findIndex(c => c.id === sourceId);
     const ti = ordered.findIndex(c => c.id === targetId);
+    if (si < 0 || ti < 0) return;
     const [moved] = ordered.splice(si, 1);
     ordered.splice(ti, 0, moved);
-    await Promise.all(ordered.map((c, i) => sbFetch(`captains?id=eq.${c.id}`, { method: "PATCH", body: JSON.stringify({ sort_order: i }) })));
-    setDraggingId(null); setDragOverId(null); reload(); showToast("✅ Order saved.");
+    try {
+      await Promise.all(
+        ordered.map((c, i) =>
+          adminProxy("captains", "update", { id: c.id, updates: { sort_order: i } })
+        )
+      );
+      showToast("✅ Order saved.");
+    } catch (err) {
+      showToast(String(err.message || err), "#ef4444");
+    } finally {
+      setDraggingId(null);
+      setDragOverId(null);
+      reload();
+    }
   }
+
+  const sortedCaptains = [...captains].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
   return (
     <div>
@@ -773,7 +788,7 @@ function CaptainsAdmin({ captains, reload, showToast }) {
 
       <div style={S.card}>
         <div style={S.cardTitle}>Current Leadership — Drag to reorder</div>
-        {captains.map(c => (
+        {sortedCaptains.map(c => (
           <div key={c.id} draggable onDragStart={() => setDraggingId(c.id)} onDragOver={e => { e.preventDefault(); setDragOverId(c.id); }} onDrop={e => handleDrop(e, c.id)} onDragEnd={() => { setDraggingId(null); setDragOverId(null); }}
             style={{ ...S.memberRow, opacity: draggingId === c.id ? 0.4 : 1, background: dragOverId === c.id && draggingId !== c.id ? "rgba(239,68,68,0.06)" : "transparent", border: dragOverId === c.id && draggingId !== c.id ? "1px dashed rgba(239,68,68,0.4)" : "1px solid transparent", cursor: "grab" }}>
             {editId === c.id ? (
