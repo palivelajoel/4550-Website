@@ -3,7 +3,7 @@ import Starfield from "./Starfield.jsx";
 import { RulerMarks } from "./Starfield.jsx";
 
 import supabase from './supabaseClient.js';
-import { CaptainPhoto, sbFetch, SUPABASE_URL, SUPABASE_KEY } from './hubUtils.jsx';
+import { CaptainPhoto, sbFetch, uploadFile } from './hubUtils.jsx';
 
 const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 const ROLES = ["Member", "Captain", "Admin"];
@@ -36,19 +36,6 @@ async function adminProxy(table, action, payload) {
     throw new Error(msg);
   }
   return res.json();
-}
-
-async function uploadImageToSupabase(file) {
-  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
-  const safeFileName = `${Date.now()}-${file.name}`.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9._-]/g, "_");
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/team-assets/${safeFileName}`, {
-    method: "POST",
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": file.type, "x-upsert": "true" },
-    body: file,
-  });
-  if (!res.ok) return null;
-  // Return WITHOUT encodeURIComponent — simpler, works for safe filenames
-  return `${SUPABASE_URL}/storage/v1/object/public/team-assets/${safeFileName}`;
 }
 
 const ROLE_COLORS = { Member: "#64748b", Captain: "#3b82f6", Admin: "#ef4444" };
@@ -699,7 +686,7 @@ function CaptainsAdmin({ captains, reload, showToast }) {
     setUploading(true);
     try {
       let photo_url = "";
-      if (photoFile) photo_url = (await uploadImageToSupabase(photoFile)) || "";
+      if (photoFile) photo_url = (await uploadFile(photoFile)) || "";
       await adminProxy("captains", "insert", { ...form, photo_url });
       setForm({ name: "", position: "", bio: "", sort_order: 0 });
       setPhotoFile(null);
@@ -717,7 +704,7 @@ function CaptainsAdmin({ captains, reload, showToast }) {
     try {
       const update = { ...editData };
       if (editPhotoFile) {
-        const url = await uploadImageToSupabase(editPhotoFile);
+        const url = await uploadFile(editPhotoFile);
         if (url) update.photo_url = url;
       }
       await adminProxy("captains", "update", { id, updates: update });
@@ -873,7 +860,7 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
   async function uploadLogo() {
     if (!logoFile) return;
     setUploading(true);
-    const url = await uploadImageToSupabase(logoFile);
+    const url = await uploadFile(logoFile);
     if (!url) { showToast("Upload failed.", "#ef4444"); setUploading(false); return; }
     const existing = await sbFetch("site_config?key=eq.logo_url&select=key");
     if (existing?.length) await sbFetch("site_config?key=eq.logo_url", { method: "PATCH", body: JSON.stringify({ value: url }) });

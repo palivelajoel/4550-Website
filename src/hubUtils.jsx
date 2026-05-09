@@ -1,5 +1,5 @@
 // hubUtils.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // Read Supabase config from Vite env vars so keys are not checked into source.
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -41,80 +41,229 @@ export async function uploadFile(file, bucket = "team-assets") {
   return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${safeFileName}`;
 }
 
-// ── DEFINITIVE Captain Photo Fix ─────────────────────────
-// Extracts just the filename from any stored URL format
-function extractFilename(url) {
-  if (!url) return null;
-  const s = decodeURIComponent(url.trim());
-  // Strip query params
-  const noQuery = s.split("?")[0];
-  // Find after any known bucket segment
-  const seps = ["/public/team-assets/", "/object/team-assets/", "/team-assets/"];
-  for (const sep of seps) {
-    const idx = noQuery.lastIndexOf(sep);
-    if (idx !== -1) return noQuery.slice(idx + sep.length);
-  }
-  // Fallback: last path segment
-  return noQuery.split("/").pop();
+/** Public URL helpers for captain headshots (`team-assets` bucket only). */
+
+const CAPTAIN_BUCKET = "team-assets";
+
+function safeDecode(seg) {
+  try { return decodeURIComponent(seg); } catch { return seg; }
 }
 
+/** Object path inside bucket (may include slashes), no leading slash; null if unmappable */
+export function captainStorageKeyFromStoredValue(stored) {
+  if (!stored || typeof stored !== "string") return null;
+  const raw = stored.trim();
+  if (!raw) return null;
+
+  let pathLike = raw.split(/[?#]/)[0];
+  try {
+    if (/^https?:\/\//i.test(raw)) pathLike = new URL(raw).pathname;
+  } catch {
+    return null;
+  }
+
+  const tryAfter = (s, needle) => {
+    const i = s.indexOf(needle);
+    if (i === -1) return null;
+    return safeDecode(s.slice(i + needle.length).replace(/^\/+/, ""));
+  };
+
+  let key =
+    tryAfter(pathLike, `/object/public/${CAPTAIN_BUCKET}/`) ||
+    tryAfter(pathLike, `/storage/v1/object/public/${CAPTAIN_BUCKET}/`) ||
+    tryAfter(pathLike, `/object/sign/${CAPTAIN_BUCKET}/`) ||
+    tryAfter(pathLike, `/object/${CAPTAIN_BUCKET}/`) ||
+    tryAfter(pathLike, `/${CAPTAIN_BUCKET}/`);
+  if (key) return key.replace(/^\/*/, "");
+
+  pathLike = pathLike.replace(/^\/+/, "");
+  const segments = pathLike.split("/").filter(Boolean);
+  const bi = segments.lastIndexOf(CAPTAIN_BUCKET);
+  if (bi >= 0 && bi < segments.length - 1) return segments.slice(bi + 1).map(safeDecode).join("/");
+
+  if (/^[a-zA-Z0-9._\- /]+\.(jpe?g|png|gif|webp)$/i.test(pathLike)) return pathLike;
+  const last = segments[segments.length - 1];
+  return last ? safeDecode(last) : null;
+}
+
+/** Encode each path segment (spaces etc.) once for the canonical public URL Supabase expects. */
+function escapedStoragePath(key) {
+  return key
+    .split("/")
+    .filter(Boolean)
+    .map(seg => encodeURIComponent(safeDecode(seg)))
+    .join("/");
+}
+
+/** Distinct URLs to try loading (stored URL plus canonical `public/` URLs for current project). */
+function captainAvatarUrlCandidates(storageKey, originalTrimmed) {
+  const uniq = [];
+  const add = u => {
+    if (u && typeof u === "string" && !uniq.includes(u)) uniq.push(u);
+  };
+
+  if (/^https?:\/\//i.test(originalTrimmed)) add(originalTrimmed);
+
+  if (!SUPABASE_URL || !storageKey) return uniq;
+
+  const base = `${SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/${CAPTAIN_BUCKET}`;
+  add(`${base}/${escapedStoragePath(storageKey)}`);
+  add(`${base}/${storageKey}`);
+  return uniq;
+}
+
+function loadImageViaTag(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const done = ok => {
+      img.onload = null;
+      img.onerror = null;
+      resolve(ok);
+    };
+    img.onload = () => done(true);
+    img.onerror = () => done(false);
+    img.decoding = "async";
+    img.src = url;
+  });
+}
+
+/**
+ * Displays a captain/leaders headshot from `photo_url`: any full URL, legacy host, or object key under `team-assets`.
+ */
 export function CaptainPhoto({ photoUrl, name = "?", size = 80, style: extraStyle = {} }) {
+  const [status, setStatus] = useState("idle");
   const [src, setSrc] = useState(null);
-  const [failed, setFailed] = useState(false);
+  const blobUrlRef = useRef(null);
 
   useEffect(() => {
-    setSrc(null); setFailed(false);
-    if (!photoUrl) { setFailed(true); return; }
     let cancelled = false;
+    const revokeBlob = () => {
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+    };
 
-    const filename = extractFilename(photoUrl);
-    if (!filename) { setFailed(true); return; }
+    revokeBlob();
+    setSrc(null);
 
-    // Build candidate URLs (encoded + raw)
-    const urls = [
-      `${SUPABASE_URL}/storage/v1/object/public/team-assets/${encodeURIComponent(filename)}`,
-      `${SUPABASE_URL}/storage/v1/object/public/team-assets/${filename}`,
-    ];
+    const trimmed = typeof photoUrl === "string" ? photoUrl.trim() : "";
+    if (!trimmed || !SUPABASE_URL) {
+      setStatus("error");
+      return () => {
+        cancelled = true;
+        revokeBlob();
+      };
+    }
+
+    setStatus("loading");
+
+    const key = captainStorageKeyFromStoredValue(trimmed);
+    const candidates = captainAvatarUrlCandidates(key, trimmed);
+    const authHeaders =
+      SUPABASE_KEY && SUPABASE_URL
+        ? { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        : null;
 
     (async () => {
-      // Try 1: plain <img> load for each candidate
-      for (const url of urls) {
-        const ok = await new Promise(res => {
-          const img = new Image();
-          img.onload = () => res(true);
-          img.onerror = () => res(false);
-          img.src = url;
-        });
-        if (ok && !cancelled) { setSrc(url); return; }
-      }
-
-      // Try 2: authenticated fetch → blob URL
-      for (const url of urls) {
+      for (const url of candidates) {
+        if (cancelled) return;
         try {
-          const r = await fetch(url, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }});
-          if (r.ok) {
-            const blob = await r.blob();
-            if (!cancelled) { setSrc(URL.createObjectURL(blob)); return; }
+          if (await loadImageViaTag(url)) {
+            revokeBlob();
+            if (cancelled) return;
+            setSrc(url);
+            setStatus("ok");
+            return;
           }
-        } catch {}
+        } catch { /* next */ }
       }
 
-      if (!cancelled) setFailed(true);
+      if (authHeaders && candidates.length > 0) {
+        for (const url of candidates) {
+          if (cancelled) return;
+          try {
+            const r = await fetch(url, { headers: authHeaders });
+            if (!r.ok) continue;
+            const blob = await r.blob();
+            if (!blob.size || cancelled) continue;
+            revokeBlob();
+            const blobUrl = URL.createObjectURL(blob);
+            blobUrlRef.current = blobUrl;
+            setSrc(blobUrl);
+            setStatus("ok");
+            return;
+          } catch { /* next */ }
+        }
+      }
+
+      if (!cancelled) setStatus("error");
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      revokeBlob();
+    };
   }, [photoUrl]);
 
-  const baseStyle = { width: size, height: size, borderRadius: "50%", flexShrink: 0, ...extraStyle };
-  const initial = (name || "?")[0].toUpperCase();
+  const merged = {
+    width: size,
+    height: size,
+    borderRadius: "50%",
+    flexShrink: 0,
+    ...extraStyle,
+  };
 
-  if (failed) return (
-    <div style={{ ...baseStyle, background:"rgba(239,68,68,0.12)", border:"2px solid rgba(239,68,68,0.3)", display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize: size * 0.38, color:"#ef4444", fontFamily:"'Orbitron',sans-serif" }}>{initial}</div>
+  const initial = ((name || "?").trim()[0] || "?").toUpperCase();
+
+  if (status === "error")
+    return (
+      <div
+        style={{
+          ...merged,
+          background: "rgba(239,68,68,0.12)",
+          border: merged.border ?? "2px solid rgba(239,68,68,0.3)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontWeight: 700,
+          fontSize: Math.max(size * 0.36, 14),
+          color: "#ef4444",
+          fontFamily: "'Orbitron',sans-serif",
+        }}
+      >
+        {initial}
+      </div>
+    );
+
+  if (status !== "ok" || !src)
+    return (
+      <div
+        aria-hidden
+        style={{
+          ...merged,
+          background: "rgba(255,255,255,0.06)",
+          border: merged.border ?? "2px solid rgba(255,255,255,0.08)",
+        }}
+      />
+    );
+
+  return (
+    <img
+      src={src}
+      alt={name || "Captain"}
+      style={{
+        ...merged,
+        objectFit: "cover",
+        display: "block",
+        border: merged.border ?? "2px solid rgba(239,68,68,0.35)",
+      }}
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
+      onError={() => setStatus("error")}
+    />
   );
-  if (!src) return (
-    <div style={{ ...baseStyle, background:"rgba(255,255,255,0.06)", border:"2px solid rgba(255,255,255,0.08)", animation:"pulse 1.4s ease-in-out infinite" }} />
-  );
-  return <img src={src} alt={name} style={{ ...baseStyle, objectFit:"cover", border:"2px solid rgba(239,68,68,0.35)" }} onError={() => setFailed(true)} />;
 }
 
 // ── CSS ──────────────────────────────────────────────────
