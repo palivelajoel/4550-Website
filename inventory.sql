@@ -1,11 +1,7 @@
 -- Migration: Add password_hash to members
 ALTER TABLE members ADD COLUMN IF NOT EXISTS password_hash TEXT;
 
--- Migration: Change inventory_items.added_by to reference members.id instead of auth.users
-ALTER TABLE inventory_items DROP CONSTRAINT IF EXISTS inventory_items_added_by_fkey;
--- Make added_by nullable since we use member IDs now
-
--- Inventory table for parts and tools
+-- Inventory table for parts and tools (must exist before ALTER below)
 CREATE TABLE IF NOT EXISTS public.inventory_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -17,6 +13,9 @@ CREATE TABLE IF NOT EXISTS public.inventory_items (
     added_by UUID,
     created_at TIMESTAMPTZ WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Drop old foreign key constraint if table existed before (migration from auth.users to members.id)
+ALTER TABLE public.inventory_items DROP CONSTRAINT IF EXISTS inventory_items_added_by_fkey;
 
 -- Enable Row Level Security
 ALTER TABLE public.inventory_items ENABLE ROW LEVEL SECURITY;
