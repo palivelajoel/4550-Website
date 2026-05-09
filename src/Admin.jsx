@@ -2,21 +2,16 @@ import { useState, useEffect, useRef } from "react";
 import Starfield from "./Starfield.jsx";
 import { RulerMarks } from "./Starfield.jsx";
 
-import supabase from './supabaseClient.js';
 import { CaptainPhoto, sbFetch, uploadFile } from './hubUtils.jsx';
 
 const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 const ROLES = ["Member", "Captain", "Admin"];
 const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];
 
-// Admin proxy helper — forwards the signed-in Supabase access token because /api/admin-proxy requires Bearer auth.
 async function adminProxy(table, action, payload) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
+  const token = localStorage.getItem("admin_token");
   if (!token) {
-    throw new Error(
-      "Missing admin auth session. Sign in with your team email address and password so API requests can authenticate."
-    );
+    throw new Error("Missing admin auth session. Sign in with your username and password.");
   }
   const res = await fetch("/api/admin-proxy", {
     method: "POST",
@@ -110,31 +105,21 @@ export default function Admin() {
     e.preventDefault();
     setErr("");
     try {
-      // If email is provided, use Supabase Auth sign-in flow
-      if (email) {
-        const { data: signData, error: signErr } = await supabase.auth.signInWithPassword({ email, password: pw });
-        if (signErr || !signData?.session) { setErr(signErr?.message || 'Sign-in failed.'); return; }
-        const token = signData.session.access_token;
-        // Exchange token with server to set HttpOnly admin cookie
-        const r = await fetch('/api/admin-login', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
-        if (!r.ok) { const txt = await r.text().catch(() => ''); setErr(txt || 'Server login failed.'); return; }
-        localStorage.setItem("admin_authed", "true");
-        setAuthed(true); loadAll();
-        return;
-      }
-
-      // Fallback: legacy password (no email)
-      const r = await fetch('/api/admin-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
-      if (!r.ok) { setErr('Incorrect password.'); return; }
+      const r = await fetch('/api/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: email.trim(), password: pw }),
+      });
+      const data = await r.json();
+      if (!r.ok) { setErr(data.error || 'Login failed.'); return; }
+      localStorage.setItem("admin_token", data.token);
       localStorage.setItem("admin_authed", "true");
       setAuthed(true); loadAll();
     } catch (err) { setErr('Login failed.'); }
   }
 
   async function handleLogout() {
-    try { await fetch('/api/admin-logout'); } catch (e) {}
-    try { await supabase.auth.signOut(); } catch (e) {}
-    localStorage.removeItem("admin_authed"); setAuthed(false);
+    localStorage.removeItem("admin_authed"); localStorage.removeItem("admin_token"); setAuthed(false);
   }
 
   if (!authed) {
@@ -149,7 +134,7 @@ export default function Admin() {
           <div style={S.loginTitle}>ADMIN PANEL</div>
           <div style={S.loginSub}>FRC Team 4550 · Something's Bruin</div>
           <form onSubmit={handleLogin} style={S.loginForm}>
-            <input type="email" placeholder="Email (optional for Supabase auth)" value={email} onChange={e => { setEmail(e.target.value); setErr(""); }} style={S.loginInput} />
+            <input type="text" placeholder="Username" value={email} onChange={e => { setEmail(e.target.value); setErr(""); }} style={S.loginInput} />
             <input type="password" placeholder="Password" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }}
               style={S.loginInput} autoFocus />
             {err && <div style={S.loginErr}>{err}</div>}

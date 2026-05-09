@@ -10,6 +10,7 @@ export default async function handler(req, res) {
       GROQ_API_KEY: !!process.env.GROQ_API_KEY,
       ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
       TBA_API_KEY: !!process.env.TBA_API_KEY,
+      JWT_SECRET: !!process.env.JWT_SECRET,
     };
 
     // Include a quick build/runtime hint (vercel sets VERCEL env var)

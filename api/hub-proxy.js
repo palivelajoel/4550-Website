@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyToken, getTokenFromRequest } from './_shared.js';
 
-const ALLOWED_TABLES = ['sponsors', 'captains', 'site_config', 'members', 'hub_tasks', 'suggestions', 'hub_calendar', 'inventory_items'];
+const ALLOWED_TABLES = ['hub_tasks', 'inventory_items'];
 
 export default async function handler(req, res) {
   try {
@@ -10,40 +10,20 @@ export default async function handler(req, res) {
 
     const payload = verifyToken(token);
     if (!payload) return res.status(401).json({ error: 'Invalid or expired token' });
-    if (payload.role !== 'Admin') return res.status(403).json({ error: 'Forbidden: admin role required' });
+    if (!['Captain', 'Admin'].includes(payload.role)) return res.status(403).json({ error: 'Forbidden: captain or admin role required' });
 
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE);
 
     const { table, action, payload: bodyPayload } = req.body || {};
     if (!table || !ALLOWED_TABLES.includes(table)) return res.status(400).json({ error: 'Invalid table' });
 
-    if (table === 'members' && action === 'update_member') {
-      const { id, updates } = bodyPayload || {};
-      if (!id) return res.status(400).json({ error: 'Missing id' });
-      const pw = updates?.password;
-      const upd = { ...(updates || {}) };
-      if (pw) {
-        const { hashPassword } = await import('./_shared.js');
-        upd.password_hash = hashPassword(pw);
-      }
-      delete upd.password;
-      const { data: upData, error: upErr } = await supabase.from('members').update(upd).eq('id', id).select();
-      if (upErr) return res.status(500).json({ error: upErr.message });
-      return res.status(200).json({ data: upData });
-    }
-
     if (!['insert', 'update', 'delete'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
 
     if (action === 'insert') {
-      let dataPayload = bodyPayload;
-      if (table === 'members' && bodyPayload?.password) {
-        const { hashPassword } = await import('./_shared.js');
-        dataPayload = { ...bodyPayload, password_hash: hashPassword(bodyPayload.password) };
-        delete dataPayload.password;
-      }
-      const { data, error } = await supabase.from(table).insert(dataPayload).select();
+      const data = { ...bodyPayload, added_by: bodyPayload.added_by || payload.userId };
+      const { data: result, error } = await supabase.from(table).insert(data).select();
       if (error) return res.status(500).json({ error: error.message });
-      return res.status(200).json({ data });
+      return res.status(200).json({ data: result });
     }
 
     if (action === 'update') {

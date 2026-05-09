@@ -19,6 +19,24 @@ export const getSubteam = () => localStorage.getItem("hub_subteam") || "General"
 export const isAdmin = () => getRole() === "Admin";
 export const isCaptainOrAbove = () => ["Captain","Admin"].includes(getRole());
 export const canEditHub = () => isCaptainOrAbove();
+export const getToken = () => localStorage.getItem("hub_token");
+
+function decodeTokenPayload(token) {
+  try { return JSON.parse(atob(token.split(".")[1])); } catch { return null; }
+}
+export const getTokenUserId = () => { const t = getToken(); return t ? decodeTokenPayload(t)?.userId : null; };
+
+export async function hubProxy(table, action, payload) {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch("/api/hub-proxy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ table, action, payload }),
+  });
+  if (!res.ok) { let msg = await res.text().catch(() => ""); try { const j = JSON.parse(msg); if (j?.error) msg = j.error; } catch {} throw new Error(msg || `Proxy error ${res.status}`); }
+  return res.json();
+}
 
 // ── Supabase ─────────────────────────────────────────────
 export async function sbFetch(path, opts = {}) {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { FONTS, C, ROLE_COLORS, SUBTEAM_COLORS, TEAM_PASSWORD, sbFetch, isAdmin, isCaptainOrAbove, getRole, getUsername } from "./hubUtils.jsx";
-import supabase from "./supabaseClient.js";
+
 import Starfield from "./Starfield.jsx";
 import { RulerMarks } from "./Starfield.jsx";
 
@@ -109,34 +109,31 @@ export default function Hub() {
     e.preventDefault();
     if (!username.trim() || !pw.trim()) { setErr("Username (email) and password required."); return; }
     setLoginLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: username.trim(),
-      password: pw.trim(),
-    });
-    if (error || !data?.session) {
-      setErr(error?.message || "Incorrect email or password.");
+    try {
+      const res = await fetch("/api/hub-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password: pw.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error || "Login failed."); setLoginLoading(false); return; }
+      localStorage.setItem("hub_token", data.token);
+      localStorage.setItem("hub_authed", "true");
+      localStorage.setItem("hub_username", data.user.username);
+      localStorage.setItem("hub_role", data.user.role);
+      localStorage.setItem("hub_subteam", data.user.subteam || "General");
+      setAuthed(true);
+      setRole(data.user.role);
+      setSubteam(data.user.subteam || "General");
+      setMemberName(data.user.full_name || data.user.username);
       setLoginLoading(false);
-      return;
-    }
-    const token = data.session.access_token;
-    const user = data.user;
-    const { data: member } = await supabase.from("members").select("full_name,role,subteam").or(`auth_id.eq.${user.id},username.eq.${user.email}`).maybeSingle();
-    const r = member?.role || "Member";
-    localStorage.setItem("hub_authed", "true");
-    localStorage.setItem("hub_username", user.email || username.trim());
-    localStorage.setItem("hub_role", r);
-    localStorage.setItem("hub_subteam", member?.subteam || "General");
-    setAuthed(true);
-    setRole(r);
-    setSubteam(member?.subteam || "General");
-    setLoginLoading(false);
-    setErr("");
-    loadStats();
+      setErr("");
+      loadStats();
+    } catch { setErr("Login failed. Server may be unavailable."); setLoginLoading(false); }
   }
 
   function logout() {
-    supabase.auth.signOut().catch(() => {});
-    ["hub_authed","hub_username","hub_role","hub_subteam"].forEach(k => localStorage.removeItem(k));
+    ["hub_authed","hub_username","hub_role","hub_subteam","hub_token"].forEach(k => localStorage.removeItem(k));
     setAuthed(false); setMemberName(""); setRole("Member");
   }
 

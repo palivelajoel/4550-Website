@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch, isAuthed, canEditHub, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
-import supabase from "./supabaseClient.js";
+import { FONTS, C, sbFetch, isAuthed, canEditHub, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
 
 const STATUSES = ["Backlog", "To Do", "In Progress", "Review", "Done"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
@@ -54,10 +53,10 @@ export default function HubTasks() {
     const payload = { ...form, assigned_name: member ? member.full_name || member.username : form.assigned_name };
     try {
       if (modal.mode === "add") {
-        await supabase.from("hub_tasks").insert(payload);
+        await hubProxy("hub_tasks", "insert", payload);
         showToast("Task created.");
       } else {
-        await supabase.from("hub_tasks").update(payload).eq("id", modal.task.id);
+        await hubProxy("hub_tasks", "update", { id: modal.task.id, updates: payload });
         showToast("Task updated.");
       }
     } catch (e) {
@@ -70,7 +69,7 @@ export default function HubTasks() {
 
   async function deleteTask(id) {
     try {
-      await supabase.from("hub_tasks").delete().eq("id", id);
+      await hubProxy("hub_tasks", "delete", { id });
       showToast("Deleted.");
     } catch (e) {
       showToast("Delete failed: " + (e.message || e));
@@ -80,8 +79,10 @@ export default function HubTasks() {
   }
 
   async function moveTask(id, newStatus) {
-    await supabase.from("hub_tasks").update({ status: newStatus }).eq("id", id);
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+    try {
+      await hubProxy("hub_tasks", "update", { id, updates: { status: newStatus } });
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+    } catch { showToast("Move failed."); }
   }
 
   function filteredTasks(status) {

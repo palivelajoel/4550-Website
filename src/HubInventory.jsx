@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch, isAuthed, canEditHub, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
-import supabase from "./supabaseClient.js";
+import { FONTS, C, sbFetch, isAuthed, canEditHub, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy, getTokenUserId } from "./hubUtils.jsx";
 import Starfield from "./Starfield.jsx";
 
 export default function HubInventory() {
@@ -71,13 +70,14 @@ export default function HubInventory() {
     if (!form.name.trim()) return showToast("Name is required.", "#ef4444");
     setSaving(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const payload = { ...form, added_by: userData?.user?.id || null };
+      const userId = getTokenUserId();
+      const payload = { ...form, added_by: userId };
       if (modal === "add") {
-        await fetch(`/api/admin-proxy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "inventory_items", action: "insert", payload }) });
+        await hubProxy("inventory_items", "insert", payload);
         showToast("✅ Item added.");
       } else {
-        await fetch(`/api/admin-proxy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "inventory_items", action: "update", payload: { id: form.id, updates: { ...form, added_by: undefined, id: undefined, created_at: undefined } } }) });
+        const { id, created_at, ...updates } = form;
+        await hubProxy("inventory_items", "update", { id, updates });
         showToast("✅ Item updated.");
       }
       setModal(null);
@@ -88,7 +88,7 @@ export default function HubInventory() {
 
   async function handleDelete(id) {
     if (!confirm("Delete this item?")) return;
-    await fetch(`/api/admin-proxy`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ table: "inventory_items", action: "delete", payload: { id } }) });
+    await hubProxy("inventory_items", "delete", { id });
     showToast("🗑️ Deleted.", "#ef4444");
     loadItems();
   }
