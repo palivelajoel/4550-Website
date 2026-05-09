@@ -521,9 +521,9 @@ function Tasks({ tasks, members, reload, showToast }) {
                     {["To Do", "In Progress", "Done"].map(s => <option key={s}>{s}</option>)}
                   </select>
                   <button onClick={() => deleteTask(t.id)} style={S.btnDanger}>✕</button>
-                </div>
-              </div>
-            ))}
+            </div>
+            </div>
+          )}
           </div>
         ))}
       </div>
