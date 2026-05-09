@@ -523,7 +523,7 @@ function Tasks({ tasks, members, reload, showToast }) {
                   <button onClick={() => deleteTask(t.id)} style={S.btnDanger}>✕</button>
             </div>
             </div>
-          )}
+          ))}
           </div>
         ))}
       </div>
@@ -795,7 +795,7 @@ function CaptainsAdmin({ captains, reload, showToast }) {
                   <button onClick={() => deleteCaptain(c.id)} style={S.btnDanger}>Remove</button>
                 </div>
               </>
-            )}
+            ))}
           </div>
         ))}
       </div>
