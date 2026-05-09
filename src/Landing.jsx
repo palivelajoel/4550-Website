@@ -1,6 +1,28 @@
 import { useEffect, useRef, useState } from "react";
+import { useIsMobile } from "./useIsMobile";
 import Starfield from "./Starfield.jsx";
 import { RulerMarks } from "./Starfield.jsx";
+
+// Distorted grid that warps on scroll
+function DistortedGrid({ scrollY }) {
+  const warp = Math.sin(scrollY * 0.003) * 2;
+  const skew = scrollY * 0.001;
+  const blur = Math.min(scrollY * 0.015, 3);
+  return (
+    <div style={{
+      position: "fixed",
+      inset: 0,
+      pointerEvents: "none",
+      zIndex: 0,
+      backgroundImage: "linear-gradient(rgba(239,68,68,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.04) 1px,transparent 1px)",
+      backgroundSize: "44px 44px",
+      transform: `perspective(500px) rotateX(${warp}deg) skewY(${skew}deg)`,
+      filter: `blur(${blur}px)`,
+      opacity: Math.max(1 - scrollY * 0.0008, 0.3),
+      transition: "transform 0.1s ease-out, filter 0.1s ease-out",
+    }} />
+  );
+}
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -95,7 +117,7 @@ function FadeSection({ children, style }) {
 
 export default function Landing() {
   const isMobile = useIsMobile();
-  const scrollY = useScrollY(isMobile);
+  const [scrollY, setScrollY] = useState(0);
   const [config, setConfig] = useState({});
   const [captains, setCaptains] = useState([]);
   const [competitions, setCompetitions] = useState([]);
@@ -113,6 +135,11 @@ export default function Landing() {
     });
     sbFetch("captains?select=*&order=sort_order.asc").then(r => { if (r) setCaptains(r); });
     fetchCompetitions().then(r => { if (r) setCompetitions(r); });
+    
+    // Track scroll position for grid distortion
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => { if (menuOpen) setMenuOpen(false); }, [scrollY]);
@@ -189,7 +216,8 @@ export default function Landing() {
     <div style={{ background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", position: "relative", minHeight: "100vh" }}>
       <Starfield density={9000} opacity={0.38} />
       <RulerMarks opacity={0.22} />
-      {/* Full-page grid texture */}
+      {/* Distorted grid that warps on scroll */}
+      <DistortedGrid scrollY={scrollY} />
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, backgroundImage: "linear-gradient(rgba(239,68,68,0.035) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.035) 1px,transparent 1px)", backgroundSize: "44px 44px" }} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&family=Bebas+Neue&display=swap');
@@ -267,7 +295,7 @@ export default function Landing() {
       <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(180deg,rgba(8,10,15,0.55) 0%,rgba(13,17,23,0.66) 100%)", paddingTop: 70, position: "relative", overflow: "hidden" }}>
         <ParticleCanvas isMobile={isMobile} />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(239,68,68,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.04) 1px,transparent 1px)", backgroundSize: isMobile ? "40px 40px" : "60px 60px", pointerEvents: "none" }} />
-        <div style={{ textAlign: "center", zIndex: 1, padding: isMobile ? "0 20px" : "0 24px", transform: isMobile ? "none" : `translateY(${scrollY * 0.22}px)` }}>
+        <div style={{ textAlign: "center", zIndex: 1, padding: isMobile ? "0 20px" : "0 24px", transform: isMobile ? "none" : `translateY(${scrollY * 0.15}px)` }}>
           <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: isMobile ? 9 : 11, color: "#64748b", letterSpacing: isMobile ? 2 : 3, marginBottom: 20 }}>FRC ROBOTICS · CHERRY CREEK HIGH SCHOOL · GREENWOOD VILLAGE, CO</div>
           <img src={logoUrl} alt="Team Logo" style={{ width: isMobile ? 88 : 110, height: isMobile ? 88 : 110, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)", boxShadow: "0 0 40px rgba(239,68,68,0.2)", marginBottom: isMobile ? 20 : 28, animation: "fadeUp 0.8s ease both" }} />
           <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: isMobile ? "clamp(22px,8vw,40px)" : "clamp(32px,6vw,72px)", letterSpacing: isMobile ? 2 : 4, color: "#f1f5f9", animation: "fadeUp 0.8s ease 0.15s both" }}>SOMETHING'S BRUIN</h1>
