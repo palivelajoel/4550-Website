@@ -227,7 +227,8 @@ export default function Landing() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
         @keyframes menuSlide{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
         a{-webkit-tap-highlight-color:transparent;}
-        section,footer,nav{position:relative;z-index:1;}
+        /* Make sections semi-transparent to show the grid */
+        section,footer,nav{position:relative;z-index:1;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
         .sec{padding:80px 24px;max-width:1100px;margin:0 auto;position:relative;z-index:1;}
         .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;}
         .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
