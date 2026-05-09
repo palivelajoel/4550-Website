@@ -1,9 +1,10 @@
 // hubUtils.jsx
 import { useState, useEffect } from "react";
 
-export const SUPABASE_URL = "https://ehkwxzumgizryvhkeusr.supabase.co";
-export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc";
-export const TEAM_PASSWORD = "Bruin@4550";
+// Read Supabase config from Vite env vars so keys are not checked into source.
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+export const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const TEAM_PASSWORD = import.meta.env.VITE_TEAM_PASSWORD;
 
 export const ROLES = ["Member", "Captain", "Admin"];
 export const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];

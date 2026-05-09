@@ -1,8 +1,9 @@
 // hubUtils.js — shared across all Hub pages
 
-export const SUPABASE_URL = "https://ehkwxzumgizryvhkeusr.supabase.co";
-export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc";
-export const TEAM_PASSWORD = "Bruin@4550";
+// Read Supabase configuration from Vite env vars. These must be defined in a .env file or your environment.
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+export const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+export const TEAM_PASSWORD = import.meta.env.VITE_TEAM_PASSWORD;
 
 export async function sbFetch(path, opts = {}) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {

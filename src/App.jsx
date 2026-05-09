@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import Starfield from './Starfield.jsx'
 
 const supabase = createClient(
-  'https://ehkwxzumgizryvhkeusr.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoa3d4enVtZ2l6cnl2aGtldXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MTEwODcsImV4cCI6MjA5MzI4NzA4N30.IXAhkAx1ygZpJMNSWNd3k80Hmt4rNmRtuFPnLZGcGuc'
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
 )
 
 const STATUS_COLORS = {
@@ -398,7 +398,9 @@ export default function App() {
   }, [fetchSponsors, authed])
 
   const handleLogin = () => {
-    if (pwInput === 'Bruin@4550') { localStorage.setItem('sb_authed', 'true'); setAuthed(true); setPwError(false) }
+    // Team password is read from Vite env var VITE_TEAM_PASSWORD
+    const teamPw = import.meta.env.VITE_TEAM_PASSWORD
+    if (pwInput === teamPw) { localStorage.setItem('sb_authed', 'true'); setAuthed(true); setPwError(false) }
     else setPwError(true)
   }
 
