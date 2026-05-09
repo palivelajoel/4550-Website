@@ -1,19 +1,27 @@
 import { useState, useEffect, useRef } from "react";
 import Starfield from "./Starfield.jsx";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import supabase from './supabaseClient.js';
 const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 const ROLES = ["Member", "Captain", "Admin"];
 const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];
 
 async function sbFetch(path, opts = {}) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation", ...opts.headers },
-    ...opts,
-  });
-  if (!res.ok) { console.error("sbFetch", res.status, path, await res.text().catch(() => "")); return null; }
-  try { return await res.json(); } catch { return null; }
+  // Use Supabase client for ease and to get auth helpers later
+  try {
+    const res = await supabase.rpc('rest_proxy', { path });
+    // fallback: use direct fetch when rpc not available
+  } catch (e) {
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation", ...opts.headers },
+      ...opts,
+    });
+    if (!res.ok) { console.error("sbFetch", res.status, path, await res.text().catch(() => "")); return null; }
+    try { return await res.json(); } catch { return null; }
+  }
+  return null;
 }
 
 // Admin proxy helper - calls serverless admin-proxy which uses the service_role key.
@@ -112,6 +120,7 @@ const NAV = [
 
 export default function Admin() {
   const [authed, setAuthed] = useState(false);
+  const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [page, setPage] = useState("overview");
@@ -162,8 +171,22 @@ export default function Admin() {
 
   async function handleLogin(e) {
     e.preventDefault();
-    // Server-side login via admin-login that sets HttpOnly cookie
+    setErr("");
     try {
+      // If email is provided, use Supabase Auth sign-in flow
+      if (email) {
+        const { data: signData, error: signErr } = await supabase.auth.signInWithPassword({ email, password: pw });
+        if (signErr || !signData?.session) { setErr(signErr?.message || 'Sign-in failed.'); return; }
+        const token = signData.session.access_token;
+        // Exchange token with server to set HttpOnly admin cookie
+        const r = await fetch('/api/admin-login', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+        if (!r.ok) { const txt = await r.text().catch(() => ''); setErr(txt || 'Server login failed.'); return; }
+        localStorage.setItem("admin_authed", "true");
+        setAuthed(true); loadAll();
+        return;
+      }
+
+      // Fallback: legacy password (no email)
       const r = await fetch('/api/admin-login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
       if (!r.ok) { setErr('Incorrect password.'); return; }
       localStorage.setItem("admin_authed", "true");
@@ -171,7 +194,11 @@ export default function Admin() {
     } catch (err) { setErr('Login failed.'); }
   }
 
-  function handleLogout() { localStorage.removeItem("admin_authed"); setAuthed(false); }
+  async function handleLogout() {
+    try { await fetch('/api/admin-logout'); } catch (e) {}
+    try { await supabase.auth.signOut(); } catch (e) {}
+    localStorage.removeItem("admin_authed"); setAuthed(false);
+  }
 
   if (!authed) {
     return (
@@ -185,7 +212,8 @@ export default function Admin() {
           <div style={S.loginTitle}>ADMIN PANEL</div>
           <div style={S.loginSub}>FRC Team 4550 · Something's Bruin</div>
           <form onSubmit={handleLogin} style={S.loginForm}>
-            <input type="password" placeholder="Admin password" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }}
+            <input type="email" placeholder="Email (optional for Supabase auth)" value={email} onChange={e => { setEmail(e.target.value); setErr(""); }} style={S.loginInput} />
+            <input type="password" placeholder="Password" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }}
               style={S.loginInput} autoFocus />
             {err && <div style={S.loginErr}>{err}</div>}
             <button type="submit" style={S.loginBtn}>ENTER →</button>
@@ -308,7 +336,8 @@ function Accounts({ members, reload, showToast }) {
     setPwError("");
     if (!form.username || !form.password) return;
     if (form.password !== form.confirmPassword) { setPwError("Passwords do not match."); return; }
-    await adminProxy('members', 'insert', { username: form.username, password: form.password, full_name: form.full_name, role: form.role, subteam: form.subteam });
+    // Use special admin-proxy flow to create Supabase auth user and members row
+    await adminProxy('members', 'create_user', { email: form.username, password: form.password, full_name: form.full_name, role: form.role, subteam: form.subteam, username: form.username });
     setForm({ username: "", password: "", confirmPassword: "", full_name: "", role: "Member", subteam: "General" });
     reload(); showToast("✅ Member created.");
   }
@@ -317,8 +346,8 @@ function Accounts({ members, reload, showToast }) {
     setPwError("");
     if (editData.password && editData.password !== editData.confirmPassword) { setPwError("Passwords do not match."); return; }
     const payload = { full_name: editData.full_name, role: editData.role, subteam: editData.subteam };
-    if (editData.password) payload.password = editData.password;
-    await adminProxy('members', 'update', { id, updates: payload });
+    // If password provided, use special update_member action to change Auth password
+    await adminProxy('members', 'update_member', { id, updates: payload, password: editData.password });
     setEditId(null); setEditData({}); reload(); showToast("✅ Member updated.");
   }
 
