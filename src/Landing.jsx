@@ -167,8 +167,15 @@ export default function Landing() {
   ];
 
   return (
-    <div style={{ background: "transparent", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", position: "relative", minHeight: "100vh" }}>
-      <Starfield density={9000} opacity={0.38} />
+    <div style={{ background: "transparent", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", overflow:"hidden", position: "relative", minHeight: "100vh" }}>
+      <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
+        <Starfield density={9000} opacity={0.38} />
+        {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
+          <div key={i} style={{ position:"absolute", width:o.s, height:o.s, top:o.t, bottom:o.b, left:o.l, right:o.r, borderRadius:"50%", background:`radial-gradient(circle, ${o.c}, transparent)`, animation:`orbFloat ${6+i}s ease-in-out infinite`, animationDelay:o.d }} />
+        ))}
+        <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(239,68,68,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.04) 1px,transparent 1px)", backgroundSize:"44px 44px" }} />
+        <div style={{ position:"absolute", left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,rgba(239,68,68,0.3),transparent)", animation:"scanline 4s linear infinite", top:"-4px" }} />
+      </div>
       {/* Distorted grid that warps on scroll */}
       <DistortedGrid scrollY={scrollY} />
       <style>{`
@@ -179,6 +186,8 @@ export default function Landing() {
         ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:#0d1117;}::-webkit-scrollbar-thumb{background:#ef4444;border-radius:3px;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
         @keyframes menuSlide{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes orbFloat{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
+        @keyframes scanline{0%{top:-4px;}100%{top:100%;}}
         a{-webkit-tap-highlight-color:transparent;}
         /* Make sections semi-transparent to show the grid */
         section,footer,nav{position:relative;z-index:1;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
