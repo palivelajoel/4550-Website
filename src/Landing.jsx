@@ -23,6 +23,47 @@ function DistortedGrid({ scrollY }) {
   );
 }
 
+// Random glitch overlay — small screen chunks flash/distort at random intervals
+function GlitchOverlay() {
+  const [glitches, setGlitches] = useState([]);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const count = Math.floor(Math.random() * 3) + 1;
+      const newGlitches = Array.from({ length: count }, () => ({
+        id: Date.now() + Math.random(),
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        w: Math.random() * 120 + 30,
+        h: Math.random() * 8 + 3,
+        skew: (Math.random() - 0.5) * 10,
+        color: Math.random() > 0.5 ? "rgba(239,68,68,0.15)" : "rgba(59,130,246,0.1)",
+      }));
+      setGlitches(prev => [...prev, ...newGlitches].slice(-8));
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+  return (
+    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999, overflow: "hidden" }}>
+      {glitches.map(g => (
+        <div
+          key={g.id}
+          style={{
+            position: "absolute",
+            left: `${g.x}%`,
+            top: `${g.y}%`,
+            width: g.w,
+            height: g.h,
+            background: g.color,
+            transform: `skewX(${g.skew}deg)`,
+            animation: "glitchFade 0.25s ease-out forwards",
+            mixBlendMode: "screen",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -189,6 +230,7 @@ export default function Landing() {
         @keyframes orbFloat{0%,100%{transform:scale(1);}50%{transform:scale(1.15);}}
         @keyframes scanline{0%{top:-4px;}100%{top:100%;}}
         @keyframes glitch{0%,90%,100%{text-shadow:none;}92%{text-shadow:-3px 0 #ef4444,3px 0 #3b82f6;}95%{text-shadow:3px 0 #ef4444,-3px 0 #3b82f6;}97%{text-shadow:none;}}
+        @keyframes glitchFade{from{opacity:1;}to{opacity:0;}}
         a{-webkit-tap-highlight-color:transparent;}
         /* Make sections semi-transparent to show the grid */
         section,footer,nav{position:relative;z-index:1;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}

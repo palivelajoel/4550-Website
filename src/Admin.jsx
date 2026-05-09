@@ -1170,6 +1170,7 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
   return (
     <div>
       <h1 style={S.pageTitle}>Competitions</h1>
+
       <div style={S.card}>
         <div style={S.cardTitle}>Fetch FRC Events</div>
         <div style={S.formRow}>
@@ -1185,19 +1186,22 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
             </div>
             <div style={S.cardTitle}>Available Events</div>
             <div style={{ maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
-            {eventFiltered.map(ev => (
-              <div key={ev.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <div>
-                  <div style={{ color: "#f1f5f9", fontSize: 14 }}>{ev.name}</div>
-                  <div style={{ color: "#64748b", fontSize: 12 }}>{ev.start_date} - {ev.city}, {ev.state_prov}</div>
+              {eventFiltered.map(ev => (
+                <div key={ev.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div>
+                    <div style={{ color: "#f1f5f9", fontSize: 14 }}>{ev.name}</div>
+                    <div style={{ color: "#64748b", fontSize: 12 }}>{ev.start_date} - {ev.city}, {ev.state_prov}</div>
+                  </div>
+                  <button onClick={() => addCompetition(ev)} disabled={competitions.some(c => c.event_key === ev.key)} style={{ ...S.btnGhost, opacity: competitions.some(c => c.event_key === ev.key) ? 0.45 : 1 }}>
+                    {competitions.some(c => c.event_key === ev.key) ? "Added" : "Add"}
+                  </button>
                 </div>
-                <button onClick={() => addCompetition(ev)} disabled={competitions.some(c => c.event_key === ev.key)} style={{ ...S.btnGhost, opacity: competitions.some(c => c.event_key === ev.key) ? 0.45 : 1 }}>{competitions.some(c => c.event_key === ev.key) ? "Added" : "Add"}</button>
-              </div>
-            ))}
+              ))}
             </div>
           </div>
         )}
       </div>
+
       <div style={S.card}>
         <div style={S.formRow}>
           <input placeholder="Search competitions..." value={search} onChange={e => setSearch(e.target.value)} style={S.input} />
@@ -1223,15 +1227,15 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
             <div style={{ ...S.formRow, marginTop: 10 }}>
               <input placeholder="Map check status" defaultValue={c.map_status || ""} onBlur={e => saveCompetitionFields(c.id, { map_status: e.target.value, last_map_check: new Date().toISOString() }, "Map check saved.")} style={S.input} />
               <button onClick={() => autoFindLinks(c)} disabled={findingId === c.id} style={{ ...S.btnPrimary, opacity: findingId === c.id ? 0.65 : 1 }}>{findingId === c.id ? "Finding..." : "AI Find Links"}</button>
-               <button onClick={() => setEditMapId(c.id)} style={S.btnGhost}>{editMapId === c.id ? "Close Editor" : "Map Editor"}</button>
-               <a href={`https://www.thebluealliance.com/event/${c.event_key}`} target="_blank" rel="noreferrer" style={S.quickBtn}>TBA Event</a>
-               <a href="/member-hub/venuemap" target="_blank" rel="noreferrer" style={S.quickBtn}>Preview Maps</a>
-             </div>
-           </div>
+              <button onClick={() => setEditMapId(c.id)} style={S.btnGhost}>{editMapId === c.id ? "Close Editor" : "Map Editor"}</button>
+              <a href={`https://www.thebluealliance.com/event/${c.event_key}`} target="_blank" rel="noreferrer" style={S.quickBtn}>TBA Event</a>
+              <a href="/member-hub/venuemap" target="_blank" rel="noreferrer" style={S.quickBtn}>Preview Maps</a>
+            </div>
+          </div>
         ))}
-        </div>
       </div>
-   );
+    </div>
+  );
 }
 
 // ── STYLES ────────────────────────────────────────────────
