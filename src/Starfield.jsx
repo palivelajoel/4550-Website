@@ -145,23 +145,4 @@ export default function Starfield({ density = 8000, opacity = 0.55 }) {
   );
 }
 
-// Ruler tick marks on the sides
-export function RulerMarks({ opacity = 0.25 }) {
-  const marks = [];
-  for (let i = 0; i < 100; i++) {
-    const y = i * 12;
-    const isMajor = i % 10 === 0;
-    const isMid = i % 5 === 0 && !isMajor;
-    marks.push(
-      <div key={`l-${i}`} style={{ position: "fixed", left: 0, top: y, width: isMajor ? 28 : isMid ? 18 : 10, height: 1, background: `rgba(239,68,68,${isMajor ? opacity : isMid ? opacity * 0.7 : opacity * 0.4})`, zIndex: 1 }} />,
-      <div key={`r-${i}`} style={{ position: "fixed", right: 0, top: y, width: isMajor ? 28 : isMid ? 18 : 10, height: 1, background: `rgba(239,68,68,${isMajor ? opacity : isMid ? opacity * 0.7 : opacity * 0.4})`, zIndex: 1 }} />
-    );
-    if (isMajor) {
-      marks.push(
-        <span key={`lt-${i}`} style={{ position: "fixed", left: 32, top: y - 5, fontSize: 9, color: `rgba(239,68,68,${opacity})`, fontFamily: "monospace", zIndex: 1 }}>{i * 10}</span>,
-        <span key={`rt-${i}`} style={{ position: "fixed", right: 32, top: y - 5, fontSize: 9, color: `rgba(239,68,68,${opacity})`, fontFamily: "monospace", zIndex: 1 }}>{i * 10}</span>
-      );
-    }
-  }
-  return <>{marks}</>;
-}
+

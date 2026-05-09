@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { FONTS, C, ROLE_COLORS, SUBTEAM_COLORS, TEAM_PASSWORD, sbFetch, isAdmin, isCaptainOrAbove, getRole, getUsername } from "./hubUtils.jsx";
 
 import Starfield from "./Starfield.jsx";
-import { RulerMarks } from "./Starfield.jsx";
 
 // ── Animated particle canvas ──────────────────────────────
 function Particles({ count = 40 }) {
@@ -161,7 +160,6 @@ export default function Hub() {
 <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Exo 2',sans-serif", position:"relative", overflow:"hidden", padding:16, zIndex:0 }}>
         <style>{FONTS}</style>
         <Starfield density={6000} opacity={0.55} />
-        <RulerMarks opacity={0.2} />
         {/* Animated background */}
         <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
 <Starfield density={6000} opacity={0.55} />
