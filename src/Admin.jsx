@@ -136,6 +136,7 @@ export default function Admin() {
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [toast, setToast] = useState("");
   const [adminPassword, setAdminPassword] = useState(DEFAULT_ADMIN_PASSWORD);
+  const [editMapId, setEditMapId] = useState(null);
 
   useEffect(() => {
     if (localStorage.getItem("admin_authed") === "true") { setAuthed(true); loadAll(); }
@@ -1037,6 +1038,9 @@ function PitMapEditor({ comp, reload, showToast }) {
     </div>
   );
 }
+
+// ── COMPETITIONS ADMIN ─────────────────────────────────────
+function CompetitionsAdmin({ competitions, config, reload, showToast }) {
   const [search, setSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
   const [frcEvents, setFrcEvents] = useState([]);
