@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { FONTS, C, ROLE_COLORS, SUBTEAM_COLORS, TEAM_PASSWORD, sbFetch, isAdmin, isCaptainOrAbove, getRole, getUsername } from "./hubUtils.jsx";
+import supabase from "./supabaseClient.js";
 import Starfield from "./Starfield.jsx";
 
 // ── Animated particle canvas ──────────────────────────────
@@ -105,24 +106,35 @@ export default function Hub() {
 
   async function handleLogin(e) {
     e.preventDefault();
-    if (!username.trim() || !pw.trim()) { setErr("Username and password required."); return; }
+    if (!username.trim() || !pw.trim()) { setErr("Username (email) and password required."); return; }
     setLoginLoading(true);
-    const user = await sbFetch(`members?username=eq.${encodeURIComponent(username.trim())}&select=full_name,role,password,subteam`);
-    if (user?.[0] && user[0].password === pw.trim()) {
-      const r = user[0].role || "Member";
-      localStorage.setItem("hub_authed","true"); localStorage.setItem("hub_username", username.trim());
-      localStorage.setItem("hub_role", r); localStorage.setItem("hub_subteam", user[0].subteam || "General");
-      setAuthed(true); setRole(r); setLoginLoading(false); setErr(""); loadStats(); return;
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: username.trim(),
+      password: pw.trim(),
+    });
+    if (error || !data?.session) {
+      setErr(error?.message || "Incorrect email or password.");
+      setLoginLoading(false);
+      return;
     }
-    if (pw === TEAM_PASSWORD) {
-      localStorage.setItem("hub_authed","true"); localStorage.setItem("hub_username", username.trim());
-      localStorage.setItem("hub_role","Member"); localStorage.setItem("hub_subteam","General");
-      setAuthed(true); setRole("Member"); setLoginLoading(false); setErr(""); loadStats(); return;
-    }
-    setErr("Incorrect username or password."); setLoginLoading(false);
+    const token = data.session.access_token;
+    const user = data.user;
+    const { data: member } = await supabase.from("members").select("full_name,role,subteam").or(`auth_id.eq.${user.id},username.eq.${user.email}`).maybeSingle();
+    const r = member?.role || "Member";
+    localStorage.setItem("hub_authed", "true");
+    localStorage.setItem("hub_username", user.email || username.trim());
+    localStorage.setItem("hub_role", r);
+    localStorage.setItem("hub_subteam", member?.subteam || "General");
+    setAuthed(true);
+    setRole(r);
+    setSubteam(member?.subteam || "General");
+    setLoginLoading(false);
+    setErr("");
+    loadStats();
   }
 
   function logout() {
+    supabase.auth.signOut().catch(() => {});
     ["hub_authed","hub_username","hub_role","hub_subteam"].forEach(k => localStorage.removeItem(k));
     setAuthed(false); setMemberName(""); setRole("Member");
   }
@@ -172,7 +184,7 @@ export default function Hub() {
           <div style={{ fontSize:12, color:C.dim, fontFamily:"monospace", marginBottom:26 }}>Sign in with your team account</div>
 
           <form onSubmit={handleLogin} style={{ display:"flex", flexDirection:"column", gap:12 }}>
-            <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} autoComplete="username"
+            <input type="text" placeholder="Email" value={username} onChange={e => setUsername(e.target.value)} autoComplete="username"
               style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:8, padding:"12px 16px", color:"#fff", fontSize:14, fontFamily:"monospace", textAlign:"center", width:"100%", WebkitAppearance:"none" }}
               onFocus={e => e.target.style.borderColor="rgba(239,68,68,0.5)"} onBlur={e => e.target.style.borderColor="rgba(255,255,255,0.12)"} />
             <PwInput value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" />
