@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Starfield from "./Starfield.jsx";
+import { RulerMarks } from "./Starfield.jsx";
 
 import supabase from './supabaseClient.js';
 const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
@@ -229,6 +230,7 @@ export default function Admin() {
   return (
     <div className="admin-layout" style={S.layout}>
       <Starfield density={11500} opacity={0.25} />
+      <RulerMarks opacity={0.18} />
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&family=Share+Tech+Mono&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:#080a0f;color:#f1f5f9;font-family:'Exo 2',sans-serif;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}

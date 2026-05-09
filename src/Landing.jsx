@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import Starfield from "./Starfield.jsx";
+import { RulerMarks } from "./Starfield.jsx";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -185,8 +186,11 @@ export default function Landing() {
   ];
 
   return (
-    <div style={{ background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", position: "relative" }}>
+    <div style={{ background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", position: "relative", minHeight: "100vh" }}>
       <Starfield density={9000} opacity={0.38} />
+      <RulerMarks opacity={0.22} />
+      {/* Full-page grid texture */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, backgroundImage: "linear-gradient(rgba(239,68,68,0.035) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.035) 1px,transparent 1px)", backgroundSize: "44px 44px" }} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&family=Bebas+Neue&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
