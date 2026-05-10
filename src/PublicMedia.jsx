@@ -35,8 +35,7 @@ function getThumbnail(item) {
 
 export default function PublicMedia() {
   const [items, setItems] = useState([]);
-  const [activeSection, setActiveSection] = useState("competitions");
-  const [activeYear, setActiveYear] = useState("all");
+  const [activeYear, setActiveYear] = useState(null);
   const [lightbox, setLightbox] = useState(null);
   const [loading, setLoading] = useState(true);
   const isMobile = window.innerWidth < 768;
@@ -50,11 +49,9 @@ export default function PublicMedia() {
   }, []);
 
   const years = [...new Set(items.map(i => i.year).filter(Boolean))].sort((a, b) => b - a);
+  const activeAlbum = activeYear || years[0] || null;
 
-  const sectionItems = SECTIONS.find(s => s.id === activeSection);
-  const filtered = sectionItems
-    ? items.filter(i => sectionItems.categories.includes(i.category) && (activeYear === "all" || String(i.year) === String(activeYear)))
-    : [];
+  const albumItems = items.filter(i => String(i.year) === String(activeAlbum));
 
   return (
     <div style={{ minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" }}>
@@ -80,88 +77,85 @@ export default function PublicMedia() {
         </div>
       </header>
 
-      {/* Section tabs */}
+      {/* Year album tabs */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "16px 14px 0" : "24px 28px 0" }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginBottom: 10 }}>
-          {SECTIONS.map(s => (
-            <button key={s.id} onClick={() => setActiveSection(s.id)} style={{
-              background: activeSection === s.id ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)",
-              border: `1px solid ${activeSection === s.id ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.1)"}`,
-              color: activeSection === s.id ? "#ef4444" : "#94a3b8",
-              borderRadius: 20, padding: "8px 18px", cursor: "pointer", fontSize: 13, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, letterSpacing: 1,
-              transition: "all 0.2s",
-            }}>
-              {s.icon} {s.label}
-            </button>
-          ))}
-        </div>
-        {/* Year filter */}
-        {years.length > 0 && (
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginBottom: 4 }}>
-            <button onClick={() => setActiveYear("all")} style={{
-              background: activeYear === "all" ? "rgba(239,68,68,0.12)" : "transparent",
-              border: `1px solid ${activeYear === "all" ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.06)"}`,
-              color: activeYear === "all" ? "#ef4444" : "#64748b",
-              borderRadius: 14, padding: "4px 14px", cursor: "pointer", fontSize: 12, fontFamily: "monospace", transition: "all 0.2s",
-            }}>All</button>
-            {years.map(y => (
-              <button key={y} onClick={() => setActiveYear(y)} style={{
-                background: activeYear === y ? "rgba(239,68,68,0.12)" : "transparent",
-                border: `1px solid ${activeYear === y ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.06)"}`,
-                color: activeYear === y ? "#ef4444" : "#64748b",
-                borderRadius: 14, padding: "4px 14px", cursor: "pointer", fontSize: 12, fontFamily: "monospace", transition: "all 0.2s",
-              }}>{y}</button>
-            ))}
+        {loading ? null : years.length === 0 ? null : (
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginBottom: 4 }}>
+            {years.map(y => {
+              const count = items.filter(i => String(i.year) === String(y)).length;
+              const isActive = String(activeAlbum) === String(y);
+              return (
+                <button key={y} onClick={() => setActiveYear(y)} style={{
+                  background: isActive ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${isActive ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.08)"}`,
+                  color: isActive ? "#ef4444" : "#94a3b8",
+                  borderRadius: 12, padding: "10px 22px", cursor: "pointer",
+                  fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 1,
+                  transition: "all 0.2s", display: "flex", alignItems: "center", gap: 8,
+                }}>
+                  {y}
+                  <span style={{ fontSize: 11, opacity: 0.7, fontFamily: "monospace", fontWeight: 400 }}>{count}</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Gallery */}
+      {/* Gallery grouped by category within the year */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "16px 14px 40px" : "24px 28px 60px" }}>
         {loading ? (
           <div style={{ textAlign: "center", color: "#64748b", padding: "60px 0", fontFamily: "monospace", fontSize: 13 }}>Loading gallery...</div>
-        ) : filtered.length === 0 ? (
+        ) : !activeAlbum || albumItems.length === 0 ? (
           <div style={{ textAlign: "center", color: "#64748b", padding: "60px 0", fontFamily: "monospace", fontSize: 13 }}>
-            No media in this section yet.
+            No media yet.
           </div>
         ) : (
           <div style={{ animation: "fadeUp 0.4s ease" }}>
-            <div className="gallery-grid">
-              {filtered.map(item => {
-                const thumb = getThumbnail(item);
-                return (
-                  <div key={item.id} onClick={() => setLightbox(item)} style={{
-                    cursor: "pointer", borderRadius: 8, overflow: "hidden",
-                    border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)",
-                    transition: "transform 0.15s, border-color 0.15s",
-                    animation: "fadeUp 0.4s ease both",
-                  }}
-                    onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.03)"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.4)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
-                  >
-                    <div style={{ width: "100%", aspectRatio: "16/10", background: "#0d1117", overflow: "hidden", position: "relative" }}>
-                      {thumb ? (
-                        <img src={thumb} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
-                      ) : (
-                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🎬</div>
-                      )}
-                      {item.type === "video" && (
-                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }}>
-                          <div style={{ width: 36, height: 36, background: "rgba(239,68,68,0.9)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff" }}>▶</div>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ padding: "8px 10px" }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
-                      <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{item.year}</div>
-                    </div>
+            {SECTIONS.map(section => {
+              const sectionItems = albumItems.filter(i => section.categories.includes(i.category));
+              if (sectionItems.length === 0) return null;
+              return (
+                <div key={section.id} style={{ marginBottom: 32 }}>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#94a3b8", letterSpacing: 1, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>{section.icon}</span> {section.label}
+                    <span style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", fontWeight: 400 }}>{sectionItems.length}</span>
                   </div>
-                );
-              })}
-            </div>
-            <div style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: "#64748b", fontFamily: "monospace" }}>
-              {filtered.length} item{filtered.length !== 1 ? "s" : ""}
-            </div>
+                  <div className="gallery-grid">
+                    {sectionItems.map(item => {
+                      const thumb = getThumbnail(item);
+                      return (
+                        <div key={item.id} onClick={() => setLightbox(item)} style={{
+                          cursor: "pointer", borderRadius: 8, overflow: "hidden",
+                          border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)",
+                          transition: "transform 0.15s, border-color 0.15s",
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.03)"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.4)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+                        >
+                          <div style={{ width: "100%", aspectRatio: "16/10", background: "#0d1117", overflow: "hidden", position: "relative" }}>
+                            {thumb ? (
+                              <img src={thumb} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                            ) : (
+                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🎬</div>
+                            )}
+                            {item.type === "video" && (
+                              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }}>
+                                <div style={{ width: 36, height: 36, background: "rgba(239,68,68,0.9)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff" }}>▶</div>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ padding: "8px 10px" }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
+                            <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{item.year}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
