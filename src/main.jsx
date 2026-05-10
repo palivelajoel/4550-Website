@@ -12,6 +12,7 @@ import HubResources from './HubResources.jsx'
 import HubProjector from './HubProjector.jsx'
 import HubScouting from './HubScouting.jsx'
 import HubInventory from './HubInventory.jsx'
+import ScoutMapTab from './ScoutMapTab.jsx'
 
 const path = window.location.pathname
 
@@ -25,8 +26,8 @@ const Page =
   : path === '/member-hub/announcements'       ? HubAnnouncements
   : path === '/member-hub/resources'           ? HubResources
   : path === '/member-hub/projector'           ? HubProjector
-  : path === '/member-hub/scouting'            ? HubScouting
-  : path === '/member-hub/venuemap'            ? HubScouting
+  : path === '/member-hub/scouting'            ? ScoutMapTab
+  : path === '/member-hub/venuemap'            ? ScoutMapTab
   : path === '/member-hub/inventory'           ? HubInventory
   : Landing
 
