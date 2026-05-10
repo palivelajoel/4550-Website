@@ -232,15 +232,6 @@ export default function Landing() {
 
   return (
     <div className="frost-bg" style={{ background: "transparent", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", overflow:"hidden", position: "relative", minHeight: "100vh" }}>
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        opacity: frostedShow ? 1 : 0,
-        transition: "opacity 0.3s",
-        maskImage: frostedRect ? "url(#frost-mask)" : "none",
-        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
-      }} />
       {frostedRect && (
         <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
           <defs>
@@ -252,6 +243,15 @@ export default function Landing() {
           </defs>
         </svg>
       )}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+        opacity: frostedShow ? 1 : 0,
+        transition: "opacity 0.3s",
+        maskImage: frostedRect ? "url(#frost-mask)" : "none",
+        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
+      }} />
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={9000} opacity={0.38} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
