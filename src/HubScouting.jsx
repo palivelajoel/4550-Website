@@ -344,164 +344,47 @@ function PitScout({ onSubmit, username, isMobile }) {
 }
 
 // ─────────────────────────────────────────────────────────
-// AI STREAM ANALYSIS TAB
+// TEAM ANALYTICS TAB (via TBA API)
 // ─────────────────────────────────────────────────────────
-function StreamAnalysis({ isMobile, competitions = [] }) {
-  const [img, setImg] = useState(null);
-  const [imgB64, setImgB64] = useState(null);
-  const [result, setResult] = useState(null);
+function TeamStatsAnalysis({ competitions = [] }) {
+  const [team, setTeam] = useState("");
+  const [comp, setComp] = useState(competitions.find(c => c.attending)?.id || "");
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [selectedCompId, setSelectedCompId] = useState(competitions.find(c => c.attending)?.id || "");
-  const fileRef = useRef(null);
-  const selectedComp = competitions.find(c => c.id === selectedCompId) || competitions.find(c => c.attending);
-  const streamSearch = selectedComp ? encodeURIComponent(`${selectedComp.name} ${selectedComp.event_key || ""} FRC webcast stream`) : "";
+  const tbaKey = localStorage.getItem("tba_key"); // Assuming you store it here
 
-  function handleFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    setResult(null); setError("");
-    const reader = new FileReader();
-    reader.onload = ev => {
-      setImg(ev.target.result);
-      setImgB64(ev.target.result.split(",")[1]);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  async function analyze() {
-    if (!imgB64) return;
-    setLoading(true); setError(""); setResult(null);
+  async function fetchStats() {
+    if (!team || !comp) return;
+    setLoading(true);
+    setStats(null);
+    const selected = competitions.find(c => c.id === comp);
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method:"POST",
-        headers: { "Content-Type":"application/json", "anthropic-version":"2023-06-01" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 800,
-          messages: [{
-            role:"user",
-            content: [
-              { type:"image", source:{ type:"base64", media_type:"image/jpeg", data:imgB64 } },
-              { type:"text", text:`You are analyzing a screenshot from a FIRST Robotics Competition REBUILT 2026 match stream or scoreboard.
-
-REBUILT 2026 scoring:
-- Fuel scored in Hub: 1pt each (auto and teleop)
-- Tower Climb L1 Auto: 15pts | Teleop: L1=10, L2=20, L3=30pts
-- Ranking Points: ENERGIZED (≥100 Fuel), SUPERCHARGED (≥360 Fuel), TRAVERSAL (Tower≥50pts)
-
-Please analyze this image and return a JSON object with:
-{
-  "red_score": number or null,
-  "blue_score": number or null,
-  "red_fuel_total": number or null,
-  "blue_fuel_total": number or null,
-  "red_tower": "None/L1/L2/L3" or null,
-  "blue_tower": "None/L1/L2/L3" or null,
-  "match_number": number or null,
-  "time_remaining": string or null,
-  "period": "Auto/Teleop/Endgame/Unknown",
-  "notes": "any other observations",
-  "confidence": "high/medium/low"
-}
-
-Return ONLY the JSON object. If you cannot determine a value, use null.` }
-            ]
-          }]
-        })
+      const res = await fetch(`https://www.thebluealliance.com/api/v3/team/frc${team}/event/${selected.event_key}/status`, {
+        headers: { "X-TBA-Auth-Key": tbaKey }
       });
       const data = await res.json();
-      const text = data.content?.[0]?.text || "{}";
-      const clean = text.replace(/```json|```/g,"").trim();
-      setResult(JSON.parse(clean));
-    } catch(e) {
-      setError("Analysis failed — ensure Anthropic API access is available.");
+      setStats(data);
+    } catch (e) {
+      console.error(e);
     }
     setLoading(false);
   }
 
-  const scoreBox = (alliance, data) => data && (
-    <div style={{ flex:1, background:`rgba(${alliance==="Red"?"239,68,68":"59,130,246"},0.08)`, border:`1px solid rgba(${alliance==="Red"?"239,68,68":"59,130,246"},0.3)`, borderRadius:12, padding:"16px 14px" }}>
-      <div style={{ fontFamily:"'Orbitron',sans-serif", fontSize:12, color:alliance==="Red"?"#fca5a5":"#93c5fd", letterSpacing:2, marginBottom:8 }}>{alliance.toUpperCase()}</div>
-      <div style={{ fontFamily:"'Orbitron',sans-serif", fontSize:36, fontWeight:900, color:alliance==="Red"?C.red:C.blue, lineHeight:1 }}>{data[`${alliance.toLowerCase()}_score`] ?? "?"}</div>
-      <div style={{ fontSize:12, color:C.muted, fontFamily:"monospace", marginTop:8, display:"flex", flexDirection:"column", gap:4 }}>
-        {data[`${alliance.toLowerCase()}_fuel_total`] != null && <span>⚽ Fuel: {data[`${alliance.toLowerCase()}_fuel_total`]}</span>}
-        {data[`${alliance.toLowerCase()}_tower`] && <span>🏗️ Tower: {data[`${alliance.toLowerCase()}_tower`]}</span>}
-      </div>
-    </div>
-  );
-
   return (
-    <div style={{ maxWidth:700, margin:"0 auto" }}>
-      <div style={{ background:"rgba(168,85,247,0.06)", border:`1px solid rgba(168,85,247,0.2)`, borderRadius:12, padding:"16px 16px", marginBottom:20 }}>
-        <div style={{ fontFamily:"'Orbitron',sans-serif", fontSize:13, color:C.purple, marginBottom:8 }}>🤖 AI STREAM SCORE ANALYZER</div>
-        <div style={{ fontSize:13, color:C.muted, fontFamily:"monospace", lineHeight:1.7 }}>
-          Take a screenshot from a competition stream or scoreboard, upload it here, and Claude AI will analyze it to extract scores, Fuel totals, Tower status, and more — automatically.
-        </div>
-      </div>
-
-      <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr auto auto", gap:10, alignItems:"center", marginBottom:16 }}>
-        <select value={selectedCompId} onChange={e=>setSelectedCompId(e.target.value)} style={selectStyle}>
-          <option value="">Select competition</option>
-          {competitions.filter(c=>c.attending).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+    <div style={{ maxWidth:600, margin:"0 auto" }}>
+      <div style={ { fontFamily: "'Orbitron',sans-serif", fontSize: 13, color: C.blue, marginBottom: 16 } }>TEAM ANALYTICS (TBA)</div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        <input type="number" placeholder="Team #" value={team} onChange={e => setTeam(e.target.value)} style={inputStyle} />
+        <select value={comp} onChange={e => setComp(e.target.value)} style={selectStyle}>
+          {competitions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        {selectedComp?.stream_url && <a href={selectedComp.stream_url} target="_blank" rel="noreferrer" style={ghostBtn}>Open saved stream</a>}
-        {selectedComp && <a href={`https://www.google.com/search?q=${streamSearch}`} target="_blank" rel="noreferrer" style={ghostBtn}>Find stream</a>}
+        <button onClick={fetchStats} style={addBtnStyle}>Fetch</button>
       </div>
-
-      <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
-        <button type="button" onClick={() => fileRef.current?.click()} style={{ ...addBtnStyle, background:"rgba(168,85,247,0.3)", border:"1px solid rgba(168,85,247,0.5)", flex:1 }}>
-          📸 Upload Stream Screenshot
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile} />
-        {img && (
-          <button type="button" onClick={analyze} disabled={loading} style={{ ...addBtnStyle, flex:1, opacity:loading?0.6:1 }}>
-            {loading ? "🤖 Analyzing..." : "🔍 Analyze with AI"}
-          </button>
-        )}
-      </div>
-
-      {img && (
-        <div style={{ marginBottom:16, borderRadius:10, overflow:"hidden", border:`1px solid ${C.border}`, position:"relative" }}>
-          <img src={img} alt="stream" style={{ width:"100%", display:"block", maxHeight:400, objectFit:"contain", background:"#000" }} />
-          {loading && (
-            <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.7)", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12 }}>
-              <div style={{ width:40, height:40, border:"3px solid rgba(255,255,255,0.1)", borderTop:"3px solid #a855f7", borderRadius:"50%", animation:"spin 1s linear infinite" }} />
-              <div style={{ color:C.purple, fontFamily:"'Orbitron',sans-serif", fontSize:12, letterSpacing:2 }}>AI ANALYZING...</div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {error && <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", color:"#fca5a5", borderRadius:8, padding:"12px 16px", fontFamily:"monospace", fontSize:13, marginBottom:16 }}>{error}</div>}
-
-      {result && (
-        <div style={{ animation:"fadeUp 0.4s ease" }}>
-          <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:12 }}>
-            <div style={{ fontFamily:"'Orbitron',sans-serif", fontSize:12, color:C.text }}>ANALYSIS RESULTS</div>
-            <span style={{ fontSize:10, background:result.confidence==="high"?"rgba(34,197,94,0.2)":"rgba(245,158,11,0.2)", color:result.confidence==="high"?C.green:C.amber, border:`1px solid ${result.confidence==="high"?C.green:C.amber}44`, borderRadius:10, padding:"2px 8px", fontFamily:"monospace" }}>
-              {result.confidence?.toUpperCase()||"?"} CONFIDENCE
-            </span>
-            {result.match_number && <span style={{ fontSize:11, color:C.dim, fontFamily:"monospace" }}>Match {result.match_number}</span>}
-            {result.time_remaining && <span style={{ fontSize:11, color:C.dim, fontFamily:"monospace" }}>⏱ {result.time_remaining}</span>}
-            {result.period && <span style={{ fontSize:11, color:C.blue, fontFamily:"monospace" }}>{result.period}</span>}
-          </div>
-          <div style={{ display:"flex", gap:10 }}>
-            {scoreBox("Red", result)}
-            {scoreBox("Blue", result)}
-          </div>
-          {result.notes && (
-            <div style={{ marginTop:12, padding:"10px 14px", background:C.surface, border:`1px solid ${C.border}`, borderRadius:8, fontSize:12, color:C.muted, fontFamily:"monospace" }}>
-              📝 {result.notes}
-            </div>
-          )}
-        </div>
-      )}
-
-      {!img && (
-        <div style={{ textAlign:"center", padding:"48px 20px", border:`2px dashed ${C.border}`, borderRadius:12, color:C.dim, fontFamily:"monospace", fontSize:13 }}>
-          Upload a screenshot from your competition stream to analyze it with AI
-        </div>
+      {loading && <div>Loading...</div>}
+      {stats && (
+        <pre style={{ background: C.surface, padding: 10, fontSize: 12, color: C.text, overflow: "auto" }}>
+          {JSON.stringify(stats.qual?.ranking?.sort_order_info, null, 2)}
+        </pre>
       )}
     </div>
   );
@@ -977,7 +860,7 @@ const TABS = [
   { id:"match", label:"🎯 Match Scout" },
   { id:"pit", label:"🔧 Pit Scout" },
   { id:"maps", label:"🗺️ Maps" },
-  { id:"stream", label:"🤖 AI Stream" },
+  { id:"stream", label:"📊 Team Stats" },
   { id:"data", label:"📊 Team Data" },
   { id:"picklist", label:"🏆 Picklist" },
   { id:"raw", label:"📋 Raw Data" },
@@ -1070,7 +953,7 @@ export default function HubScouting() {
         {tab==="match" && <MatchScout onSubmit={()=>{loadAll();showToast("✅ Match submitted!");}} username={username} cfg={gameConfig} isMobile={isMobile} />}
         {tab==="pit" && <PitScout onSubmit={()=>{loadAll();showToast("✅ Pit report saved!");}} username={username} isMobile={isMobile} />}
         {tab==="maps" && <MapsView2 competitions={competitions} pits={pits} matches={matches} cfg={gameConfig} isMobile={isMobile} />}
-        {tab==="stream" && <StreamAnalysis isMobile={isMobile} competitions={competitions} />}
+        {tab==="stream" && <TeamStatsAnalysis competitions={competitions} />}
         {tab==="data" && <TeamData matches={matches} pits={pits} cfg={gameConfig} isMobile={isMobile} />}
         {tab==="picklist" && <Picklist matches={matches} picklist={picklist} onReload={loadAll} cfg={gameConfig} isMobile={isMobile} />}
         {tab==="raw" && <RawData matches={matches} onDelete={deleteMatch} cfg={gameConfig} isMobile={isMobile} />}
