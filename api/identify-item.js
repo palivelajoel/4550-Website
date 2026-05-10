@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     if (!apiKey) return res.status(500).json({ error: 'AI API key not configured' });
 
     const groqPayload = {
-      model: 'llama-3.2-11b-vision-preview',
+      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
       messages: [
         {
           role: 'user',
@@ -40,6 +40,7 @@ Be specific about types: e.g. "1/4-20 x 1in Hex Bolt" not just "screw", "CIM Mot
       ],
       temperature: 0.2,
       max_tokens: 300,
+      response_format: { type: 'json_object' },
     };
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
