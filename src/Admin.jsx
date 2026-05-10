@@ -144,10 +144,9 @@ export default function Admin() {
           }}>
             <svg style={{ position: "fixed", width: 0, height: 0 }}>
               <defs>
-                <filter id="frost-blur"><feGaussianBlur stdDeviation="6" /></filter>
                 <mask id="frost-mask">
                   <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                  <rect x={frostedRect.left - 4} y={frostedRect.top - 4} width={frostedRect.width + 8} height={frostedRect.height + 8} rx="8" ry="8" fill="black" filter="url(#frost-blur)" />
+                  <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" />
                 </mask>
               </defs>
             </svg>
