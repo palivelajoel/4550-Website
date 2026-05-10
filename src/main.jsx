@@ -26,8 +26,7 @@ const Page =
   : path === '/member-hub/announcements'       ? HubAnnouncements
   : path === '/member-hub/resources'           ? HubResources
   : path === '/member-hub/projector'           ? HubProjector
-  : path === '/member-hub/scouting'            ? ScoutMapTab
-  : path === '/member-hub/venuemap'            ? ScoutMapTab
+  : path === '/member-hub/scout-map'           ? ScoutMapTab
   : path === '/member-hub/inventory'           ? HubInventory
   : Landing
 
