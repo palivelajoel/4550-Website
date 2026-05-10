@@ -169,7 +169,7 @@ export default function Hub() {
         position: "fixed", inset: 0, zIndex: 9998,
         backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
         background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.bottom}px, ${frostedRect.right}px ${frostedRect.bottom}px, ${frostedRect.right}px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.top}px, 0px ${frostedRect.top}px, 0px 0px)`,
+        clipPath: `polygon(evenodd,0% 0%,100% 0%,100% 100%,0% 100%,${frostedRect.left}px ${frostedRect.top}px,${frostedRect.right}px ${frostedRect.top}px,${frostedRect.right}px ${frostedRect.bottom}px,${frostedRect.left}px ${frostedRect.bottom}px)`,
       }} />}
         <style>{FONTS}</style>
         <Starfield density={6000} opacity={0.55} />
@@ -212,7 +212,7 @@ export default function Hub() {
         position: "fixed", inset: 0, zIndex: 9998,
         backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
         background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.bottom}px, ${frostedRect.right}px ${frostedRect.bottom}px, ${frostedRect.right}px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.top}px, 0px ${frostedRect.top}px, 0px 0px)`,
+        clipPath: `polygon(evenodd,0% 0%,100% 0%,100% 100%,0% 100%,${frostedRect.left}px ${frostedRect.top}px,${frostedRect.right}px ${frostedRect.top}px,${frostedRect.right}px ${frostedRect.bottom}px,${frostedRect.left}px ${frostedRect.bottom}px)`,
       }} />}
       <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={11000} opacity={0.32} />
