@@ -158,8 +158,20 @@ export default function Landing() {
   const [captains, setCaptains] = useState([]);
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [frosted, setFrosted] = useState(false);
-  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
+  const [frostedRect, setFrostedRect] = useState(null);
+  const fr = {
+    onMouseEnter: e => {
+      e.currentTarget.style.zIndex = "9999";
+      e.currentTarget.style.position = "relative";
+      const r = e.currentTarget.getBoundingClientRect();
+      setFrostedRect(r);
+    },
+    onMouseLeave: e => {
+      e.currentTarget.style.zIndex = "";
+      e.currentTarget.style.position = "";
+      setFrostedRect(null);
+    },
+  };
 
   useEffect(() => {
     document.title = "Team 4550 Something's Bruin";
@@ -211,7 +223,12 @@ export default function Landing() {
 
   return (
     <div className="frost-bg" style={{ background: "transparent", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", overflow:"hidden", position: "relative", minHeight: "100vh" }}>
-      <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0, filter: frosted ? "blur(6px)" : "none", transition: "filter 0.25s" }}>
+      {frostedRect && <div style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+      }} />}
+      <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={9000} opacity={0.38} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
           <div key={i} style={{ position:"absolute", width:o.s, height:o.s, top:o.t, bottom:o.b, left:o.l, right:o.r, borderRadius:"50%", background:`radial-gradient(circle, ${o.c}, transparent)`, animation:`orbFloat ${6+i}s ease-in-out infinite`, animationDelay:o.d }} />
@@ -234,8 +251,10 @@ export default function Landing() {
         @keyframes glitch{0%,90%,100%{text-shadow:none;}92%{text-shadow:-3px 0 #ef4444,3px 0 #3b82f6;}95%{text-shadow:3px 0 #ef4444,-3px 0 #3b82f6;}97%{text-shadow:none;}}
         @keyframes glitchFade{from{opacity:1;}to{opacity:0;}}
         a{-webkit-tap-highlight-color:transparent;}
-        section,footer,nav{position:relative;z-index:1;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
-        .sec{padding:80px 24px;max-width:1100px;margin:0 auto;position:relative;z-index:1;}
+        section,footer,nav{position:relative;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
+        .frost-btn{position:relative;}
+        .frost-btn:hover{z-index:9999;}
+        .sec{padding:80px 24px;max-width:1100px;margin:0 auto;position:relative;}
         .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;}
         .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
         .subteams-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}

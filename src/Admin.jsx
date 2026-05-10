@@ -57,8 +57,20 @@ export default function Admin() {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [page, setPage] = useState("overview");
-  const [frosted, setFrosted] = useState(false);
-  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
+  const [frostedRect, setFrostedRect] = useState(null);
+  const fr = {
+    onMouseEnter: e => {
+      e.currentTarget.style.zIndex = "9999";
+      e.currentTarget.style.position = "relative";
+      const r = e.currentTarget.getBoundingClientRect();
+      setFrostedRect(r);
+    },
+    onMouseLeave: e => {
+      e.currentTarget.style.zIndex = "";
+      e.currentTarget.style.position = "";
+      setFrostedRect(null);
+    },
+  };
   const [members, setMembers] = useState([]);
   const [tasks, setTaskList] = useState([]);
   const [hubCalendar, setHubCalendar] = useState([]);
@@ -129,6 +141,11 @@ export default function Admin() {
   if (!authed) {
     return (
       <div style={S.loginBg}>
+        {frostedRect && <div style={{
+          position: "fixed", inset: 0, zIndex: 9998,
+          backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+          background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+        }} />}
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Exo+2:wght@400;600&display=swap');
           *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:#080a0f;}
           @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
@@ -159,7 +176,13 @@ export default function Admin() {
 
   return (
     <div className="admin-layout" style={{ ...S.layout, overflow:"hidden" }}>
-      <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0, filter: frosted ? "blur(6px)" : "none", transition: "filter 0.25s" }}>
+      {frostedRect && <div style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+        clipPath: `polygon(evenodd,0% 0%,100% 0%,100% 100%,0% 100%,${frostedRect.left}px ${frostedRect.top}px,${frostedRect.right}px ${frostedRect.top}px,${frostedRect.right}px ${frostedRect.bottom}px,${frostedRect.left}px ${frostedRect.bottom}px)`,
+      }} />}
+      <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={8000} opacity={0.45} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
           <div key={i} style={{ position:"absolute", width:o.s, height:o.s, top:o.t, bottom:o.b, left:o.l, right:o.r, borderRadius:"50%", background:`radial-gradient(circle, ${o.c}, transparent)`, animation:`orbFloat ${6+i}s ease-in-out infinite`, animationDelay:o.d }} />

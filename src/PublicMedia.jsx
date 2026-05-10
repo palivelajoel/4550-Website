@@ -38,9 +38,21 @@ export default function PublicMedia() {
   const [activeYear, setActiveYear] = useState(null);
   const [lightbox, setLightbox] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [frosted, setFrosted] = useState(false);
+  const [frostedRect, setFrostedRect] = useState(null);
   const isMobile = window.innerWidth < 768;
-  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
+  const fr = {
+    onMouseEnter: e => {
+      e.currentTarget.style.zIndex = "9999";
+      e.currentTarget.style.position = "relative";
+      const r = e.currentTarget.getBoundingClientRect();
+      setFrostedRect(r);
+    },
+    onMouseLeave: e => {
+      e.currentTarget.style.zIndex = "";
+      e.currentTarget.style.position = "";
+      setFrostedRect(null);
+    },
+  };
 
   useEffect(() => {
     document.title = "Media Gallery · Team 4550";
@@ -57,9 +69,12 @@ export default function PublicMedia() {
 
   return (
     <div className="frost-bg" style={{ minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" }}>
-      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, filter: frosted ? "blur(6px)" : "none", transition: "filter 0.25s" }}>
-        <Starfield density={9000} opacity={0.28} />
-      </div>
+      {frostedRect && <div style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+      }} />}
+      <Starfield density={9000} opacity={0.28} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
