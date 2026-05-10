@@ -78,6 +78,15 @@ export default function PublicMedia() {
 
   return (
     <div className="frost-bg" style={{ minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" }}>
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+        opacity: frostedShow ? 1 : 0,
+        transition: "opacity 0.3s",
+        maskImage: frostedRect ? "url(#frost-mask)" : "none",
+        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
+      }} />
       {frostedRect && (
         <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
           <defs>
@@ -89,15 +98,6 @@ export default function PublicMedia() {
           </defs>
         </svg>
       )}
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        opacity: frostedShow ? 1 : 0,
-        transition: "opacity 0.3s",
-        maskImage: frostedRect ? "url(#frost-mask)" : "none",
-        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
-      }} />
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
         <Starfield density={9000} opacity={0.28} />
       </div>

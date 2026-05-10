@@ -180,6 +180,15 @@ export default function Hub() {
   if (!authed) {
     return (
 <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Exo 2',sans-serif", position:"relative", overflow:"hidden", padding:16, zIndex:0 }}>
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+        opacity: frostedShow ? 1 : 0,
+        transition: "opacity 0.3s",
+        maskImage: frostedRect ? "url(#frost-mask)" : "none",
+        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
+      }} />
       {frostedRect && (
         <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
           <defs>
@@ -191,15 +200,6 @@ export default function Hub() {
           </defs>
         </svg>
       )}
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        opacity: frostedShow ? 1 : 0,
-        transition: "opacity 0.3s",
-        maskImage: frostedRect ? "url(#frost-mask)" : "none",
-        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
-      }} />
         <style>{FONTS}</style>
         {/* Animated background */}
         <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
@@ -236,6 +236,15 @@ export default function Hub() {
   // ── HUB DASHBOARD ───────────────────────────────────────
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'Exo 2',sans-serif", position:"relative", overflow:"hidden" }}>
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+        opacity: frostedShow ? 1 : 0,
+        transition: "opacity 0.3s",
+        maskImage: frostedRect ? "url(#frost-mask)" : "none",
+        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
+      }} />
       {frostedRect && (
         <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
           <defs>
@@ -247,15 +256,6 @@ export default function Hub() {
           </defs>
         </svg>
       )}
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        opacity: frostedShow ? 1 : 0,
-        transition: "opacity 0.3s",
-        maskImage: frostedRect ? "url(#frost-mask)" : "none",
-        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
-      }} />
       <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={11000} opacity={0.32} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
