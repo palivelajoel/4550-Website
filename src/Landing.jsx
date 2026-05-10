@@ -158,27 +158,17 @@ export default function Landing() {
   const [captains, setCaptains] = useState([]);
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [frostedRect, setFrostedRect] = useState(null);
-  const [frostedShow, setFrostedShow] = useState(false);
+  const [frosted, setFrosted] = useState(false);
   const frostTimer = useRef(null);
-  const rectTimer = useRef(null);
   const fr = {
-    onMouseEnter: e => {
+    onMouseEnter: () => {
       if (frostTimer.current) clearTimeout(frostTimer.current);
-      if (rectTimer.current) clearTimeout(rectTimer.current);
-      const r = e.currentTarget.getBoundingClientRect();
-      setFrostedRect(r);
-      setFrostedShow(true);
-      frostTimer.current = setTimeout(() => {
-        setFrostedShow(false);
-        rectTimer.current = setTimeout(() => setFrostedRect(null), 300);
-      }, 1000);
+      setFrosted(true);
+      frostTimer.current = setTimeout(() => setFrosted(false), 1000);
     },
     onMouseLeave: () => {
       if (frostTimer.current) clearTimeout(frostTimer.current);
-      if (rectTimer.current) clearTimeout(rectTimer.current);
-      setFrostedShow(false);
-      rectTimer.current = setTimeout(() => setFrostedRect(null), 300);
+      setFrosted(false);
     },
   };
 
@@ -231,27 +221,7 @@ export default function Landing() {
   ];
 
   return (
-    <div className="frost-bg" style={{ background: "transparent", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", overflow:"hidden", position: "relative", minHeight: "100vh" }}>
-      {frostedRect && (
-        <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
-          <defs>
-            <filter id="frost-feather"><feGaussianBlur stdDeviation="4" /></filter>
-            <mask id="frost-mask" maskUnits="userSpaceOnUse">
-              <rect x="0" y="0" width="100%" height="100%" fill="white" />
-              <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" filter="url(#frost-feather)" />
-            </mask>
-          </defs>
-        </svg>
-      )}
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        opacity: frostedShow ? 1 : 0,
-        transition: "opacity 0.3s",
-        maskImage: frostedRect ? "url(#frost-mask)" : "none",
-        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
-      }} />
+    <div className={"frost-bg" + (frosted ? " frost-active" : "")} style={{ background: "transparent", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", overflow:"hidden", position: "relative", minHeight: "100vh" }}>
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={9000} opacity={0.38} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
@@ -260,7 +230,14 @@ export default function Landing() {
         <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(239,68,68,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.04) 1px,transparent 1px)", backgroundSize:"44px 44px" }} />
         <div style={{ position:"absolute", left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,rgba(239,68,68,0.3),transparent)", animation:"scanline 4s linear infinite", top:"-4px" }} />
       </div>
-      {/* Distorted grid that warps on scroll */}
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 1,
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        background: frosted ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0)",
+        opacity: frosted ? 1 : 0,
+        transition: "opacity 0.3s, background 0.3s",
+        pointerEvents: "none",
+      }} />
       <DistortedGrid scrollY={scrollY} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&family=Bebas+Neue&display=swap');
@@ -275,7 +252,8 @@ export default function Landing() {
         @keyframes glitch{0%,90%,100%{text-shadow:none;}92%{text-shadow:-3px 0 #ef4444,3px 0 #3b82f6;}95%{text-shadow:3px 0 #ef4444,-3px 0 #3b82f6;}97%{text-shadow:none;}}
         @keyframes glitchFade{from{opacity:1;}to{opacity:0;}}
         a{-webkit-tap-highlight-color:transparent;}
-        section,footer,nav{position:relative;z-index:1;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
+        section,footer,nav{position:relative;z-index:2;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);transition:background 0.3s;}
+        .frost-active section,.frost-active footer{background:rgba(8,10,15,0.55);}
         .sec{padding:80px 24px;max-width:1100px;margin:0 auto;position:relative;z-index:1;}
         .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;}
         .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -307,7 +285,7 @@ export default function Landing() {
       `}</style>
 
       {/* NAV */}
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000, background: "rgba(8,10,15,0.95)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <nav className="frost-nav" style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000, background: "rgba(8,10,15,0.95)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "12px 18px" : "14px 32px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
             <img src={logoUrl} alt="logo" style={{ width: isMobile ? 30 : 34, height: isMobile ? 30 : 34, borderRadius: "50%", objectFit: "cover" }} />
@@ -317,8 +295,8 @@ export default function Landing() {
           </div>
           {!isMobile ? (
             <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
-              {navItems.map(l => <a key={l} href={`#${l.toLowerCase().replace(/\s/g,"-")}`} style={{ color: "#94a3b8", textDecoration: "none", fontSize: 13, fontFamily: "'Share Tech Mono', monospace" }} {...fr}>{l}</a>)}
-              <a href="/member-hub" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "7px 16px", borderRadius: 4, textDecoration: "none", fontSize: 12, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }} {...fr}>FOR MEMBERS ›</a>
+              {navItems.map(l => <a key={l} href={`#${l.toLowerCase().replace(/\s/g,"-")}`} className="frost-btn" style={{ color: "#94a3b8", textDecoration: "none", fontSize: 13, fontFamily: "'Share Tech Mono', monospace" }} {...fr}>{l}</a>)}
+              <a href="/member-hub" className="frost-btn" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "7px 16px", borderRadius: 4, textDecoration: "none", fontSize: 12, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }} {...fr}>FOR MEMBERS ›</a>
             </div>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
