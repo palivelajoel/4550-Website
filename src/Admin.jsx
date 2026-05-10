@@ -57,6 +57,8 @@ export default function Admin() {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [page, setPage] = useState("overview");
+  const [frosted, setFrosted] = useState(false);
+  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
   const [members, setMembers] = useState([]);
   const [tasks, setTaskList] = useState([]);
   const [hubCalendar, setHubCalendar] = useState([]);
@@ -127,6 +129,7 @@ export default function Admin() {
   if (!authed) {
     return (
       <div style={S.loginBg}>
+        {frosted && <div style={{ position:"fixed", inset:0, zIndex:9998, backdropFilter:"blur(6px)", WebkitBackdropFilter:"blur(6px)", background:"rgba(0,0,0,0.1)", pointerEvents:"none", transition:"opacity 0.25s" }} />}
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Exo+2:wght@400;600&display=swap');
           *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:#080a0f;}
           @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
@@ -140,9 +143,9 @@ export default function Admin() {
             <input type="password" placeholder="Password" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }}
               style={S.loginInput} autoFocus />
             {err && <div style={S.loginErr}>{err}</div>}
-            <button type="submit" style={S.loginBtn}>ENTER →</button>
+            <button type="submit" style={S.loginBtn} {...fr}>ENTER →</button>
           </form>
-          <a href="/" style={S.loginBack}>← Back to site</a>
+          <a href="/" style={S.loginBack} {...fr}>← Back to site</a>
       </div>
       {editMapId && (
         <div style={{ marginTop: 24, borderTop: "2px solid #ef4444", paddingTop: 24 }}>
@@ -157,6 +160,7 @@ export default function Admin() {
 
   return (
     <div className="admin-layout" style={{ ...S.layout, overflow:"hidden" }}>
+      {frosted && <div style={{ position:"fixed", inset:0, zIndex:9998, backdropFilter:"blur(6px)", WebkitBackdropFilter:"blur(6px)", background:"rgba(0,0,0,0.1)", pointerEvents:"none", transition:"opacity 0.25s" }} />}
       <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={8000} opacity={0.45} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
@@ -196,13 +200,13 @@ export default function Admin() {
         </div>
         <nav className="admin-nav" style={S.sidebarNav}>
           {NAV.map(n => (
-            <button key={n.id} onClick={() => setPage(n.id)} style={{ ...S.navItem, background: page === n.id ? "rgba(239,68,68,0.15)" : "transparent", color: page === n.id ? "#ef4444" : "#94a3b8", borderLeft: page === n.id ? "3px solid #ef4444" : "3px solid transparent" }}>
+            <button key={n.id} onClick={() => setPage(n.id)} style={{ ...S.navItem, background: page === n.id ? "rgba(239,68,68,0.15)" : "transparent", color: page === n.id ? "#ef4444" : "#94a3b8", borderLeft: page === n.id ? "3px solid #ef4444" : "3px solid transparent" }} {...fr}>
               {n.label}
               {n.id === "suggestions" && suggestions.length > 0 && <span style={S.badge}>{suggestions.length}</span>}
             </button>
           ))}
         </nav>
-        <button onClick={handleLogout} style={S.logoutBtn}>Log Out</button>
+        <button onClick={handleLogout} style={S.logoutBtn} {...fr}>Log Out</button>
       </aside>
 
       <main className="admin-main" style={S.main}>

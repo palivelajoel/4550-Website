@@ -158,6 +158,8 @@ export default function Landing() {
   const [captains, setCaptains] = useState([]);
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [frosted, setFrosted] = useState(false);
+  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
 
   useEffect(() => {
     document.title = "Team 4550 Something's Bruin";
@@ -209,6 +211,7 @@ export default function Landing() {
 
   return (
     <div style={{ background: "transparent", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", overflow:"hidden", position: "relative", minHeight: "100vh" }}>
+      {frosted && <div style={{ position:"fixed", inset:0, zIndex:9998, backdropFilter:"blur(6px)", WebkitBackdropFilter:"blur(6px)", background:"rgba(0,0,0,0.1)", pointerEvents:"none", transition:"opacity 0.25s" }} />}
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={9000} opacity={0.38} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
@@ -275,12 +278,12 @@ export default function Landing() {
           </div>
           {!isMobile ? (
             <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
-              {navItems.map(l => <a key={l} href={`#${l.toLowerCase().replace(/\s/g,"-")}`} style={{ color: "#94a3b8", textDecoration: "none", fontSize: 13, fontFamily: "'Share Tech Mono', monospace" }}>{l}</a>)}
-              <a href="/member-hub" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "7px 16px", borderRadius: 4, textDecoration: "none", fontSize: 12, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }}>FOR MEMBERS ›</a>
+              {navItems.map(l => <a key={l} href={`#${l.toLowerCase().replace(/\s/g,"-")}`} style={{ color: "#94a3b8", textDecoration: "none", fontSize: 13, fontFamily: "'Share Tech Mono', monospace" }} {...fr}>{l}</a>)}
+              <a href="/member-hub" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "7px 16px", borderRadius: 4, textDecoration: "none", fontSize: 12, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }} {...fr}>FOR MEMBERS ›</a>
             </div>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <a href="/member-hub" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "6px 12px", borderRadius: 4, textDecoration: "none", fontSize: 10, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }}>MEMBERS</a>
+              <a href="/member-hub" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "6px 12px", borderRadius: 4, textDecoration: "none", fontSize: 10, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }} {...fr}>MEMBERS</a>
               <button onClick={() => setMenuOpen(o => !o)} style={{ background: "transparent", border: "none", cursor: "pointer", padding: 6, display: "flex", flexDirection: "column", gap: 5 }} aria-label="Menu">
                 <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "#ef4444" : "#94a3b8", transition: "all 0.2s", transform: menuOpen ? "rotate(45deg) translate(5px,5px)" : "none" }} />
                 <span style={{ display: "block", width: 22, height: 2, background: menuOpen ? "transparent" : "#94a3b8", transition: "all 0.2s" }} />
@@ -291,7 +294,7 @@ export default function Landing() {
         </div>
         {isMobile && menuOpen && (
           <div style={{ background: "rgba(13,17,23,0.98)", borderTop: "1px solid rgba(255,255,255,0.06)", padding: "8px 0 12px", animation: "menuSlide 0.2s ease" }}>
-            {navItems.map(l => <a key={l} href={`#${l.toLowerCase().replace(/\s/g,"-")}`} onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "13px 20px", color: "#94a3b8", textDecoration: "none", fontSize: 14, fontFamily: "'Share Tech Mono', monospace", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>{l}</a>)}
+            {navItems.map(l => <a key={l} href={`#${l.toLowerCase().replace(/\s/g,"-")}`} onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "13px 20px", color: "#94a3b8", textDecoration: "none", fontSize: 14, fontFamily: "'Share Tech Mono', monospace", borderBottom: "1px solid rgba(255,255,255,0.04)" }} {...fr}>{l}</a>)}
           </div>
         )}
       </nav>
@@ -310,8 +313,8 @@ export default function Landing() {
             Engineering excellence. Community impact. Championship mindset.
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", animation: "fadeUp 0.8s ease 0.5s both" }}>
-            <a href="#about" style={{ background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>LEARN MORE</a>
-            <a href={donate} target="_blank" rel="noreferrer" style={{ background: "transparent", color: "#ef4444", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, border: "1px solid #ef4444", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>SUPPORT US</a>
+            <a href="#about" style={{ background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }} {...fr}>LEARN MORE</a>
+            <a href={donate} target="_blank" rel="noreferrer" style={{ background: "transparent", color: "#ef4444", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, border: "1px solid #ef4444", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }} {...fr}>SUPPORT US</a>
           </div>
         </div>
       </section>
@@ -403,7 +406,7 @@ export default function Landing() {
           <SectionTitle>Media Gallery</SectionTitle>
           <p style={{ color: "#94a3b8", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15, textAlign: "center" }}>Browse photos and videos from competitions, outreach events, build season, and team activities.</p>
           <div style={{ textAlign: "center" }}>
-            <a href="/media" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 36px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>EXPLORE GALLERY →</a>
+            <a href="/media" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 36px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }} {...fr}>EXPLORE GALLERY →</a>
           </div>
         </FadeSection>
       </div></section>
@@ -440,7 +443,7 @@ export default function Landing() {
                 <div key={t.name} style={{ border: `1px solid ${t.color}`, borderRadius: 20, padding: isMobile ? "5px 14px" : "6px 20px", fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 10 : 12, fontWeight: 700, letterSpacing: 2, color: t.color }}>{t.name}</div>
               ))}
             </div>
-            <a href={`mailto:${email}`} style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>CONTACT US TO SPONSOR</a>
+            <a href={`mailto:${email}`} style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }} {...fr}>CONTACT US TO SPONSOR</a>
           </div>
         </FadeSection>
       </div></section>
@@ -452,7 +455,7 @@ export default function Landing() {
             <Eyebrow>// SUPPORT THE TEAM</Eyebrow>
             <SectionTitle>Make a Donation</SectionTitle>
             <p style={{ color: "#94a3b8", maxWidth: 460, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15 }}>Every donation goes directly toward robot parts, competition fees, and team travel. Help us compete at the highest level.</p>
-            <a href={donate} target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>DONATE NOW</a>
+            <a href={donate} target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }} {...fr}>DONATE NOW</a>
           </div>
         </FadeSection>
       </div></section>
@@ -485,8 +488,8 @@ export default function Landing() {
             </div>
           </div>
           <div className="footer-links">
-            {navItems.map(l => <a key={l} href={`#${l.toLowerCase().replace(/\s/g,"-")}`} style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "'Share Tech Mono', monospace" }}>{l}</a>)}
-            <a href="/member-hub" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "'Share Tech Mono', monospace" }}>Member Hub</a>
+            {navItems.map(l => <a key={l} href={`#${l.toLowerCase().replace(/\s/g,"-")}`} style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "'Share Tech Mono', monospace" }} {...fr}>{l}</a>)}
+            <a href="/member-hub" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "'Share Tech Mono', monospace" }} {...fr}>Member Hub</a>
           </div>
         </div>
         <div style={{ textAlign: "center", color: "#334155", fontSize: 11, fontFamily: "'Share Tech Mono', monospace", borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: 18 }}>
