@@ -69,27 +69,12 @@ export default function Hub() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const [frostedRect, setFrostedRect] = useState(null);
-  const [frostedShow, setFrostedShow] = useState(false);
-  const frostTimer = useRef(null);
-  const rectTimer = useRef(null);
   const fr = {
     onMouseEnter: e => {
-      if (frostTimer.current) clearTimeout(frostTimer.current);
-      if (rectTimer.current) clearTimeout(rectTimer.current);
       const r = e.currentTarget.getBoundingClientRect();
       setFrostedRect(r);
-      setFrostedShow(true);
-      frostTimer.current = setTimeout(() => {
-        setFrostedShow(false);
-        rectTimer.current = setTimeout(() => setFrostedRect(null), 300);
-      }, 1000);
     },
-    onMouseLeave: () => {
-      if (frostTimer.current) clearTimeout(frostTimer.current);
-      if (rectTimer.current) clearTimeout(rectTimer.current);
-      setFrostedShow(false);
-      rectTimer.current = setTimeout(() => setFrostedRect(null), 300);
-    },
+    onMouseLeave: () => setFrostedRect(null),
   };
 
   useEffect(() => {
@@ -180,25 +165,25 @@ export default function Hub() {
   if (!authed) {
     return (
 <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Exo 2',sans-serif", position:"relative", overflow:"hidden", padding:16, zIndex:0 }}>
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        opacity: frostedShow ? 1 : 0,
-        transition: "opacity 0.3s",
-        maskImage: frostedRect ? "url(#frost-mask)" : "none",
-        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
-      }} />
       {frostedRect && (
-        <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
-          <defs>
-            <filter id="frost-feather"><feGaussianBlur stdDeviation="4" /></filter>
-            <mask id="frost-mask" maskUnits="userSpaceOnUse">
-              <rect x="0" y="0" width="100%" height="100%" fill="white" />
-              <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" filter="url(#frost-feather)" />
-            </mask>
-          </defs>
-        </svg>
+        <>
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 9998,
+            backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+            background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+            maskImage: "url(#frost-mask)",
+            WebkitMaskImage: "url(#frost-mask)",
+          }} />
+          <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
+            <defs>
+              <filter id="frost-feather"><feGaussianBlur stdDeviation="4" /></filter>
+              <mask id="frost-mask" maskUnits="userSpaceOnUse">
+                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" filter="url(#frost-feather)" />
+              </mask>
+            </defs>
+          </svg>
+        </>
       )}
         <style>{FONTS}</style>
         {/* Animated background */}
@@ -236,25 +221,25 @@ export default function Hub() {
   // ── HUB DASHBOARD ───────────────────────────────────────
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'Exo 2',sans-serif", position:"relative", overflow:"hidden" }}>
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        opacity: frostedShow ? 1 : 0,
-        transition: "opacity 0.3s",
-        maskImage: frostedRect ? "url(#frost-mask)" : "none",
-        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
-      }} />
       {frostedRect && (
-        <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
-          <defs>
-            <filter id="frost-feather"><feGaussianBlur stdDeviation="4" /></filter>
-            <mask id="frost-mask" maskUnits="userSpaceOnUse">
-              <rect x="0" y="0" width="100%" height="100%" fill="white" />
-              <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" filter="url(#frost-feather)" />
-            </mask>
-          </defs>
-        </svg>
+        <>
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 9998,
+            backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+            background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+            maskImage: "url(#frost-mask)",
+            WebkitMaskImage: "url(#frost-mask)",
+          }} />
+          <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
+            <defs>
+              <filter id="frost-feather"><feGaussianBlur stdDeviation="4" /></filter>
+              <mask id="frost-mask" maskUnits="userSpaceOnUse">
+                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" filter="url(#frost-feather)" />
+              </mask>
+            </defs>
+          </svg>
+        </>
       )}
       <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={11000} opacity={0.32} />
