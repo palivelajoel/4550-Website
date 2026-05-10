@@ -68,20 +68,8 @@ export default function Hub() {
   const [subteam, setSubteam] = useState("General");
   const [loginLoading, setLoginLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
-  const [frostedRect, setFrostedRect] = useState(null);
-  const fr = {
-    onMouseEnter: e => {
-      e.currentTarget.style.zIndex = "9999";
-      e.currentTarget.style.position = "relative";
-      const r = e.currentTarget.getBoundingClientRect();
-      setFrostedRect(r);
-    },
-    onMouseLeave: e => {
-      e.currentTarget.style.zIndex = "";
-      e.currentTarget.style.position = "";
-      setFrostedRect(null);
-    },
-  };
+  const [frosted, setFrosted] = useState(false);
+  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
 
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 640);
@@ -171,16 +159,10 @@ export default function Hub() {
   if (!authed) {
     return (
 <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Exo 2',sans-serif", position:"relative", overflow:"hidden", padding:16, zIndex:0 }}>
-      {frostedRect && <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-      }} />}
         <style>{FONTS}</style>
-        <Starfield density={6000} opacity={0.55} />
         {/* Animated background */}
-        <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
-<Starfield density={6000} opacity={0.55} />
+        <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0, filter: frosted ? "blur(6px)" : "none", transition: "filter 0.25s" }}>
+          <Starfield density={6000} opacity={0.55} />
           {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
             <div key={i} style={{ position:"absolute", width:o.s, height:o.s, top:o.t, bottom:o.b, left:o.l, right:o.r, borderRadius:"50%", background:`radial-gradient(circle, ${o.c}, transparent)`, animation:`orbFloat ${6+i}s ease-in-out infinite`, animationDelay:o.d }} />
           ))}
@@ -213,12 +195,7 @@ export default function Hub() {
   // ── HUB DASHBOARD ───────────────────────────────────────
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'Exo 2',sans-serif", position:"relative", overflow:"hidden" }}>
-      {frostedRect && <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-      }} />}
-      <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
+      <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0, filter: frosted ? "blur(6px)" : "none", transition: "filter 0.25s" }}>
         <Starfield density={11000} opacity={0.32} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
           <div key={i} style={{ position:"absolute", width:o.s, height:o.s, top:o.t, bottom:o.b, left:o.l, right:o.r, borderRadius:"50%", background:`radial-gradient(circle, ${o.c}, transparent)`, animation:`orbFloat ${6+i}s ease-in-out infinite`, animationDelay:o.d }} />
