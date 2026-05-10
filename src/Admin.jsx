@@ -57,17 +57,27 @@ export default function Admin() {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [page, setPage] = useState("overview");
-  const [frosted, setFrosted] = useState(false);
+  const [frostedRect, setFrostedRect] = useState(null);
+  const [frostedShow, setFrostedShow] = useState(false);
   const frostTimer = useRef(null);
+  const rectTimer = useRef(null);
   const fr = {
-    onMouseEnter: () => {
+    onMouseEnter: e => {
       if (frostTimer.current) clearTimeout(frostTimer.current);
-      setFrosted(true);
-      frostTimer.current = setTimeout(() => setFrosted(false), 1000);
+      if (rectTimer.current) clearTimeout(rectTimer.current);
+      const r = e.currentTarget.getBoundingClientRect();
+      setFrostedRect(r);
+      setFrostedShow(true);
+      frostTimer.current = setTimeout(() => {
+        setFrostedShow(false);
+        rectTimer.current = setTimeout(() => setFrostedRect(null), 300);
+      }, 1000);
     },
     onMouseLeave: () => {
       if (frostTimer.current) clearTimeout(frostTimer.current);
-      setFrosted(false);
+      if (rectTimer.current) clearTimeout(rectTimer.current);
+      setFrostedShow(false);
+      rectTimer.current = setTimeout(() => setFrostedRect(null), 300);
     },
   };
   const [members, setMembers] = useState([]);
@@ -170,13 +180,25 @@ export default function Admin() {
 
   return (
     <div className="admin-layout" style={{ ...S.layout, overflow:"hidden" }}>
+      {frostedRect && (
+        <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
+          <defs>
+            <filter id="frost-feather"><feGaussianBlur stdDeviation="4" /></filter>
+            <mask id="frost-mask" maskUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="100%" height="100%" fill="white" />
+              <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" filter="url(#frost-feather)" />
+            </mask>
+          </defs>
+        </svg>
+      )}
       <div style={{
-        position: "fixed", inset: 0, zIndex: 1,
+        position: "fixed", inset: 0, zIndex: 9998,
         backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: frosted ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0)",
-        opacity: frosted ? 1 : 0,
+        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+        opacity: frostedShow ? 1 : 0,
         transition: "opacity 0.3s",
-        pointerEvents: "none",
+        maskImage: frostedRect ? "url(#frost-mask)" : "none",
+        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
       }} />
       <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={8000} opacity={0.45} />
