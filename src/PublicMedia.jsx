@@ -42,16 +42,10 @@ export default function PublicMedia() {
   const isMobile = window.innerWidth < 768;
   const fr = {
     onMouseEnter: e => {
-      e.currentTarget.style.zIndex = "9999";
-      e.currentTarget.style.position = "relative";
       const r = e.currentTarget.getBoundingClientRect();
       setFrostedRect(r);
     },
-    onMouseLeave: e => {
-      e.currentTarget.style.zIndex = "";
-      e.currentTarget.style.position = "";
-      setFrostedRect(null);
-    },
+    onMouseLeave: () => setFrostedRect(null),
   };
 
   useEffect(() => {
@@ -69,11 +63,23 @@ export default function PublicMedia() {
 
   return (
     <div className="frost-bg" style={{ minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" }}>
-      {frostedRect && <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-      }} />}
+      {frostedRect && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9998,
+          backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+          background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+          maskImage: "url(#frost-mask)",
+        }}>
+          <svg style={{ position: "fixed", width: 0, height: 0 }}>
+            <defs>
+              <mask id="frost-mask">
+                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" />
+              </mask>
+            </defs>
+          </svg>
+        </div>
+      )}
       <Starfield density={9000} opacity={0.28} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');

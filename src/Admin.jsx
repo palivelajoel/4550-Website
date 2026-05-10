@@ -60,16 +60,10 @@ export default function Admin() {
   const [frostedRect, setFrostedRect] = useState(null);
   const fr = {
     onMouseEnter: e => {
-      e.currentTarget.style.zIndex = "9999";
-      e.currentTarget.style.position = "relative";
       const r = e.currentTarget.getBoundingClientRect();
       setFrostedRect(r);
     },
-    onMouseLeave: e => {
-      e.currentTarget.style.zIndex = "";
-      e.currentTarget.style.position = "";
-      setFrostedRect(null);
-    },
+    onMouseLeave: () => setFrostedRect(null),
   };
   const [members, setMembers] = useState([]);
   const [tasks, setTaskList] = useState([]);
@@ -141,11 +135,23 @@ export default function Admin() {
   if (!authed) {
     return (
       <div style={S.loginBg}>
-        {frostedRect && <div style={{
-          position: "fixed", inset: 0, zIndex: 9998,
-          backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-          background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        }} />}
+        {frostedRect && (
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 9998,
+            backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+            background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+            maskImage: "url(#frost-mask)",
+          }}>
+            <svg style={{ position: "fixed", width: 0, height: 0 }}>
+              <defs>
+                <mask id="frost-mask">
+                  <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                  <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" />
+                </mask>
+              </defs>
+            </svg>
+          </div>
+        )}
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Exo+2:wght@400;600&display=swap');
           *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}body{background:#080a0f;}
           @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}

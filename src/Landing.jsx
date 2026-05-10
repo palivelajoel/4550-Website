@@ -161,16 +161,10 @@ export default function Landing() {
   const [frostedRect, setFrostedRect] = useState(null);
   const fr = {
     onMouseEnter: e => {
-      e.currentTarget.style.zIndex = "9999";
-      e.currentTarget.style.position = "relative";
       const r = e.currentTarget.getBoundingClientRect();
       setFrostedRect(r);
     },
-    onMouseLeave: e => {
-      e.currentTarget.style.zIndex = "";
-      e.currentTarget.style.position = "";
-      setFrostedRect(null);
-    },
+    onMouseLeave: () => setFrostedRect(null),
   };
 
   useEffect(() => {
@@ -223,11 +217,23 @@ export default function Landing() {
 
   return (
     <div className="frost-bg" style={{ background: "transparent", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", overflow:"hidden", position: "relative", minHeight: "100vh" }}>
-      {frostedRect && <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-      }} />}
+      {frostedRect && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9998,
+          backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+          background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+          maskImage: "url(#frost-mask)",
+        }}>
+          <svg style={{ position: "fixed", width: 0, height: 0 }}>
+            <defs>
+              <mask id="frost-mask">
+                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" />
+              </mask>
+            </defs>
+          </svg>
+        </div>
+      )}
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={9000} opacity={0.38} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
@@ -251,10 +257,9 @@ export default function Landing() {
         @keyframes glitch{0%,90%,100%{text-shadow:none;}92%{text-shadow:-3px 0 #ef4444,3px 0 #3b82f6;}95%{text-shadow:3px 0 #ef4444,-3px 0 #3b82f6;}97%{text-shadow:none;}}
         @keyframes glitchFade{from{opacity:1;}to{opacity:0;}}
         a{-webkit-tap-highlight-color:transparent;}
-        section,footer,nav{position:relative;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
-        .frost-btn{position:relative;}
-        .frost-btn:hover{z-index:9999;}
-        .sec{padding:80px 24px;max-width:1100px;margin:0 auto;position:relative;}
+        /* Make sections semi-transparent to show the grid */
+        section,footer,nav{position:relative;z-index:1;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
+        .sec{padding:80px 24px;max-width:1100px;margin:0 auto;position:relative;z-index:1;}
         .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;}
         .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
         .subteams-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
