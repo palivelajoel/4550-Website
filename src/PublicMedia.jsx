@@ -63,12 +63,24 @@ export default function PublicMedia() {
 
   return (
     <div className="frost-bg" style={{ minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" }}>
-      {frostedRect && <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.bottom}px, ${frostedRect.right}px ${frostedRect.bottom}px, ${frostedRect.right}px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.top}px, 0px ${frostedRect.top}px, 0px 0px)`,
-      }} />}
+      {frostedRect && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9998,
+          backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+          background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+          maskImage: "url(#frost-mask)",
+        }}>
+          <svg style={{ position: "fixed", width: 0, height: 0 }}>
+            <defs>
+              <filter id="frost-blur"><feGaussianBlur stdDeviation="6" /></filter>
+              <mask id="frost-mask">
+                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                <rect x={frostedRect.left - 4} y={frostedRect.top - 4} width={frostedRect.width + 8} height={frostedRect.height + 8} rx="8" ry="8" fill="black" filter="url(#frost-blur)" />
+              </mask>
+            </defs>
+          </svg>
+        </div>
+      )}
       <Starfield density={9000} opacity={0.28} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
