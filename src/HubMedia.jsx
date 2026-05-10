@@ -3,6 +3,159 @@ import { FONTS, C, sbFetch, isAuthed, uploadFile, HubHeader, toastStyle, inputSt
 
 const CATEGORIES = ["All", "Competition", "Build Season", "Outreach", "Team", "Other"];
 
+function CropTool({ file, onCrop, onCancel }) {
+  const imgRef = useRef(null);
+  const containerRef = useRef(null);
+  const [loaded, setLoaded] = useState(false);
+  const [crop, setCrop] = useState({ x: 0, y: 0, w: 100, h: 100 });
+  const [dragging, setDragging] = useState(null);
+  const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
+  const dragStart = useRef(null);
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      imgRef.current = img;
+      const maxW = 480, maxH = 360;
+      let w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxW) { h = h * maxW / w; w = maxW; }
+      if (h > maxH) { w = w * maxH / h; h = maxH; }
+      setImgSize({ w, h });
+      setCrop({ x: 0, y: 0, w, h });
+      setLoaded(true);
+    };
+    const url = URL.createObjectURL(file);
+    img.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  function getPos(e) {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const r = containerRef.current.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function handleDown(e) {
+    const p = getPos(e);
+    const c = crop;
+    dragStart.current = { x: p.x - c.x, y: p.y - c.y, w: c.w, h: c.h, mx: p.x, my: p.y };
+    if (p.x >= c.x && p.x <= c.x + c.w && p.y >= c.y && p.y <= c.y + c.h) setDragging("move");
+    else setDragging("new");
+  }
+
+  function handleMove(e) {
+    if (!dragging) return;
+    const p = getPos(e);
+    if (dragging === "move") {
+      const ds = dragStart.current;
+      setCrop({
+        x: Math.max(0, Math.min(p.x - ds.x, imgSize.w - ds.w)),
+        y: Math.max(0, Math.min(p.y - ds.y, imgSize.h - ds.h)),
+        w: ds.w, h: ds.h,
+      });
+    } else if (dragging === "new") {
+      const ds = dragStart.current;
+      const nx = Math.min(ds.mx, p.x), ny = Math.min(ds.my, p.y);
+      setCrop({
+        x: Math.max(0, nx), y: Math.max(0, ny),
+        w: Math.max(20, Math.min(Math.abs(p.x - ds.mx), imgSize.w - nx)),
+        h: Math.max(20, Math.min(Math.abs(p.y - ds.my), imgSize.h - ny)),
+      });
+    }
+  }
+
+  const containerStyle = {
+    position: "relative", display: "inline-block", borderRadius: 6, overflow: "hidden",
+    border: "1px solid rgba(255,255,255,0.1)", cursor: dragging === "move" ? "grabbing" : "crosshair",
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+      {loaded && (
+        <div ref={containerRef} style={containerStyle}
+          onMouseDown={handleDown} onMouseMove={handleMove} onMouseUp={() => { setDragging(null); dragStart.current = null; }}
+          onMouseLeave={() => { setDragging(null); dragStart.current = null; }}>
+          <img src={imgRef.current?.src} alt="crop" style={{ display: "block", maxWidth: "100%", maxHeight: 360 }} draggable={false} />
+          <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+            <svg width="100%" height="100%" viewBox={`0 0 ${imgSize.w} ${imgSize.h}`} preserveAspectRatio="none"
+              style={{ position: "absolute", inset: 0 }}>
+              <defs>
+                <mask id="cropMask">
+                  <rect x="0" y="0" width={imgSize.w} height={imgSize.h} fill="white" />
+                  <rect x={crop.x} y={crop.y} width={crop.w} height={crop.h} fill="black" />
+                </mask>
+              </defs>
+              <rect x="0" y="0" width={imgSize.w} height={imgSize.h} fill="rgba(0,0,0,0.5)" mask="url(#cropMask)" />
+              <rect x={crop.x} y={crop.y} width={crop.w} height={crop.h} fill="none" stroke="#ef4444" strokeWidth={2} />
+            </svg>
+          </div>
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => {
+          if (!imgRef.current) return;
+          const scale = imgRef.current.naturalWidth / imgSize.w;
+          const c = document.createElement("canvas");
+          c.width = crop.w * scale; c.height = crop.h * scale;
+          const ctx = c.getContext("2d");
+          ctx.drawImage(imgRef.current, crop.x * scale, crop.y * scale, c.width, c.height, 0, 0, c.width, c.height);
+          c.toBlob(blob => { if (blob) onCrop(new File([blob], file.name, { type: "image/jpeg" })); }, "image/jpeg", 0.92);
+        }} style={addBtnStyle}>Apply Crop</button>
+        <button onClick={onCancel} style={dangerBtn}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+      return { x: nx, y: ny, w: nw, h: nh };
+    });
+  }
+
+  function applyCrop() {
+    if (!imgRef.current) return;
+    const scaleX = imgRef.current.naturalWidth / imgSize.w;
+    const scaleY = imgRef.current.naturalHeight / imgSize.h;
+    const c = document.createElement("canvas");
+    c.width = crop.w * scaleX;
+    c.height = crop.h * scaleY;
+    const ctx = c.getContext("2d");
+    ctx.drawImage(imgRef.current, crop.x * scaleX, crop.y * scaleY, c.width, c.height, 0, 0, c.width, c.height);
+    c.toBlob(blob => {
+      if (blob) onCrop(new File([blob], file.name, { type: "image/jpeg" }));
+    }, "image/jpeg", 0.92);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+      {loaded && (
+        <div style={{ position: "relative", display: "inline-block" }}>
+          <canvas ref={canvasRef} width={imgSize.w} height={imgSize.h}
+            onMouseDown={e => { const r = canvasRef.current.getBoundingClientRect(); const mx = e.clientX - r.left, my = e.clientY - r.top; const c = crop; if (mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h) setDragging("move"); }}
+            onMouseMove={handleMouse} onMouseUp={() => setDragging(null)} onMouseLeave={() => setDragging(null)}
+            style={{ borderRadius: 6, maxWidth: "100%", cursor: dragging ? "grabbing" : "crosshair" }} />
+          {loaded && (() => {
+            const s = canvasRef.current ? canvasRef.current.width / (canvasRef.current?.offsetWidth || 1) : 1;
+            return (
+              <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+                viewBox={`0 0 ${imgSize.w} ${imgSize.h}`} preserveAspectRatio="none">
+                <rect x="0" y="0" width={imgSize.w} height={imgSize.h} fill="rgba(0,0,0,0.45)" />
+                <rect x={crop.x} y={crop.y} width={crop.w} height={crop.h} fill="transparent" stroke="#ef4444" strokeWidth={2} />
+                <rect x={crop.x} y={crop.y} width={crop.w} height={crop.h} fill="transparent" stroke="white" strokeWidth={1} strokeDasharray="4 3" />
+                <circle cx={crop.x + crop.w} cy={crop.y + crop.h} r={5} fill="white" stroke="#ef4444" strokeWidth={2}
+                  style={{ cursor: "nwse-resize", pointerEvents: "auto" }}
+                  onMouseDown={e => { e.stopPropagation(); setDragging("se"); }} />
+              </svg>
+            );
+          })()}
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={applyCrop} style={addBtnStyle}>Apply Crop</button>
+        <button onClick={onCancel} style={dangerBtn}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 export default function HubMedia() {
   const [authed] = useState(isAuthed());
   const [items, setItems] = useState([]);
@@ -15,6 +168,7 @@ export default function HubMedia() {
   const [uploadMode, setUploadMode] = useState("file"); // "file" | "url"
   const [file, setFile] = useState(null);
   const [toast, setToast] = useState("");
+  const [cropFile, setCropFile] = useState(null);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -204,6 +358,11 @@ export default function HubMedia() {
                     {file ? `✓ ${file.name}` : "Choose image or video"}
                   </button>
                   <input ref={fileRef} type="file" accept="image/*,video/*" style={{ display: "none" }} onChange={e => setFile(e.target.files[0])} />
+                  {file && file.type.startsWith("image/") && (
+                    <button onClick={() => setCropFile(file)} style={{ ...ghostBtn, width: "100%", padding: "8px", marginTop: 6, fontSize: 12, color: C.red, border: "1px solid rgba(239,68,68,0.3)" }}>
+                      ✂️ Crop Image
+                    </button>
+                  )}
                 </div>
               ) : (
                 <input placeholder="https://youtube.com/watch?v=... or image URL" value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} style={inputStyle} />
@@ -214,6 +373,16 @@ export default function HubMedia() {
                 <button onClick={() => setAddModal(false)} style={{ ...ghostBtn, flex: 1 }}>Cancel</button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Crop Modal */}
+      {cropFile && (
+        <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget) setCropFile(null); }}>
+          <div style={{ background: "#0d1117", border: `1px solid ${C.border}`, borderRadius: 14, padding: "24px", width: "100%", maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 16, letterSpacing: 2 }}>✂️ Crop Image</div>
+            <CropTool file={cropFile} onCrop={cropped => { setFile(cropped); setCropFile(null); showToast("Image cropped!"); }} onCancel={() => setCropFile(null)} />
           </div>
         </div>
       )}

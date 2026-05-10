@@ -13,6 +13,7 @@ import HubProjector from './HubProjector.jsx'
 import HubScouting from './HubScouting.jsx'
 import HubInventory from './HubInventory.jsx'
 import ScoutMapTab from './ScoutMapTab.jsx'
+import PublicMedia from './PublicMedia.jsx'
 
 const path = window.location.pathname
 
@@ -28,6 +29,7 @@ const Page =
   : path === '/member-hub/projector'           ? HubProjector
   : path === '/member-hub/scout-map'           ? ScoutMapTab
   : path === '/member-hub/inventory'           ? HubInventory
+  : path === '/media'                          ? PublicMedia
   : Landing
 
 createRoot(document.getElementById('root')).render(

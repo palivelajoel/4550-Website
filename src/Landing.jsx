@@ -184,7 +184,7 @@ export default function Landing() {
   const yt = config.youtube || "https://www.youtube.com/channel/UC4_P1A5xYb7A7rCdEXdKzBQ";
   const donate = config.donate_url || "https://www.vancoevents.com/us/events/landing/46671";
 
-  const navItems = ["About", "Team", "Sub-Teams", "Outreach", "Sponsors", "Contact"];
+  const navItems = ["About", "Team", "Sub-Teams", "Outreach", "Media Gallery", "Sponsors", "Contact"];
 
   const SUB_TEAMS = [
     {
@@ -397,10 +397,22 @@ export default function Landing() {
       </div></section>
 
       {/* MEDIA */}
+      <section id="media-gallery"><div className="sec">
+        <FadeSection>
+          <Eyebrow>// GALLERY</Eyebrow>
+          <SectionTitle>Media Gallery</SectionTitle>
+          <p style={{ color: "#94a3b8", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15, textAlign: "center" }}>Browse photos and videos from competitions, outreach events, build season, and team activities.</p>
+          <div style={{ textAlign: "center" }}>
+            <a href="/media" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 36px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>EXPLORE GALLERY →</a>
+          </div>
+        </FadeSection>
+      </div></section>
+
+      {/* SOCIAL MEDIA */}
       <section id="media"><div className="sec">
         <FadeSection>
           <Eyebrow>// FOLLOW ALONG</Eyebrow>
-          <SectionTitle>Media</SectionTitle>
+          <SectionTitle>Social Media</SectionTitle>
           <div className="media-row">
             {[
               { href: ig, icon: "📸", title: "Instagram", handle: "@cherrycreek.robotics", border: "rgba(59,130,246,0.3)" },
