@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Starfield from "./Starfield.jsx";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -39,13 +39,28 @@ export default function PublicMedia() {
   const [lightbox, setLightbox] = useState(null);
   const [loading, setLoading] = useState(true);
   const [frostedRect, setFrostedRect] = useState(null);
+  const [frostedShow, setFrostedShow] = useState(false);
+  const frostTimer = useRef(null);
+  const rectTimer = useRef(null);
   const isMobile = window.innerWidth < 768;
   const fr = {
     onMouseEnter: e => {
+      if (frostTimer.current) clearTimeout(frostTimer.current);
+      if (rectTimer.current) clearTimeout(rectTimer.current);
       const r = e.currentTarget.getBoundingClientRect();
       setFrostedRect(r);
+      setFrostedShow(true);
+      frostTimer.current = setTimeout(() => {
+        setFrostedShow(false);
+        rectTimer.current = setTimeout(() => setFrostedRect(null), 300);
+      }, 1000);
     },
-    onMouseLeave: () => setFrostedRect(null),
+    onMouseLeave: () => {
+      if (frostTimer.current) clearTimeout(frostTimer.current);
+      if (rectTimer.current) clearTimeout(rectTimer.current);
+      setFrostedShow(false);
+      rectTimer.current = setTimeout(() => setFrostedRect(null), 300);
+    },
   };
 
   useEffect(() => {
@@ -63,25 +78,25 @@ export default function PublicMedia() {
 
   return (
     <div className="frost-bg" style={{ minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" }}>
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+        opacity: frostedShow ? 1 : 0,
+        transition: "opacity 0.3s",
+        maskImage: frostedRect ? "url(#frost-mask)" : "none",
+        WebkitMaskImage: frostedRect ? "url(#frost-mask)" : "none",
+      }} />
       {frostedRect && (
-        <>
-          <div style={{
-            position: "fixed", inset: 0, zIndex: 9998,
-            backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-            background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-            maskImage: "url(#frost-mask)",
-            WebkitMaskImage: "url(#frost-mask)",
-          }} />
-          <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
-            <defs>
-              <filter id="frost-feather"><feGaussianBlur stdDeviation="4" /></filter>
-              <mask id="frost-mask" maskUnits="userSpaceOnUse">
-                <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" filter="url(#frost-feather)" />
-              </mask>
-            </defs>
-          </svg>
-        </>
+        <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
+          <defs>
+            <filter id="frost-feather"><feGaussianBlur stdDeviation="4" /></filter>
+            <mask id="frost-mask" maskUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="100%" height="100%" fill="white" />
+              <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" filter="url(#frost-feather)" />
+            </mask>
+          </defs>
+        </svg>
       )}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
         <Starfield density={9000} opacity={0.28} />
