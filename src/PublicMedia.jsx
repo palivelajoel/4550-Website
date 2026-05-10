@@ -36,6 +36,7 @@ function getThumbnail(item) {
 export default function PublicMedia() {
   const [items, setItems] = useState([]);
   const [activeSection, setActiveSection] = useState("competitions");
+  const [activeYear, setActiveYear] = useState("all");
   const [lightbox, setLightbox] = useState(null);
   const [loading, setLoading] = useState(true);
   const isMobile = window.innerWidth < 768;
@@ -48,9 +49,11 @@ export default function PublicMedia() {
     });
   }, []);
 
+  const years = [...new Set(items.map(i => i.year).filter(Boolean))].sort((a, b) => b - a);
+
   const sectionItems = SECTIONS.find(s => s.id === activeSection);
   const filtered = sectionItems
-    ? items.filter(i => sectionItems.categories.includes(i.category))
+    ? items.filter(i => sectionItems.categories.includes(i.category) && (activeYear === "all" || String(i.year) === String(activeYear)))
     : [];
 
   return (
@@ -79,7 +82,7 @@ export default function PublicMedia() {
 
       {/* Section tabs */}
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "16px 14px 0" : "24px 28px 0" }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginBottom: 10 }}>
           {SECTIONS.map(s => (
             <button key={s.id} onClick={() => setActiveSection(s.id)} style={{
               background: activeSection === s.id ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)",
@@ -92,6 +95,25 @@ export default function PublicMedia() {
             </button>
           ))}
         </div>
+        {/* Year filter */}
+        {years.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", marginBottom: 4 }}>
+            <button onClick={() => setActiveYear("all")} style={{
+              background: activeYear === "all" ? "rgba(239,68,68,0.12)" : "transparent",
+              border: `1px solid ${activeYear === "all" ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.06)"}`,
+              color: activeYear === "all" ? "#ef4444" : "#64748b",
+              borderRadius: 14, padding: "4px 14px", cursor: "pointer", fontSize: 12, fontFamily: "monospace", transition: "all 0.2s",
+            }}>All</button>
+            {years.map(y => (
+              <button key={y} onClick={() => setActiveYear(y)} style={{
+                background: activeYear === y ? "rgba(239,68,68,0.12)" : "transparent",
+                border: `1px solid ${activeYear === y ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.06)"}`,
+                color: activeYear === y ? "#ef4444" : "#64748b",
+                borderRadius: 14, padding: "4px 14px", cursor: "pointer", fontSize: 12, fontFamily: "monospace", transition: "all 0.2s",
+              }}>{y}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Gallery */}
