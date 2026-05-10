@@ -68,8 +68,6 @@ export default function Hub() {
   const [subteam, setSubteam] = useState("General");
   const [loginLoading, setLoginLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
-  const [frosted, setFrosted] = useState(false);
-  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
 
   useEffect(() => {
     const fn = () => setIsMobile(window.innerWidth < 640);
@@ -159,7 +157,6 @@ export default function Hub() {
   if (!authed) {
     return (
 <div style={{ minHeight:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Exo 2',sans-serif", position:"relative", overflow:"hidden", padding:16, zIndex:0 }}>
-      {frosted && <div style={{ position:"fixed", inset:0, zIndex:9998, backdropFilter:"blur(6px)", WebkitBackdropFilter:"blur(6px)", background:"rgba(0,0,0,0.1)", pointerEvents:"none", transition:"opacity 0.25s" }} />}
         <style>{FONTS}</style>
         <Starfield density={6000} opacity={0.55} />
         {/* Animated background */}
@@ -184,7 +181,7 @@ export default function Hub() {
               onFocus={e => e.target.style.borderColor="rgba(239,68,68,0.5)"} onBlur={e => e.target.style.borderColor="rgba(255,255,255,0.12)"} />
             <PwInput value={pw} onChange={e => setPw(e.target.value)} placeholder="Password" />
             {err && <div style={{ color:C.red, fontSize:12, fontFamily:"monospace", animation:"fadeUp 0.3s ease" }}>{err}</div>}
-            <button type="submit" disabled={loginLoading} className="login-btn" style={{ background:C.red, border:"none", borderRadius:8, padding:13, color:"#fff", fontFamily:"'Orbitron',sans-serif", fontWeight:700, fontSize:13, letterSpacing:2, cursor:"pointer", opacity:loginLoading?0.7:1, transition:"all 0.2s", marginTop:4, animation:"glow 2.5s ease-in-out infinite" }} {...fr}>
+            <button type="submit" disabled={loginLoading} className="login-btn" style={{ background:C.red, border:"none", borderRadius:8, padding:13, color:"#fff", fontFamily:"'Orbitron',sans-serif", fontWeight:700, fontSize:13, letterSpacing:2, cursor:"pointer", opacity:loginLoading?0.7:1, transition:"all 0.2s", marginTop:4, animation:"glow 2.5s ease-in-out infinite" }}>
               {loginLoading ? "AUTHENTICATING..." : "ENTER HUB →"}
             </button>
           </form>
@@ -197,7 +194,6 @@ export default function Hub() {
   // ── HUB DASHBOARD ───────────────────────────────────────
   return (
     <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'Exo 2',sans-serif", position:"relative", overflow:"hidden" }}>
-      {frosted && <div style={{ position:"fixed", inset:0, zIndex:9998, backdropFilter:"blur(6px)", WebkitBackdropFilter:"blur(6px)", background:"rgba(0,0,0,0.1)", pointerEvents:"none", transition:"opacity 0.25s" }} />}
       <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={11000} opacity={0.32} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
@@ -231,12 +227,12 @@ export default function Hub() {
           {memberName && !isMobile && <span style={{ fontSize:12, color:C.muted, fontFamily:"monospace" }}>👋 {memberName}</span>}
           {memberName && <span style={{ fontSize:10, background:`${ROLE_COLORS[currentRole]||"#64748b"}22`, color:ROLE_COLORS[currentRole]||"#64748b", border:`1px solid ${ROLE_COLORS[currentRole]||"#64748b"}44`, borderRadius:10, padding:"2px 9px", fontFamily:"monospace" }}>{currentRole}</span>}
           {isAdminUser && (
-            <a href="/admin" style={{ fontSize:11, color:C.red, textDecoration:"none", fontFamily:"'Orbitron',sans-serif", border:"1px solid rgba(239,68,68,0.4)", borderRadius:6, padding:"5px 10px", letterSpacing:1, animation:"glow 3s ease-in-out infinite" }} {...fr}>
+            <a href="/admin" style={{ fontSize:11, color:C.red, textDecoration:"none", fontFamily:"'Orbitron',sans-serif", border:"1px solid rgba(239,68,68,0.4)", borderRadius:6, padding:"5px 10px", letterSpacing:1, animation:"glow 3s ease-in-out infinite" }}>
               {isMobile ? "🔐" : "ADMIN PANEL"}
             </a>
           )}
           {!isMobile && <a href="/" style={{ fontSize:12, color:C.dim, textDecoration:"none", fontFamily:"monospace" }}>Site</a>}
-          <button onClick={logout} style={{ background:"transparent", border:"1px solid rgba(239,68,68,0.3)", color:C.red, padding:"6px 12px", borderRadius:6, cursor:"pointer", fontSize:12, fontFamily:"monospace" }} {...fr}>
+          <button onClick={logout} style={{ background:"transparent", border:"1px solid rgba(239,68,68,0.3)", color:C.red, padding:"6px 12px", borderRadius:6, cursor:"pointer", fontSize:12, fontFamily:"monospace" }}>
             {isMobile ? "↩" : "Log Out"}
           </button>
         </div>
@@ -264,7 +260,7 @@ export default function Hub() {
         </div>
 
         {/* Featured projector */}
-        <a href="/member-hub/projector" style={{ textDecoration:"none", display:"block", marginBottom:20 }} {...fr}>
+        <a href="/member-hub/projector" style={{ textDecoration:"none", display:"block", marginBottom:20 }}>
           <div style={{ background:"linear-gradient(135deg,rgba(239,68,68,0.1),rgba(59,130,246,0.07))", border:"1px solid rgba(239,68,68,0.3)", borderRadius:14, padding: isMobile ? "18px 16px" : "22px 28px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, cursor:"pointer", transition:"all 0.25s", animation:"borderPulse 3s ease-in-out infinite", flexWrap:"wrap" }}
             onMouseEnter={e => e.currentTarget.style.borderColor="rgba(239,68,68,0.7)"}
             onMouseLeave={e => e.currentTarget.style.borderColor="rgba(239,68,68,0.3)"}>
@@ -282,7 +278,7 @@ export default function Hub() {
         {/* Feature grid */}
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fill,minmax(260px,1fr))", gap:isMobile?10:16 }}>
           {FEATURES.filter(f => f.id !== "projector").map((f, i) => (
-            <FeatureCard key={f.id} feature={f} index={i} isMobile={isMobile} fr={fr} />
+            <FeatureCard key={f.id} feature={f} index={i} isMobile={isMobile} />
           ))}
         </div>
       </main>
@@ -294,13 +290,12 @@ export default function Hub() {
   );
 }
 
-function FeatureCard({ feature, index, isMobile, fr }) {
+function FeatureCard({ feature, index, isMobile }) {
   const [hovered, setHovered] = useState(false);
   return (
     <div className="feat-card"
       onClick={() => { if (feature.href === "/dashboard") localStorage.setItem("sb_authed","true"); window.location.href = feature.href; }}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      {...fr}
       style={{ background: hovered ? `${feature.accent}10` : C.surface, border:`1px solid ${hovered ? feature.accent+"88" : C.border}`, borderRadius:12, padding: isMobile ? "16px 12px" : "22px 20px", cursor:"pointer", boxShadow: hovered ? `0 0 28px ${feature.accent}22` : "none", animation:`fadeUp 0.4s ease both`, animationDelay:`${index * 0.04}s`, userSelect:"none" }}>
       <div className="feat-icon" style={{ fontSize:isMobile?22:28, marginBottom:isMobile?8:12 }}>{feature.icon}</div>
       <div style={{ fontFamily:"'Orbitron',sans-serif", fontWeight:700, fontSize:isMobile?10:12, color:C.text, marginBottom:isMobile?4:7, letterSpacing:1 }}>{feature.label}</div>

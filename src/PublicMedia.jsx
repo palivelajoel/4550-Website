@@ -38,9 +38,7 @@ export default function PublicMedia() {
   const [activeYear, setActiveYear] = useState(null);
   const [lightbox, setLightbox] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [frosted, setFrosted] = useState(false);
   const isMobile = window.innerWidth < 768;
-  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
 
   useEffect(() => {
     document.title = "Media Gallery · Team 4550";
@@ -57,7 +55,6 @@ export default function PublicMedia() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" }}>
-      {frosted && <div style={{ position:"fixed", inset:0, zIndex:9998, backdropFilter:"blur(6px)", WebkitBackdropFilter:"blur(6px)", background:"rgba(0,0,0,0.1)", pointerEvents:"none", transition:"opacity 0.25s" }} />}
       <Starfield density={9000} opacity={0.28} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
@@ -73,10 +70,10 @@ export default function PublicMedia() {
       <header style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(8,10,15,0.95)", backdropFilter: "blur(16px)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "12px 16px" : "14px 28px", maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <a href="/" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "monospace" }} {...fr}>← Home</a>
+            <a href="/" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "monospace" }}>← Home</a>
             <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 13 : 16, color: "#ef4444", letterSpacing: 2 }}>MEDIA GALLERY</span>
           </div>
-          <a href="/member-hub" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "6px 14px", borderRadius: 4, textDecoration: "none", fontSize: 11, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }} {...fr}>MEMBERS</a>
+          <a href="/member-hub" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "6px 14px", borderRadius: 4, textDecoration: "none", fontSize: 11, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }}>MEMBERS</a>
         </div>
       </header>
 
@@ -95,7 +92,7 @@ export default function PublicMedia() {
                   borderRadius: 12, padding: "10px 22px", cursor: "pointer",
                   fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: 1,
                   transition: "all 0.2s", display: "flex", alignItems: "center", gap: 8,
-                }} {...fr}>
+                }}>
                   {y}
                   <span style={{ fontSize: 11, opacity: 0.7, fontFamily: "monospace", fontWeight: 400 }}>{count}</span>
                 </button>
@@ -197,7 +194,7 @@ export default function PublicMedia() {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: isMobile ? "24px 18px" : "32px 28px", textAlign: "center" }}>
-        <a href="/" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "monospace" }} {...fr}>← Back to Team 4550 Site</a>
+        <a href="/" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "monospace" }}>← Back to Team 4550 Site</a>
       </footer>
     </div>
   );
