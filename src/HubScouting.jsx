@@ -976,7 +976,6 @@ function MapsView2({ competitions, pits, matches, cfg, isMobile }) {
 const TABS = [
   { id:"match", label:"🎯 Match Scout" },
   { id:"pit", label:"🔧 Pit Scout" },
-  { id:"maps", label:"🗺️ Maps" },
   { id:"stream", label:"🤖 AI Stream" },
   { id:"data", label:"📊 Team Data" },
   { id:"picklist", label:"🏆 Picklist" },
