@@ -217,24 +217,12 @@ export default function Landing() {
 
   return (
     <div className="frost-bg" style={{ background: "transparent", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", overflow:"hidden", position: "relative", minHeight: "100vh" }}>
-      {frostedRect && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 9998,
-          backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-          background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-          maskImage: "url(#frost-mask)",
-        }}>
-          <svg style={{ position: "fixed", width: 0, height: 0 }}>
-            <defs>
-              <filter id="frost-blur"><feGaussianBlur stdDeviation="6" /></filter>
-              <mask id="frost-mask">
-                <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                <rect x={frostedRect.left - 4} y={frostedRect.top - 4} width={frostedRect.width + 8} height={frostedRect.height + 8} rx="8" ry="8" fill="black" filter="url(#frost-blur)" />
-              </mask>
-            </defs>
-          </svg>
-        </div>
-      )}
+      {frostedRect && <div style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+        clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.bottom}px, ${frostedRect.right}px ${frostedRect.bottom}px, ${frostedRect.right}px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.top}px, 0px ${frostedRect.top}px, 0px 0px)`,
+      }} />}
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={9000} opacity={0.38} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
