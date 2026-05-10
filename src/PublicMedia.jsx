@@ -38,9 +38,15 @@ export default function PublicMedia() {
   const [activeYear, setActiveYear] = useState(null);
   const [lightbox, setLightbox] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [frosted, setFrosted] = useState(false);
+  const [frostedRect, setFrostedRect] = useState(null);
   const isMobile = window.innerWidth < 768;
-  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
+  const fr = {
+    onMouseEnter: e => {
+      const r = e.currentTarget.getBoundingClientRect();
+      setFrostedRect(r);
+    },
+    onMouseLeave: () => setFrostedRect(null),
+  };
 
   useEffect(() => {
     document.title = "Media Gallery · Team 4550";
@@ -57,7 +63,27 @@ export default function PublicMedia() {
 
   return (
     <div className="frost-bg" style={{ minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" }}>
-      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, filter: frosted ? "blur(6px)" : "none", transition: "filter 0.25s" }}>
+      {frostedRect && (
+        <>
+          <div style={{
+            position: "fixed", inset: 0, zIndex: 9998,
+            backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+            background: "rgba(0,0,0,0.1)", pointerEvents: "none",
+            maskImage: "url(#frost-mask)",
+            WebkitMaskImage: "url(#frost-mask)",
+          }} />
+          <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
+            <defs>
+              <filter id="frost-feather"><feGaussianBlur stdDeviation="4" /></filter>
+              <mask id="frost-mask" maskUnits="userSpaceOnUse">
+                <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" filter="url(#frost-feather)" />
+              </mask>
+            </defs>
+          </svg>
+        </>
+      )}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
         <Starfield density={9000} opacity={0.28} />
       </div>
       <style>{`
