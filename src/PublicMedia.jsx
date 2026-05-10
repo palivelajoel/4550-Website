@@ -38,15 +38,9 @@ export default function PublicMedia() {
   const [activeYear, setActiveYear] = useState(null);
   const [lightbox, setLightbox] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [frostedRect, setFrostedRect] = useState(null);
+  const [frosted, setFrosted] = useState(false);
   const isMobile = window.innerWidth < 768;
-  const fr = {
-    onMouseEnter: e => {
-      const r = e.currentTarget.getBoundingClientRect();
-      setFrostedRect(r);
-    },
-    onMouseLeave: () => setFrostedRect(null),
-  };
+  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
 
   useEffect(() => {
     document.title = "Media Gallery · Team 4550";
@@ -62,13 +56,8 @@ export default function PublicMedia() {
   const albumItems = items.filter(i => String(i.year) === String(activeAlbum));
 
   return (
-    <div className="frost-bg" style={{ minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" }}>
-      {frostedRect && <div style={{
-        position: "fixed", inset: 0, zIndex: 9998,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        clipPath: `polygon(evenodd,0% 0%,100% 0%,100% 100%,0% 100%,${frostedRect.left}px ${frostedRect.top}px,${frostedRect.right}px ${frostedRect.top}px,${frostedRect.right}px ${frostedRect.bottom}px,${frostedRect.left}px ${frostedRect.bottom}px)`,
-      }} />}
+    <div style={{ minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" }}>
+      {frosted && <div style={{ position:"fixed", inset:0, zIndex:9998, backdropFilter:"blur(6px)", WebkitBackdropFilter:"blur(6px)", background:"rgba(0,0,0,0.1)", pointerEvents:"none", transition:"opacity 0.25s" }} />}
       <Starfield density={9000} opacity={0.28} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&display=swap');
