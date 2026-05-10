@@ -67,7 +67,7 @@ export default function PublicMedia() {
         position: "fixed", inset: 0, zIndex: 9998,
         backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
         background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-        clipPath: `polygon(evenodd,0% 0%,100% 0%,100% 100%,0% 100%,${frostedRect.left}px ${frostedRect.top}px,${frostedRect.right}px ${frostedRect.top}px,${frostedRect.right}px ${frostedRect.bottom}px,${frostedRect.left}px ${frostedRect.bottom}px)`,
+        clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.bottom}px, ${frostedRect.right}px ${frostedRect.bottom}px, ${frostedRect.right}px ${frostedRect.top}px, ${frostedRect.left}px ${frostedRect.top}px, 0px ${frostedRect.top}px, 0px 0px)`,
       }} />}
       <Starfield density={9000} opacity={0.28} />
       <style>{`
