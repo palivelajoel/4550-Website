@@ -106,56 +106,6 @@ function CropTool({ file, onCrop, onCancel }) {
     </div>
   );
 }
-      return { x: nx, y: ny, w: nw, h: nh };
-    });
-  }
-
-  function applyCrop() {
-    if (!imgRef.current) return;
-    const scaleX = imgRef.current.naturalWidth / imgSize.w;
-    const scaleY = imgRef.current.naturalHeight / imgSize.h;
-    const c = document.createElement("canvas");
-    c.width = crop.w * scaleX;
-    c.height = crop.h * scaleY;
-    const ctx = c.getContext("2d");
-    ctx.drawImage(imgRef.current, crop.x * scaleX, crop.y * scaleY, c.width, c.height, 0, 0, c.width, c.height);
-    c.toBlob(blob => {
-      if (blob) onCrop(new File([blob], file.name, { type: "image/jpeg" }));
-    }, "image/jpeg", 0.92);
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-      {loaded && (
-        <div style={{ position: "relative", display: "inline-block" }}>
-          <canvas ref={canvasRef} width={imgSize.w} height={imgSize.h}
-            onMouseDown={e => { const r = canvasRef.current.getBoundingClientRect(); const mx = e.clientX - r.left, my = e.clientY - r.top; const c = crop; if (mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h) setDragging("move"); }}
-            onMouseMove={handleMouse} onMouseUp={() => setDragging(null)} onMouseLeave={() => setDragging(null)}
-            style={{ borderRadius: 6, maxWidth: "100%", cursor: dragging ? "grabbing" : "crosshair" }} />
-          {loaded && (() => {
-            const s = canvasRef.current ? canvasRef.current.width / (canvasRef.current?.offsetWidth || 1) : 1;
-            return (
-              <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
-                viewBox={`0 0 ${imgSize.w} ${imgSize.h}`} preserveAspectRatio="none">
-                <rect x="0" y="0" width={imgSize.w} height={imgSize.h} fill="rgba(0,0,0,0.45)" />
-                <rect x={crop.x} y={crop.y} width={crop.w} height={crop.h} fill="transparent" stroke="#ef4444" strokeWidth={2} />
-                <rect x={crop.x} y={crop.y} width={crop.w} height={crop.h} fill="transparent" stroke="white" strokeWidth={1} strokeDasharray="4 3" />
-                <circle cx={crop.x + crop.w} cy={crop.y + crop.h} r={5} fill="white" stroke="#ef4444" strokeWidth={2}
-                  style={{ cursor: "nwse-resize", pointerEvents: "auto" }}
-                  onMouseDown={e => { e.stopPropagation(); setDragging("se"); }} />
-              </svg>
-            );
-          })()}
-        </div>
-      )}
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={applyCrop} style={addBtnStyle}>Apply Crop</button>
-        <button onClick={onCancel} style={dangerBtn}>Cancel</button>
-      </div>
-    </div>
-  );
-}
-
 export default function HubMedia() {
   const [authed] = useState(isAuthed());
   const [items, setItems] = useState([]);
