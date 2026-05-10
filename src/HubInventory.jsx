@@ -115,7 +115,10 @@ export default function HubInventory() {
         }));
         showToast("AI identified item!");
       } else {
-        showToast("AI identification failed, fill in manually.", "#f59e0b");
+        const errBody = await res.text().catch(() => "");
+        let errMsg = "AI identification failed.";
+        try { const j = JSON.parse(errBody); if (j?.error) errMsg = j.error; } catch {}
+        showToast(errMsg, "#ef4444");
       }
     } catch { showToast("AI service unavailable.", "#ef4444"); }
     setUploading(false);
