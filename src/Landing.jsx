@@ -158,14 +158,8 @@ export default function Landing() {
   const [captains, setCaptains] = useState([]);
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [frostedRect, setFrostedRect] = useState(null);
-  const fr = {
-    onMouseEnter: e => {
-      const r = e.currentTarget.getBoundingClientRect();
-      setFrostedRect(r);
-    },
-    onMouseLeave: () => setFrostedRect(null),
-  };
+  const [frosted, setFrosted] = useState(false);
+  const fr = { onMouseEnter: () => setFrosted(true), onMouseLeave: () => setFrosted(false) };
 
   useEffect(() => {
     document.title = "Team 4550 Something's Bruin";
@@ -217,27 +211,7 @@ export default function Landing() {
 
   return (
     <div className="frost-bg" style={{ background: "transparent", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif", overflowX: "hidden", overflow:"hidden", position: "relative", minHeight: "100vh" }}>
-      {frostedRect && (
-        <>
-          <div style={{
-            position: "fixed", inset: 0, zIndex: 9998,
-            backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-            background: "rgba(0,0,0,0.1)", pointerEvents: "none",
-            maskImage: "url(#frost-mask)",
-            WebkitMaskImage: "url(#frost-mask)",
-          }} />
-          <svg style={{ position: "fixed", width: "100vw", height: "100vh", pointerEvents: "none", opacity: 0, zIndex: -1 }}>
-            <defs>
-              <filter id="frost-feather"><feGaussianBlur stdDeviation="4" /></filter>
-              <mask id="frost-mask" maskUnits="userSpaceOnUse">
-                <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                <rect x={frostedRect.left} y={frostedRect.top} width={frostedRect.width} height={frostedRect.height} rx="8" ry="8" fill="black" filter="url(#frost-feather)" />
-              </mask>
-            </defs>
-          </svg>
-        </>
-      )}
-      <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
+      <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0, filter: frosted ? "blur(6px)" : "none", transition: "filter 0.25s" }}>
         <Starfield density={9000} opacity={0.38} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
           <div key={i} style={{ position:"absolute", width:o.s, height:o.s, top:o.t, bottom:o.b, left:o.l, right:o.r, borderRadius:"50%", background:`radial-gradient(circle, ${o.c}, transparent)`, animation:`orbFloat ${6+i}s ease-in-out infinite`, animationDelay:o.d }} />
