@@ -57,19 +57,6 @@ export default function Admin() {
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [page, setPage] = useState("overview");
-  const [frosted, setFrosted] = useState(false);
-  const frostTimer = useRef(null);
-  const fr = {
-    onMouseEnter: () => {
-      if (frostTimer.current) clearTimeout(frostTimer.current);
-      setFrosted(true);
-      frostTimer.current = setTimeout(() => setFrosted(false), 1000);
-    },
-    onMouseLeave: () => {
-      if (frostTimer.current) clearTimeout(frostTimer.current);
-      setFrosted(false);
-    },
-  };
   const [members, setMembers] = useState([]);
   const [tasks, setTaskList] = useState([]);
   const [hubCalendar, setHubCalendar] = useState([]);
@@ -153,9 +140,9 @@ export default function Admin() {
             <input type="password" placeholder="Password" value={pw} onChange={e => { setPw(e.target.value); setErr(""); }}
               style={S.loginInput} autoFocus />
             {err && <div style={S.loginErr}>{err}</div>}
-            <button type="submit" style={S.loginBtn} {...fr}>ENTER →</button>
+            <button type="submit" style={S.loginBtn}>ENTER →</button>
           </form>
-          <a href="/" style={S.loginBack} {...fr}>← Back to site</a>
+          <a href="/" style={S.loginBack}>← Back to site</a>
       </div>
       {editMapId && (
         <div style={{ marginTop: 24, borderTop: "2px solid #ef4444", paddingTop: 24 }}>
@@ -170,14 +157,6 @@ export default function Admin() {
 
   return (
     <div className="admin-layout" style={{ ...S.layout, overflow:"hidden" }}>
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 1,
-        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
-        background: frosted ? "rgba(0,0,0,0.15)" : "rgba(0,0,0,0)",
-        opacity: frosted ? 1 : 0,
-        transition: "opacity 0.3s",
-        pointerEvents: "none",
-      }} />
       <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={8000} opacity={0.45} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
@@ -217,13 +196,13 @@ export default function Admin() {
         </div>
         <nav className="admin-nav" style={S.sidebarNav}>
           {NAV.map(n => (
-            <button key={n.id} onClick={() => setPage(n.id)} style={{ ...S.navItem, background: page === n.id ? "rgba(239,68,68,0.15)" : "transparent", color: page === n.id ? "#ef4444" : "#94a3b8", borderLeft: page === n.id ? "3px solid #ef4444" : "3px solid transparent" }} {...fr}>
+            <button key={n.id} onClick={() => setPage(n.id)} style={{ ...S.navItem, background: page === n.id ? "rgba(239,68,68,0.15)" : "transparent", color: page === n.id ? "#ef4444" : "#94a3b8", borderLeft: page === n.id ? "3px solid #ef4444" : "3px solid transparent" }}>
               {n.label}
               {n.id === "suggestions" && suggestions.length > 0 && <span style={S.badge}>{suggestions.length}</span>}
             </button>
           ))}
         </nav>
-        <button onClick={handleLogout} style={S.logoutBtn} {...fr}>Log Out</button>
+        <button onClick={handleLogout} style={S.logoutBtn}>Log Out</button>
       </aside>
 
       <main className="admin-main" style={S.main}>
