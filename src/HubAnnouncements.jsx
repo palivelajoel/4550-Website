@@ -34,6 +34,15 @@ export default function HubAnnouncements() {
     if (!form.title || !form.body) return showToast("Title and body required.");
     setSaving(true);
     await sbFetch("hub_announcements", { method: "POST", body: JSON.stringify(form) });
+    // Push to Discord
+    const token = localStorage.getItem("hub_token");
+    if (token) {
+      fetch("/api/announce-to-discord", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(form),
+      }).catch(() => {});
+    }
     setSaving(false);
     setModal(false);
     setForm(f => ({ ...f, title: "", body: "", tag: "General", pinned: false }));
