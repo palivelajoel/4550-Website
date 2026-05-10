@@ -20,26 +20,30 @@ export default async function handler(req, res) {
         {
           role: 'user',
           content: [
-            { type: 'text', text: `You are an FRC inventory assistant. Identify the item in this image.
+            { type: 'text', text: `You are an FRC inventory assistant. Identify ALL items in this image.
 
 Return ONLY valid JSON:
 {
-  "name": "specific item name",
-  "category": one of [${CATEGORIES.map(c=>`"${c}"`).join(", ")}],
-  "description": "brief description including material, size, usage",
-  "estimated_quantity": number,
-  "tags": ["array", "of", "relevant", "tags"],
-  "manufacturer": "or empty string",
-  "part_number": "or empty string"
+  "items": [
+    {
+      "name": "specific item name",
+      "category": one of [${CATEGORIES.map(c=>`"${c}"`).join(", ")}],
+      "description": "brief description including material, size, usage",
+      "estimated_quantity": number,
+      "tags": ["array", "of", "relevant", "tags"],
+      "manufacturer": "or empty string",
+      "part_number": "or empty string"
+    }
+  ]
 }
 
-Be specific about types: e.g. "1/4-20 x 1in Hex Bolt" not just "screw", "CIM Motor" not just "motor", "3/8in Hex Shaft 12in" not just "shaft". Include estimated quantity (how many visible). If unknown, use 1.` },
+List EVERY distinct item you see. Be specific about types: e.g. "1/4-20 x 1in Hex Bolt" not just "screw", "CIM Motor" not just "motor", "3/8in Hex Shaft 12in" not just "shaft". Include estimated quantity per item (how many of that item are visible). If unknown, use 1.` },
             { type: 'image_url', image_url: { url: imageUrl } },
           ],
         },
       ],
       temperature: 0.2,
-      max_tokens: 300,
+      max_tokens: 600,
       response_format: { type: 'json_object' },
     };
 
@@ -61,8 +65,9 @@ Be specific about types: e.g. "1/4-20 x 1in Hex Bolt" not just "screw", "CIM Mot
     const content = data.choices?.[0]?.message?.content;
     if (!content) return res.status(500).json({ error: 'AI returned empty response' });
 
-    const item = JSON.parse(content);
-    return res.status(200).json(item);
+    const parsed = JSON.parse(content);
+    const items = Array.isArray(parsed) ? parsed : (parsed.items || [parsed]);
+    return res.status(200).json({ items });
   } catch (err) {
     console.error('Identify error:', err);
     return res.status(500).json({ error: String(err) });

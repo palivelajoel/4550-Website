@@ -103,17 +103,29 @@ export default function HubInventory() {
       const res = await fetch("/api/identify-item", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageUrl }) });
       if (res.ok) {
         const ai = await res.json();
-        setForm(prev => ({
-          ...prev,
-          name: ai.name || prev.name,
-          description: ai.description || prev.description,
-          category: ai.category || prev.category,
-          quantity: ai.estimated_quantity || prev.quantity,
-          tags: ai.tags ? (Array.isArray(ai.tags) ? ai.tags.join(", ") : ai.tags) : prev.tags,
-          manufacturer: ai.manufacturer || prev.manufacturer,
-          part_number: ai.part_number || prev.part_number,
-        }));
-        showToast("AI identified item!");
+        const items = ai.items || [];
+        if (items.length === 0) { showToast("AI didn't detect any items.", "#f59e0b"); setUploading(false); return; }
+        let saved = 0;
+        for (const item of items) {
+          const tags = item.tags ? (Array.isArray(item.tags) ? item.tags : item.tags.split(",").map(t => t.trim()).filter(Boolean)) : [];
+          try {
+            await hubProxy("inventory_items", "insert", {
+              name: item.name || "Unknown Item",
+              description: item.description || "",
+              quantity: item.estimated_quantity || 1,
+              category: item.category || "other",
+              tags,
+              image_url: imageUrl,
+              manufacturer: item.manufacturer || "",
+              part_number: item.part_number || "",
+              low_stock_threshold: 5,
+              added_by: getTokenUserId(),
+            });
+            saved++;
+          } catch {}
+        }
+        showToast(`✅ AI saved ${saved} item${saved > 1 ? "s" : ""}!`, "#22c55e");
+        loadItems();
       } else {
         const errBody = await res.text().catch(() => "");
         let errMsg = "AI identification failed.";
