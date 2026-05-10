@@ -1,3 +1,9 @@
+const CATEGORIES = [
+  "structural", "drivetrain", "electronics", "pneumatics",
+  "fastener", "tool", "consumable", "cable", "bearing",
+  "motor", "sensor", "other"
+];
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -20,7 +26,20 @@ export default async function handler(req, res) {
           {
             role: 'user',
             content: [
-              { type: 'text', text: 'Identify this item. Return ONLY JSON: { "name": "item name", "category": "part|tool|consumable", "description": "brief description", "estimated_quantity": 1 }. No markdown.' },
+              { type: 'text', text: `You are an FRC inventory assistant. Identify the item in this image.
+
+Return ONLY valid JSON (no markdown, no code fences):
+{
+  "name": "specific item name",
+  "category": one of [${CATEGORIES.map(c=>`"${c}"`).join(", ")}],
+  "description": "brief description including material, size, usage",
+  "estimated_quantity": number,
+  "tags": ["array", "of", "relevant", "tags"],
+  "manufacturer": "or empty string",
+  "part_number": "or empty string"
+}
+
+Be specific about types: e.g. "1/4-20 x 1in Hex Bolt" not just "screw", "CIM Motor" not just "motor", "3/8in Hex Shaft 12in" not just "shaft". Include estimated quantity (how many visible). If unknown, use 1.` },
               { type: 'image_url', image_url: { url: imageUrl } },
             ],
           },

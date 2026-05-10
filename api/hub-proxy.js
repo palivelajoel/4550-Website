@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { verifyToken, getTokenFromRequest } from './_shared.js';
 
-const ALLOWED_TABLES = ['hub_tasks', 'inventory_items'];
+const ALLOWED_TABLES = ['hub_tasks', 'inventory_items', 'inventory_transactions'];
 
 export default async function handler(req, res) {
   try {

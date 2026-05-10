@@ -953,7 +953,7 @@ export default function HubScouting() {
         {tab==="match" && <MatchScout onSubmit={()=>{loadAll();showToast("✅ Match submitted!");}} username={username} cfg={gameConfig} isMobile={isMobile} />}
         {tab==="pit" && <PitScout onSubmit={()=>{loadAll();showToast("✅ Pit report saved!");}} username={username} isMobile={isMobile} />}
         {tab==="maps" && <MapsView2 competitions={competitions} pits={pits} matches={matches} cfg={gameConfig} isMobile={isMobile} />}
-        {tab==="stream" && <TeamStatsAnalysis competitions={competitions} />}
+        {tab==="teamstats" && <TeamStatsAnalysis competitions={competitions} />}
         {tab==="data" && <TeamData matches={matches} pits={pits} cfg={gameConfig} isMobile={isMobile} />}
         {tab==="picklist" && <Picklist matches={matches} picklist={picklist} onReload={loadAll} cfg={gameConfig} isMobile={isMobile} />}
         {tab==="raw" && <RawData matches={matches} onDelete={deleteMatch} cfg={gameConfig} isMobile={isMobile} />}
