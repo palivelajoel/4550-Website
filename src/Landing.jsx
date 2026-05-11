@@ -18,22 +18,27 @@ const SlideIn = memo(function SlideIn({ children, direction = "up", delay = 0, s
   );
 });
 
-// Distorted grid that warps on scroll
-function DistortedGrid({ scrollY }) {
-  const warp = Math.sin(scrollY * 0.003) * 2;
-  const skew = scrollY * 0.001;
-  const blur = Math.min(scrollY * 0.015, 3);
+// Distorted grid that warps on scroll (ref-based, no React re-renders)
+function DistortedGrid() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let ticking = false;
+    const handler = () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(() => { const sy = window.scrollY; el.style.transform = `perspective(500px) rotateX(${Math.sin(sy * 0.003) * 2}deg) skewY(${sy * 0.001}deg)`; el.style.filter = `blur(${Math.min(sy * 0.015, 3)}px)`; el.style.opacity = Math.max(1 - sy * 0.0008, 0.3); ticking = false; }); }
+    };
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
   return (
-    <div style={{
+    <div ref={ref} style={{
       position: "fixed",
       inset: 0,
       pointerEvents: "none",
       zIndex: 0,
       backgroundImage: "linear-gradient(rgba(239,68,68,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.04) 1px,transparent 1px)",
       backgroundSize: "44px 44px",
-      transform: `perspective(500px) rotateX(${warp}deg) skewY(${skew}deg)`,
-      filter: `blur(${blur}px)`,
-      opacity: Math.max(1 - scrollY * 0.0008, 0.3),
       transition: "transform 0.1s ease-out, filter 0.1s ease-out",
     }} />
   );
@@ -195,12 +200,12 @@ function FadeSection({ children, style }) {
 
 export default function Landing() {
   const isMobile = useDeviceSize();
-  const [scrollY, setScrollY] = useState(0);
   const [config, setConfig] = useState({});
   const [captains, setCaptains] = useState([]);
   const [sponsors, setSponsors] = useState([]);
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [menuOpen, setMenuOpen] = useState(false);
+  const heroParallaxRef = useRef(null);
 
   useEffect(() => {
     document.title = "Team 4550 Something's Bruin";
@@ -213,17 +218,27 @@ export default function Landing() {
     });
     sbFetch("captains?select=*&order=sort_order.asc").then(r => { if (r) setCaptains(r); });
     sbFetch("sponsors?select=company,logo_url,tier,email&order=company.asc&status=not.eq.Declined").then(r => { if (r) setSponsors(r); });
-
-    // Track scroll position for grid distortion (throttled)
-    let ticking = false;
-    const handleScroll = () => {
-      if (!ticking) { ticking = true; requestAnimationFrame(() => { setScrollY(window.scrollY); ticking = false; }); }
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => { if (menuOpen) setMenuOpen(false); }, [scrollY]);
+  // Hero parallax via ref (no React re-renders)
+  useEffect(() => {
+    if (isMobile) return;
+    const el = heroParallaxRef.current;
+    if (!el) return;
+    let ticking = false;
+    const handler = () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(() => { el.style.transform = `translateY(${window.scrollY * 0.15}px)`; ticking = false; }); }
+    };
+    window.addEventListener("scroll", handler, { passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = () => setMenuOpen(false);
+    window.addEventListener("scroll", handler, { once: true, passive: true });
+    return () => window.removeEventListener("scroll", handler);
+  }, [menuOpen]);
 
   const email = config.team_email || "team4550frc@gmail.com";
   const ig = config.instagram || "https://www.instagram.com/cherrycreek.robotics";
@@ -265,7 +280,7 @@ export default function Landing() {
         <div style={{ position:"absolute", left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,rgba(239,68,68,0.3),transparent)", animation:"scanline 4s linear infinite", top:"-4px" }} />
       </div>
       {/* Distorted grid that warps on scroll */}
-      <DistortedGrid scrollY={scrollY} />
+        <DistortedGrid />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Exo+2:wght@300;400;600;700&family=Bebas+Neue&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -347,7 +362,7 @@ export default function Landing() {
       <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(180deg,rgba(8,10,15,0.55) 0%,rgba(13,17,23,0.66) 100%)", paddingTop: 70, position: "relative", overflow: "hidden" }}>
         <ParticleCanvas isMobile={isMobile} />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(239,68,68,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.04) 1px,transparent 1px)", backgroundSize: isMobile ? "40px 40px" : "60px 60px", pointerEvents: "none" }} />
-        <div style={{ textAlign: "center", zIndex: 1, padding: isMobile ? "0 20px" : "0 24px", transform: isMobile ? "none" : `translateY(${scrollY * 0.15}px)` }}>
+        <div ref={heroParallaxRef} style={{ textAlign: "center", zIndex: 1, padding: isMobile ? "0 20px" : "0 24px", transform: isMobile ? "none" : "none" }}>
           <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: isMobile ? 9 : 11, color: "#64748b", letterSpacing: isMobile ? 2 : 3, marginBottom: 20 }}>FRC ROBOTICS · CHERRY CREEK HIGH SCHOOL · GREENWOOD VILLAGE, CO</div>
           <img src={logoUrl} alt="Team Logo" style={{ width: isMobile ? 88 : 110, height: isMobile ? 88 : 110, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)", boxShadow: "0 0 40px rgba(239,68,68,0.2)", marginBottom: isMobile ? 20 : 28, animation: "fadeUp 0.8s ease both" }} />
           <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: isMobile ? "clamp(22px,8vw,40px)" : "clamp(32px,6vw,72px)", letterSpacing: isMobile ? 2 : 4, color: "#f1f5f9", animation: "fadeUp 0.8s ease 0.15s both, glitch 10s ease-in-out infinite" }}>SOMETHING'S BRUIN</h1>
