@@ -1,21 +1,5 @@
-import { useState, useEffect, useRef, memo } from "react";
+import { useState, useEffect } from "react";
 import Starfield from "./Starfield.jsx";
-
-const SlideIn = memo(function SlideIn({ children, direction = "up", delay = 0, style }) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, { threshold: 0.08 });
-    if (ref.current) obs.observe(ref.current);
-    return () => obs.disconnect();
-  }, []);
-  const dirs = { left: "translateX(-60px)", right: "translateX(60px)", up: "translateY(50px)", down: "translateY(-50px)" };
-  return (
-    <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translate(0,0)" : dirs[direction], transition: `opacity 0.8s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s, transform 0.8s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s`, ...style }}>
-      {children}
-    </div>
-  );
-});
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -101,8 +85,7 @@ export default function PublicMedia() {
               const count = items.filter(i => String(i.year) === String(y)).length;
               const isActive = String(activeAlbum) === String(y);
               return (
-                <SlideIn key={y} direction="up" delay={yi * 0.06}>
-                <button onClick={() => setActiveYear(y)} style={{
+                <button key={y} onClick={() => setActiveYear(y)} style={{
                   background: isActive ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)",
                   border: `1px solid ${isActive ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.08)"}`,
                   color: isActive ? "#ef4444" : "#94a3b8",
@@ -113,7 +96,6 @@ export default function PublicMedia() {
                   {y}
                   <span style={{ fontSize: 11, opacity: 0.7, fontFamily: "monospace", fontWeight: 400 }}>{count}</span>
                 </button>
-              </SlideIn>
             );
             })}
           </div>
@@ -135,43 +117,39 @@ export default function PublicMedia() {
               if (sectionItems.length === 0) return null;
               return (
                 <div key={section.id} style={{ marginBottom: 32 }}>
-                  <SlideIn direction="left" delay={0}>
-                    <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#94a3b8", letterSpacing: 1, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                      <span>{section.icon}</span> {section.label}
-                      <span style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", fontWeight: 400 }}>{sectionItems.length}</span>
-                    </div>
-                  </SlideIn>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#94a3b8", letterSpacing: 1, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>{section.icon}</span> {section.label}
+                    <span style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", fontWeight: 400 }}>{sectionItems.length}</span>
+                  </div>
                   <div className="gallery-grid">
                     {sectionItems.map((item, gi) => {
                       const thumb = getThumbnail(item);
                       return (
-                        <SlideIn key={item.id} direction="up" delay={Math.min(gi * 0.04, 0.5)}>
-                          <div onClick={() => setLightbox(item)} style={{
-                            cursor: "pointer", borderRadius: 8, overflow: "hidden",
-                            border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)",
-                            transition: "transform 0.15s, border-color 0.15s",
-                          }}
-                            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.03)"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.4)"; }}
-                            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
-                          >
-                            <div style={{ width: "100%", aspectRatio: "16/10", background: "#0d1117", overflow: "hidden", position: "relative" }}>
-                              {thumb ? (
-                                <img src={thumb} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
-                              ) : (
-                                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🎬</div>
-                              )}
-                              {item.type === "video" && (
-                                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }}>
-                                  <div style={{ width: 36, height: 36, background: "rgba(239,68,68,0.9)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff" }}>▶</div>
-                                </div>
-                              )}
-                            </div>
-                            <div style={{ padding: "8px 10px" }}>
-                              <div style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
-                              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{item.year}</div>
-                            </div>
+                        <div key={item.id} onClick={() => setLightbox(item)} style={{
+                          cursor: "pointer", borderRadius: 8, overflow: "hidden",
+                          border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)",
+                          transition: "transform 0.15s, border-color 0.15s",
+                        }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.03)"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.4)"; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+                        >
+                          <div style={{ width: "100%", aspectRatio: "16/10", background: "#0d1117", overflow: "hidden", position: "relative" }}>
+                            {thumb ? (
+                              <img src={thumb} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                            ) : (
+                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🎬</div>
+                            )}
+                            {item.type === "video" && (
+                              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }}>
+                                <div style={{ width: 36, height: 36, background: "rgba(239,68,68,0.9)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff" }}>▶</div>
+                              </div>
+                            )}
                           </div>
-                        </SlideIn>
+                          <div style={{ padding: "8px 10px" }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
+                            <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{item.year}</div>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
