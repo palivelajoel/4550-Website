@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
-import { verifyToken, getTokenFromRequest } from './_shared.js';
+import { verifyToken, getTokenFromRequest, hashPassword } from './_shared.js';
 
-const ALLOWED_TABLES = ['sponsors', 'captains', 'site_config', 'members', 'hub_tasks', 'suggestions', 'hub_calendar', 'inventory_items'];
+const ADMIN_TABLES = ['sponsors', 'captains', 'site_config', 'members', 'hub_tasks', 'suggestions', 'hub_calendar', 'inventory_items'];
+const HUB_TABLES = ['hub_tasks', 'inventory_items', 'inventory_transactions'];
 
 export default async function handler(req, res) {
   try {
@@ -10,20 +11,28 @@ export default async function handler(req, res) {
 
     const payload = verifyToken(token);
     if (!payload) return res.status(401).json({ error: 'Invalid or expired token' });
-    if (payload.role !== 'Admin') return res.status(403).json({ error: 'Forbidden: admin role required' });
+
+    const path = req.url.split('/').pop().split('?')[0];
+    const isAdmin = path === 'admin-proxy';
+    const isHub = path === 'hub-proxy';
+
+    if (isAdmin && payload.role !== 'Admin') return res.status(403).json({ error: 'Forbidden: admin role required' });
+    if (isHub && !['Captain', 'Admin'].includes(payload.role)) return res.status(403).json({ error: 'Forbidden: captain or admin role required' });
 
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE);
 
     const { table, action, payload: bodyPayload } = req.body || {};
-    if (!table || !ALLOWED_TABLES.includes(table)) return res.status(400).json({ error: 'Invalid table' });
+    if (!table) return res.status(400).json({ error: 'Missing table' });
 
-    if (table === 'members' && action === 'update_member') {
+    const allowedTables = isAdmin ? ADMIN_TABLES : HUB_TABLES;
+    if (!allowedTables.includes(table)) return res.status(400).json({ error: 'Invalid table' });
+
+    if (isAdmin && table === 'members' && action === 'update_member') {
       const { id, updates } = bodyPayload || {};
       if (!id) return res.status(400).json({ error: 'Missing id' });
       const pw = updates?.password;
       const upd = { ...(updates || {}) };
       if (pw) {
-        const { hashPassword } = await import('./_shared.js');
         upd.password_hash = hashPassword(pw);
       }
       delete upd.password;
@@ -37,9 +46,11 @@ export default async function handler(req, res) {
     if (action === 'insert') {
       let dataPayload = bodyPayload;
       if (table === 'members' && bodyPayload?.password) {
-        const { hashPassword } = await import('./_shared.js');
         dataPayload = { ...bodyPayload, password_hash: hashPassword(bodyPayload.password) };
         delete dataPayload.password;
+      }
+      if (isHub) {
+        dataPayload = { ...dataPayload, added_by: dataPayload.added_by || payload.userId };
       }
       const { data, error } = await supabase.from(table).insert(dataPayload).select();
       if (error) return res.status(500).json({ error: error.message });
