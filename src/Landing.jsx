@@ -2,13 +2,22 @@ import { useEffect, useRef, useState } from "react";
 import Starfield from "./Starfield.jsx";
 import { CaptainPhoto } from "./hubUtils.jsx";
 
+const TAGLINE_TEXTS = [
+  "Engineering excellence. Community impact. Championship mindset.",
+  "Built by students. Driven by purpose.",
+  "More than a robot. A community.",
+];
+
 function Typewriter({ texts = [], speed = 60, loopDelay = 6000, style }) {
-  const [displayed, setDisplayed] = useState("");
-  const [phase, setPhase] = useState("typing");
+  const [displayed, setDisplayed] = useState(() => texts[0] || "");
+  const textsRef = useRef(texts);
+  useEffect(() => { textsRef.current = texts; }, [texts]);
+  const [phase, setPhase] = useState("pause");
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    const txt = texts[index] || texts[0] || "";
+    const t = textsRef.current;
+    const txt = t[index] || t[0] || "";
     let timer;
     if (phase === "typing") {
       if (displayed.length < txt.length) {
@@ -20,17 +29,19 @@ function Typewriter({ texts = [], speed = 60, loopDelay = 6000, style }) {
       if (displayed.length > 0) {
         timer = setTimeout(() => setDisplayed(displayed.slice(0, -1)), speed * 0.5);
       } else {
-        setIndex(i => (i + 1) % texts.length);
+        setIndex(i => (i + 1) % t.length);
         setPhase("typing");
       }
+    } else {
+      timer = setTimeout(() => setPhase("erasing"), loopDelay);
     }
     return () => clearTimeout(timer);
-  }, [phase, displayed, index, texts, speed, loopDelay]);
+  }, [phase, displayed, index, speed, loopDelay]);
 
   return (
     <span style={style}>
       {displayed}
-      <span style={{ animation: "cursorBlink 0.7s step-end infinite", marginLeft: 2, color: "#ef4444" }}>|</span>
+      <span style={{ animation: "cursorBlink 0.7s step-end infinite", marginLeft: 2, color: "#ef4444", opacity: phase !== "pause" ? 1 : 0.4 }}>|</span>
     </span>
   );
 }
@@ -43,9 +54,9 @@ function SlideIn({ children, direction = "up", delay = 0, style }) {
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
   }, []);
-  const dirs = { left: "translateX(-40px)", right: "translateX(40px)", up: "translateY(30px)", down: "translateY(-30px)" };
+  const dirs = { left: "translateX(-60px)", right: "translateX(60px)", up: "translateY(50px)", down: "translateY(-50px)" };
   return (
-    <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translate(0,0)" : dirs[direction], transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`, ...style }}>
+    <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translate(0,0)" : dirs[direction], transition: `opacity 0.8s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s, transform 0.8s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s`, ...style }}>
       {children}
     </div>
   );
@@ -357,7 +368,7 @@ export default function Landing() {
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: isMobile ? "clamp(16px,5vw,24px)" : "clamp(18px,3vw,32px)", color: "#ef4444", letterSpacing: isMobile ? 6 : 8, marginTop: 6, animation: "fadeUp 0.8s ease 0.25s both, glitch 12s ease-in-out infinite 2s" }}>FRC TEAM 4550</div>
           <div style={{ width: 50, height: 2, background: "linear-gradient(90deg,transparent,#ef4444,transparent)", margin: isMobile ? "18px auto" : "24px auto", animation: "fadeUp 0.8s ease 0.35s both" }} />
           <p style={{ color: "#94a3b8", fontSize: isMobile ? 14 : 16, maxWidth: 420, margin: "0 auto", marginBottom: isMobile ? 28 : 36, lineHeight: 1.7, minHeight: isMobile ? 44 : 28, padding: "0 8px" }}>
-            <Typewriter texts={["Engineering excellence. Community impact. Championship mindset.", "Built by students. Driven by purpose.", "More than a robot. A community."]} speed={50} loopDelay={8000} style={{ color: "#94a3b8" }} />
+            <Typewriter texts={TAGLINE_TEXTS} speed={50} loopDelay={8000} style={{ color: "#94a3b8" }} />
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", animation: "fadeUp 0.8s ease 0.5s both" }}>
             <a href="#about" style={{ background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>LEARN MORE</a>

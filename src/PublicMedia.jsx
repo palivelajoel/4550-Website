@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import Starfield from "./Starfield.jsx";
 
+const GALLERY_TEXTS = ["MEDIA GALLERY", "PHOTO & VIDEO", "CAPTURED MOMENTS"];
+
 function Typewriter({ texts = [], speed = 60, loopDelay = 6000, style }) {
-  const [displayed, setDisplayed] = useState("");
-  const [phase, setPhase] = useState("typing");
+  const [displayed, setDisplayed] = useState(() => texts[0] || "");
+  const textsRef = useRef(texts);
+  useEffect(() => { textsRef.current = texts; }, [texts]);
+  const [phase, setPhase] = useState("pause");
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    const txt = texts[index] || texts[0] || "";
+    const t = textsRef.current;
+    const txt = t[index] || t[0] || "";
     let timer;
     if (phase === "typing") {
       if (displayed.length < txt.length) {
@@ -19,17 +24,19 @@ function Typewriter({ texts = [], speed = 60, loopDelay = 6000, style }) {
       if (displayed.length > 0) {
         timer = setTimeout(() => setDisplayed(displayed.slice(0, -1)), speed * 0.5);
       } else {
-        setIndex(i => (i + 1) % texts.length);
+        setIndex(i => (i + 1) % t.length);
         setPhase("typing");
       }
+    } else {
+      timer = setTimeout(() => setPhase("erasing"), loopDelay);
     }
     return () => clearTimeout(timer);
-  }, [phase, displayed, index, texts, speed, loopDelay]);
+  }, [phase, displayed, index, speed, loopDelay]);
 
   return (
     <span style={style}>
       {displayed}
-      <span style={{ animation: "cursorBlink 0.7s step-end infinite", marginLeft: 2, color: "#ef4444" }}>|</span>
+      <span style={{ animation: "cursorBlink 0.7s step-end infinite", marginLeft: 2, color: "#ef4444", opacity: phase !== "pause" ? 1 : 0.4 }}>|</span>
     </span>
   );
 }
@@ -42,9 +49,9 @@ function SlideIn({ children, direction = "up", delay = 0, style }) {
     if (ref.current) obs.observe(ref.current);
     return () => obs.disconnect();
   }, []);
-  const dirs = { left: "translateX(-40px)", right: "translateX(40px)", up: "translateY(30px)", down: "translateY(-30px)" };
+  const dirs = { left: "translateX(-60px)", right: "translateX(60px)", up: "translateY(50px)", down: "translateY(-50px)" };
   return (
-    <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translate(0,0)" : dirs[direction], transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`, ...style }}>
+    <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translate(0,0)" : dirs[direction], transition: `opacity 0.8s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s, transform 0.8s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}s`, ...style }}>
       {children}
     </div>
   );
@@ -121,7 +128,7 @@ export default function PublicMedia() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "12px 16px" : "14px 28px", maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <a href="/" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "monospace" }}>← Home</a>
-            <Typewriter texts={["MEDIA GALLERY", "PHOTO & VIDEO", "CAPTURED MOMENTS"]} speed={80} loopDelay={10000} style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 13 : 16, color: "#ef4444", letterSpacing: 2 }} />
+            <Typewriter texts={GALLERY_TEXTS} speed={80} loopDelay={10000} style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 13 : 16, color: "#ef4444", letterSpacing: 2 }} />
           </div>
           <a href="/member-hub" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "6px 14px", borderRadius: 4, textDecoration: "none", fontSize: 11, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }}>MEMBERS</a>
         </div>
