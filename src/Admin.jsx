@@ -157,7 +157,7 @@ export default function Admin() {
 
   return (
     <div className="admin-layout" style={{ ...S.layout, overflow:"hidden" }}>
-      <div style={{ position:"absolute", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
+      <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden", zIndex:0 }}>
         <Starfield density={8000} opacity={0.45} />
         {[{ s:500, t:"-20%", l:"-15%", c:"rgba(239,68,68,0.07)", d:"0s" }, { s:350, b:"-10%", r:"-10%", c:"rgba(59,130,246,0.05)", d:"1.5s" }, { s:250, t:"45%", r:"15%", c:"rgba(168,85,247,0.04)", d:"0.8s" }].map((o,i) => (
           <div key={i} style={{ position:"absolute", width:o.s, height:o.s, top:o.t, bottom:o.b, left:o.l, right:o.r, borderRadius:"50%", background:`radial-gradient(circle, ${o.c}, transparent)`, animation:`orbFloat ${6+i}s ease-in-out infinite`, animationDelay:o.d }} />
@@ -1033,53 +1033,7 @@ function AdminSettings({ showToast }) {
           </button>
         </div>
       </div>
-      <div style={S.card}>
-        <div style={S.cardTitle}>Database Setup</div>
-        <div style={{ color: "#94a3b8", fontSize: 13, fontFamily: "monospace", lineHeight: 1.8 }}>
-          Run this SQL in your Supabase SQL editor if you haven't already:<br />
-          <code style={{ display: "block", background: "rgba(0,0,0,0.4)", padding: 12, borderRadius: 6, marginTop: 10, fontSize: 11, whiteSpace: "pre-wrap", color: "#93c5fd" }}>{`ALTER TABLE members ADD COLUMN IF NOT EXISTS subteam TEXT DEFAULT 'General';
 
-CREATE TABLE IF NOT EXISTS scouting_matches (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  team_number INT, match_number INT,
-  alliance TEXT DEFAULT 'Red', scouter_name TEXT,
-  auto_leave BOOLEAN DEFAULT FALSE,
-  auto_coral_l1 INT DEFAULT 0, auto_coral_l2 INT DEFAULT 0,
-  auto_coral_l3 INT DEFAULT 0, auto_coral_l4 INT DEFAULT 0,
-  auto_algae_processor INT DEFAULT 0, auto_algae_net INT DEFAULT 0,
-  teleop_coral_l1 INT DEFAULT 0, teleop_coral_l2 INT DEFAULT 0,
-  teleop_coral_l3 INT DEFAULT 0, teleop_coral_l4 INT DEFAULT 0,
-  teleop_algae_processor INT DEFAULT 0, teleop_algae_net INT DEFAULT 0,
-  endgame TEXT DEFAULT 'None', defense BOOLEAN DEFAULT FALSE,
-  defended BOOLEAN DEFAULT FALSE, died BOOLEAN DEFAULT FALSE,
-  notes TEXT
-);
-
-CREATE TABLE IF NOT EXISTS scouting_pits (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  team_number INT, team_name TEXT, drivetrain TEXT,
-  weight_lbs NUMERIC, auto_capabilities TEXT,
-  teleop_capabilities TEXT, climb_type TEXT, notes TEXT,
-  scouter_name TEXT, can_score_l1 BOOLEAN DEFAULT FALSE,
-  can_score_l2 BOOLEAN DEFAULT FALSE, can_score_l3 BOOLEAN DEFAULT FALSE,
-  can_score_l4 BOOLEAN DEFAULT FALSE, can_score_processor BOOLEAN DEFAULT FALSE,
-  can_score_net BOOLEAN DEFAULT FALSE
-);
-
-CREATE TABLE IF NOT EXISTS scouting_picklist (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  team_number INT, rank INT
-);
-
-ALTER TABLE competitions ADD COLUMN IF NOT EXISTS stream_url TEXT DEFAULT '';
-ALTER TABLE competitions ADD COLUMN IF NOT EXISTS map_status TEXT DEFAULT 'Pit map not posted yet.';
-ALTER TABLE competitions ADD COLUMN IF NOT EXISTS last_map_check TIMESTAMPTZ;
-ALTER TABLE scouting_matches ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'human';`}</code>
-        </div>
-      </div>
     </div>
   );
 }
@@ -1341,44 +1295,44 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
 // ── STYLES ────────────────────────────────────────────────
 const S = {
   layout: { display: "flex", minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" },
-  sidebar: { width: 224, background: "#0a0e18", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: "env(safe-area-inset-top,0px)", height: "100vh", overflowY: "auto" },
+  sidebar: { width: 224, background: "#0a0e18", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0, position: "fixed", top: "env(safe-area-inset-top,0px)", left: 0, height: "100vh", overflowY: "auto", zIndex: 50 },
   sidebarBrand: { display: "flex", alignItems: "center", gap: 10, padding: "18px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" },
   sidebarLogo: { width: 34, height: 34, borderRadius: "50%", objectFit: "cover" },
   sidebarTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#ef4444", letterSpacing: 2 },
   sidebarSub: { fontSize: 10, color: "#64748b", fontFamily: "monospace" },
   sidebarNav: { flex: 1, padding: "10px 0" },
   navItem: { display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 16px", border: "none", cursor: "pointer", fontFamily: "'Exo 2', sans-serif", fontSize: 13, textAlign: "left", transition: "all 0.15s" },
-  badge: { background: "#ef4444", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 700 },
-  logoutBtn: { margin: "12px 16px", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: 8, borderRadius: 4, cursor: "pointer", fontSize: 12, fontFamily: "monospace" },
-  main: { flex: 1, padding: "32px 36px", overflowY: "auto" },
+  badge: { background: "#ef4444", color: "#fff", borderRadius: 12, padding: "1px 7px", fontSize: 11, fontWeight: 700 },
+  logoutBtn: { margin: "12px 16px", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: 8, borderRadius: 10, cursor: "pointer", fontSize: 12, fontFamily: "monospace" },
+  main: { flex: 1, padding: "32px 36px", overflowY: "auto", marginLeft: 224 },
   pageTitle: { fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 20, color: "#f1f5f9", marginBottom: 24 },
-  card: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: "22px", marginBottom: 18 },
+  card: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "22px", marginBottom: 18 },
   cardTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 12, fontWeight: 700, color: "#94a3b8", letterSpacing: 1, marginBottom: 16 },
   statRow: { display: "flex", gap: 14, flexWrap: "wrap" },
-  statCard: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, padding: "20px", minWidth: 140, textAlign: "center" },
+  statCard: { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: "20px", minWidth: 140, textAlign: "center" },
   statNum: { fontFamily: "'Orbitron', sans-serif", fontSize: 24, fontWeight: 700 },
   statLabel: { fontSize: 11, color: "#64748b", fontFamily: "monospace", marginTop: 4 },
-  alertBanner: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: 6, padding: "10px 16px", marginTop: 14, fontSize: 13 },
+  alertBanner: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#fca5a5", borderRadius: 10, padding: "10px 16px", marginTop: 14, fontSize: 13 },
   quickLinks: { display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" },
-  quickBtn: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", padding: "10px 18px", borderRadius: 8, textDecoration: "none", fontSize: 13 },
+  quickBtn: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", padding: "10px 18px", borderRadius: 12, textDecoration: "none", fontSize: 13 },
   formRow: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" },
   formCol: { display: "flex", flexDirection: "column", gap: 10 },
-  input: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none", flex: 1, minWidth: 120 },
-  select: { background: "#0a0e18", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", cursor: "pointer", flex: 1, minWidth: 120 },
-  btnPrimary: { background: "#ef4444", border: "none", borderRadius: 6, padding: "9px 18px", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" },
-  btnGhost: { background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "9px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" },
-  btnDanger: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "9px 14px", color: "#ef4444", cursor: "pointer", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" },
+  input: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", outline: "none", flex: 1, minWidth: 120 },
+  select: { background: "#0a0e18", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "9px 12px", color: "#fff", fontSize: 13, fontFamily: "monospace", cursor: "pointer", flex: 1, minWidth: 120 },
+  btnPrimary: { background: "#ef4444", border: "none", borderRadius: 10, padding: "9px 18px", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" },
+  btnGhost: { background: "transparent", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 10, padding: "9px 14px", color: "#94a3b8", cursor: "pointer", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" },
+  btnDanger: { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "9px 14px", color: "#ef4444", cursor: "pointer", fontSize: 13, fontFamily: "monospace", whiteSpace: "nowrap" },
   memberRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", minHeight: 64, gap: 10 },
   memberInfo: { display: "flex", alignItems: "center", gap: 10 },
   memberName: { color: "#f1f5f9", fontWeight: 600, fontSize: 14 },
   memberUser: { color: "#64748b", fontSize: 12, fontFamily: "monospace" },
   memberActions: { display: "flex", gap: 8, flexShrink: 0 },
-  roleBadge: { borderRadius: 10, padding: "2px 10px", fontSize: 11, fontFamily: "monospace", flexShrink: 0 },
+  roleBadge: { borderRadius: 12, padding: "2px 10px", fontSize: 11, fontFamily: "monospace", flexShrink: 0 },
   taskColumns: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 },
-  taskCol: { background: "rgba(255,255,255,0.02)", borderRadius: 8, padding: 14 },
+  taskCol: { background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: 14 },
   taskColHeader: { fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700, color: "#94a3b8", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 },
-  taskCount: { background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "1px 8px", fontSize: 11 },
-  taskCard: { borderRadius: 6, padding: 12, marginBottom: 8, border: "1px solid rgba(255,255,255,0.06)" },
+  taskCount: { background: "rgba(255,255,255,0.08)", borderRadius: 12, padding: "1px 8px", fontSize: 11 },
+  taskCard: { borderRadius: 10, padding: 12, marginBottom: 8, border: "1px solid rgba(255,255,255,0.06)" },
   taskTitle: { color: "#f1f5f9", fontSize: 13, fontWeight: 600, marginBottom: 4 },
   taskDesc: { color: "#64748b", fontSize: 11, marginBottom: 6 },
   taskMeta: { display: "flex", gap: 10, fontSize: 11, color: "#64748b", fontFamily: "monospace", marginBottom: 6, flexWrap: "wrap" },
@@ -1387,12 +1341,12 @@ const S = {
   th: { textAlign: "left", padding: "8px 12px", fontFamily: "monospace", fontSize: 11, color: "#64748b", borderBottom: "1px solid rgba(255,255,255,0.08)" },
   td: { padding: "8px 12px", fontSize: 13, color: "#f1f5f9" },
   loginBg: { minHeight: "100vh", background: "#080a0f", display: "flex", alignItems: "center", justifyContent: "center" },
-  loginCard: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: "48px 40px", textAlign: "center", width: "100%", maxWidth: 360 },
+  loginCard: { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "48px 40px", textAlign: "center", width: "100%", maxWidth: 360 },
   loginTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 20, fontWeight: 700, color: "#ef4444", letterSpacing: 4, marginBottom: 6 },
   loginSub: { fontSize: 12, color: "#64748b", fontFamily: "monospace", marginBottom: 28 },
   loginForm: { display: "flex", flexDirection: "column", gap: 12 },
-  loginInput: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "12px 16px", color: "#fff", fontSize: 14, fontFamily: "monospace", outline: "none", textAlign: "center" },
+  loginInput: { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "12px 16px", color: "#fff", fontSize: 14, fontFamily: "monospace", outline: "none", textAlign: "center" },
   loginErr: { color: "#ef4444", fontSize: 12, fontFamily: "monospace" },
-  loginBtn: { background: "#ef4444", border: "none", borderRadius: 6, padding: 12, color: "#fff", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, cursor: "pointer" },
+  loginBtn: { background: "#ef4444", border: "none", borderRadius: 10, padding: 12, color: "#fff", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: 2, cursor: "pointer" },
   loginBack: { display: "block", marginTop: 24, color: "#64748b", fontSize: 12, fontFamily: "monospace", textDecoration: "none" },
 };
