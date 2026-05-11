@@ -1,52 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import Starfield from "./Starfield.jsx";
 import { CaptainPhoto } from "./hubUtils.jsx";
 
-const TAGLINE_TEXTS = [
-  "Engineering excellence. Community impact. Championship mindset.",
-  "Built by students. Driven by purpose.",
-  "More than a robot. A community.",
-];
-
-function Typewriter({ texts = [], speed = 60, loopDelay = 6000, style }) {
-  const [displayed, setDisplayed] = useState(() => texts[0] || "");
-  const textsRef = useRef(texts);
-  useEffect(() => { textsRef.current = texts; }, [texts]);
-  const [phase, setPhase] = useState("pause");
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const t = textsRef.current;
-    const txt = t[index] || t[0] || "";
-    let timer;
-    if (phase === "typing") {
-      if (displayed.length < txt.length) {
-        timer = setTimeout(() => setDisplayed(txt.slice(0, displayed.length + 1)), speed);
-      } else {
-        timer = setTimeout(() => setPhase("erasing"), loopDelay);
-      }
-    } else if (phase === "erasing") {
-      if (displayed.length > 0) {
-        timer = setTimeout(() => setDisplayed(displayed.slice(0, -1)), speed * 0.5);
-      } else {
-        setIndex(i => (i + 1) % t.length);
-        setPhase("typing");
-      }
-    } else {
-      timer = setTimeout(() => setPhase("erasing"), loopDelay);
-    }
-    return () => clearTimeout(timer);
-  }, [phase, displayed, index, speed, loopDelay]);
-
-  return (
-    <span style={style}>
-      {displayed}
-      <span style={{ animation: "cursorBlink 0.7s step-end infinite", marginLeft: 2, color: "#ef4444", opacity: phase !== "pause" ? 1 : 0.4 }}>|</span>
-    </span>
-  );
-}
-
-function SlideIn({ children, direction = "up", delay = 0, style }) {
+const SlideIn = memo(function SlideIn({ children, direction = "up", delay = 0, style }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -60,7 +16,11 @@ function SlideIn({ children, direction = "up", delay = 0, style }) {
       {children}
     </div>
   );
-}
+});
+
+// Also memoize FadeSection and SponsorBar
+const FadeSection = memo(FadeSectionImpl);
+function FadeSectionImpl({ children, style }) {
 
 // Distorted grid that warps on scroll
 function DistortedGrid({ scrollY }) {
@@ -258,8 +218,11 @@ export default function Landing() {
     sbFetch("captains?select=*&order=sort_order.asc").then(r => { if (r) setCaptains(r); });
     sbFetch("sponsors?select=company,logo_url,tier,email&order=company.asc&status=not.eq.Declined").then(r => { if (r) setSponsors(r); });
 
-    // Track scroll position for grid distortion
-    const handleScroll = () => setScrollY(window.scrollY);
+    // Track scroll position for grid distortion (throttled)
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(() => { setScrollY(window.scrollY); ticking = false; }); }
+    };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -319,7 +282,6 @@ export default function Landing() {
         @keyframes scanline{0%{top:-4px;}100%{top:100%;}}
         @keyframes glitch{0%,90%,100%{text-shadow:none;}92%{text-shadow:-3px 0 #ef4444,3px 0 #3b82f6;}95%{text-shadow:3px 0 #ef4444,-3px 0 #3b82f6;}97%{text-shadow:none;}}
         @keyframes glitchFade{from{opacity:1;}to{opacity:0;}}
-        @keyframes cursorBlink{0%,100%{opacity:1;}50%{opacity:0;}}
         a{-webkit-tap-highlight-color:transparent;}
         /* Make sections semi-transparent to show the grid */
         section,footer,nav{position:relative;z-index:1;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
@@ -396,7 +358,7 @@ export default function Landing() {
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: isMobile ? "clamp(16px,5vw,24px)" : "clamp(18px,3vw,32px)", color: "#ef4444", letterSpacing: isMobile ? 6 : 8, marginTop: 6, animation: "fadeUp 0.8s ease 0.25s both, glitch 12s ease-in-out infinite 2s" }}>FRC TEAM 4550</div>
           <div style={{ width: 50, height: 2, background: "linear-gradient(90deg,transparent,#ef4444,transparent)", margin: isMobile ? "18px auto" : "24px auto", animation: "fadeUp 0.8s ease 0.35s both" }} />
           <p style={{ color: "#94a3b8", fontSize: isMobile ? 14 : 16, maxWidth: 420, margin: "0 auto", marginBottom: isMobile ? 28 : 36, lineHeight: 1.7, minHeight: isMobile ? 44 : 28, padding: "0 8px" }}>
-            <Typewriter texts={TAGLINE_TEXTS} speed={50} loopDelay={8000} style={{ color: "#94a3b8" }} />
+            Engineering excellence. Community impact. Championship mindset.
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", animation: "fadeUp 0.8s ease 0.5s both" }}>
             <a href="#about" style={{ background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>LEARN MORE</a>

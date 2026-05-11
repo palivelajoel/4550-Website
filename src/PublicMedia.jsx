@@ -1,47 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import Starfield from "./Starfield.jsx";
 
-const GALLERY_TEXTS = ["MEDIA GALLERY", "PHOTO & VIDEO", "CAPTURED MOMENTS"];
-
-function Typewriter({ texts = [], speed = 60, loopDelay = 6000, style }) {
-  const [displayed, setDisplayed] = useState(() => texts[0] || "");
-  const textsRef = useRef(texts);
-  useEffect(() => { textsRef.current = texts; }, [texts]);
-  const [phase, setPhase] = useState("pause");
-  const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    const t = textsRef.current;
-    const txt = t[index] || t[0] || "";
-    let timer;
-    if (phase === "typing") {
-      if (displayed.length < txt.length) {
-        timer = setTimeout(() => setDisplayed(txt.slice(0, displayed.length + 1)), speed);
-      } else {
-        timer = setTimeout(() => setPhase("erasing"), loopDelay);
-      }
-    } else if (phase === "erasing") {
-      if (displayed.length > 0) {
-        timer = setTimeout(() => setDisplayed(displayed.slice(0, -1)), speed * 0.5);
-      } else {
-        setIndex(i => (i + 1) % t.length);
-        setPhase("typing");
-      }
-    } else {
-      timer = setTimeout(() => setPhase("erasing"), loopDelay);
-    }
-    return () => clearTimeout(timer);
-  }, [phase, displayed, index, speed, loopDelay]);
-
-  return (
-    <span style={style}>
-      {displayed}
-      <span style={{ animation: "cursorBlink 0.7s step-end infinite", marginLeft: 2, color: "#ef4444", opacity: phase !== "pause" ? 1 : 0.4 }}>|</span>
-    </span>
-  );
-}
-
-function SlideIn({ children, direction = "up", delay = 0, style }) {
+const SlideIn = memo(function SlideIn({ children, direction = "up", delay = 0, style }) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -55,7 +15,7 @@ function SlideIn({ children, direction = "up", delay = 0, style }) {
       {children}
     </div>
   );
-}
+});
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -118,7 +78,6 @@ export default function PublicMedia() {
         body{background:#080a0f;padding-top:env(safe-area-inset-top,0px);}
         ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:#0d1117;}::-webkit-scrollbar-thumb{background:#ef4444;border-radius:3px;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-        @keyframes cursorBlink{0%,100%{opacity:1;}50%{opacity:0;}}
         .gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
         @media(max-width:600px){.gallery-grid{grid-template-columns:repeat(2,1fr);gap:8px;}}
       `}</style>
@@ -128,7 +87,7 @@ export default function PublicMedia() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "12px 16px" : "14px 28px", maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <a href="/" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "monospace" }}>← Home</a>
-            <Typewriter texts={GALLERY_TEXTS} speed={80} loopDelay={10000} style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 13 : 16, color: "#ef4444", letterSpacing: 2 }} />
+            <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 13 : 16, color: "#ef4444", letterSpacing: 2 }}>MEDIA GALLERY</span>
           </div>
           <a href="/member-hub" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "6px 14px", borderRadius: 4, textDecoration: "none", fontSize: 11, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }}>MEMBERS</a>
         </div>
