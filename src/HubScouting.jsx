@@ -804,7 +804,7 @@ function MapsView2({ competitions, pits, matches, cfg, isMobile }) {
                 <img src={selectedComp.pit_map_url} alt="Pit map" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", background: "transparent" }} />
               ) : (
                 <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.dim, fontFamily: "monospace", textAlign: "center", padding: 20 }}>
-                  Pit maps are usually posted shortly before the event. Track the latest status in Admin > Competitions.
+                  Pit maps are usually posted shortly before the event. Track the latest status in Admin {'>'} Competitions.
                 </div>
               )}
               <div style={{ position: "absolute", inset: 0, padding: 12, display: "grid", gridTemplateColumns: isMobile ? "repeat(3,1fr)" : "repeat(5,1fr)", gap: 8, alignContent: "start", pointerEvents: "none" }}>
