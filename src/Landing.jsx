@@ -196,6 +196,32 @@ function ParticleCanvas({ isMobile }) {
   return <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", opacity: 0.6 }} />;
 }
 
+function SponsorBar({ sponsors = [] }) {
+  const shown = sponsors.filter(s => s.company);
+  if (shown.length === 0) return null;
+  const items = shown.map(s => ({ company: s.company, logo_url: s.logo_url }));
+  const duped = [...items, ...items];
+  const speed = Math.max(20, items.length * 4);
+  return (
+    <div style={{ width: "100%", overflow: "hidden", background: "rgba(255,255,255,0.015)", borderTop: "1px solid rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "18px 0", position: "relative" }}>
+      <style>{`@keyframes sponsorMarquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
+      <div style={{ display: "flex", gap: 48, animation: `sponsorMarquee ${speed}s linear infinite`, width: "max-content", "&:hover": { animationPlayState: "paused" } }}
+        onMouseEnter={e => e.currentTarget.style.animationPlayState = "paused"}
+        onMouseLeave={e => e.currentTarget.style.animationPlayState = "running"}>
+        {duped.map((s, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, whiteSpace: "nowrap" }}>
+            {s.logo_url ? (
+              <img src={s.logo_url} alt={s.company} style={{ height: 36, width: 36, objectFit: "contain", borderRadius: 6, background: "rgba(255,255,255,0.05)" }}
+                onError={e => { e.target.style.display = "none"; e.target.nextSibling.style.display = "inline"; }} />
+            ) : null}
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#94a3b8", letterSpacing: 1, fontFamily: "'Exo 2', sans-serif" }}>{s.company}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function FadeSection({ children, style }) {
   const ref = useRef(null);
   const [vis, setVis] = useState(false);
@@ -216,6 +242,7 @@ export default function Landing() {
   const [scrollY, setScrollY] = useState(0);
   const [config, setConfig] = useState({});
   const [captains, setCaptains] = useState([]);
+  const [sponsors, setSponsors] = useState([]);
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -229,6 +256,7 @@ export default function Landing() {
     if (obj.logo_url) setLogoUrl(obj.logo_url);
     });
     sbFetch("captains?select=*&order=sort_order.asc").then(r => { if (r) setCaptains(r); });
+    sbFetch("sponsors?select=company,logo_url,tier,email&order=company.asc&status=not.eq.Declined").then(r => { if (r) setSponsors(r); });
 
     // Track scroll position for grid distortion
     const handleScroll = () => setScrollY(window.scrollY);
@@ -502,6 +530,8 @@ export default function Landing() {
           </div>
         </FadeSection>
       </div></section>
+
+      <SponsorBar sponsors={sponsors} />
 
       {/* SPONSORS */}
       <section id="sponsors" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">

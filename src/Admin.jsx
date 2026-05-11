@@ -44,7 +44,7 @@ const NAV = [
   { id: "competitions", label: "🏆 Competitions" },
   { id: "hub-tasks", label: "📋 Hub Tasks" },
   { id: "hub-calendar", label: "📅 Hub Calendar" },
-  { id: "sponsors-assign", label: "🤝 Sponsor Assignment" },
+  { id: "sponsors-assign", label: "🤝 Sponsors" },
   { id: "captains", label: "🏆 Leadership" },
   { id: "suggestions", label: "💡 Suggestions" },
   { id: "site", label: "⚙️ Site Config" },
@@ -581,6 +581,8 @@ function SponsorAssign({ sponsors, members, reload, showToast }) {
   const [assignments, setAssignments] = useState({});
   const [filter, setFilter] = useState("");
   const [autoLoading, setAutoLoading] = useState(false);
+  const [logoUploading, setLogoUploading] = useState({});
+  const logoRefs = useRef({});
 
   useEffect(() => {
     const init = {};
@@ -591,6 +593,26 @@ function SponsorAssign({ sponsors, members, reload, showToast }) {
   async function saveAssignment(sponsorId, memberId) {
     const member = members.find(m => m.id === memberId);
     await adminProxy('sponsors', 'update', { id: sponsorId, updates: { assigned_member_id: memberId || null, assigned_member_name: member ? member.full_name || member.username : null } });
+    reload();
+  }
+
+  async function uploadSponsorLogo(sponsorId, file) {
+    if (!file) return;
+    setLogoUploading(u => ({ ...u, [sponsorId]: true }));
+    const url = await uploadFile(file, 'team-assets');
+    if (url) {
+      await adminProxy('sponsors', 'update', { id: sponsorId, updates: { logo_url: url } });
+      showToast("✅ Logo uploaded.");
+      reload();
+    } else {
+      showToast("Upload failed.", "#ef4444");
+    }
+    setLogoUploading(u => ({ ...u, [sponsorId]: false }));
+  }
+
+  async function saveLogoUrl(sponsorId, url) {
+    await adminProxy('sponsors', 'update', { id: sponsorId, updates: { logo_url: url } });
+    showToast("✅ Logo saved.");
     reload();
   }
 
@@ -610,7 +632,7 @@ function SponsorAssign({ sponsors, members, reload, showToast }) {
 
   return (
     <div>
-      <h1 style={S.pageTitle}>Sponsor Assignment</h1>
+      <h1 style={S.pageTitle}>Sponsors</h1>
       <div style={S.card}>
         <div style={S.statRow}>
           {[{ label: "Total", val: sponsors.length, color: "#3b82f6" }, { label: "Assigned", val: sponsors.filter(s => s.assigned_member_id).length, color: "#22c55e" }, { label: "Unassigned", val: sponsors.filter(s => !s.assigned_member_id).length, color: "#f59e0b" }].map(s => (
@@ -626,17 +648,29 @@ function SponsorAssign({ sponsors, members, reload, showToast }) {
       </div>
       <div style={S.card}>
         <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-          <div style={S.cardTitle}>Individual Assignments</div>
+          <div style={S.cardTitle}>Sponsor Management</div>
           <input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} style={{ ...S.input, maxWidth: 220, marginBottom: 0 }} />
         </div>
         <div style={{ overflowX: "auto" }}>
           <table style={S.table}>
             <thead><tr>
-              <th style={S.th}>Company</th><th style={S.th}>Status</th><th style={S.th}>Assigned To</th><th style={S.th}>Save</th>
+              <th style={S.th}>Logo</th><th style={S.th}>Company</th><th style={S.th}>Status</th><th style={S.th}>Assigned To</th><th style={S.th}>Save</th>
             </tr></thead>
             <tbody>
               {filtered.map(s => (
                 <tr key={s.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <td style={{ ...S.td, verticalAlign: "middle" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {s.logo_url ? (
+                        <img src={s.logo_url} alt={s.company} style={{ width: 32, height: 32, borderRadius: 6, objectFit: "contain", background: "rgba(255,255,255,0.05)" }}
+                          onError={e => { e.target.style.display = "none" }} />
+                      ) : (
+                        <div style={{ width: 32, height: 32, borderRadius: 6, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#475569" }}>—</div>
+                      )}
+                      <input type="file" accept="image/*" style={{ display: "none" }} ref={el => { if (el) logoRefs.current[s.id + "-file"] = el; }} onChange={e => { if (e.target.files[0]) uploadSponsorLogo(s.id, e.target.files[0]); }} />
+                      <button onClick={() => { const el = logoRefs.current[s.id + "-file"]; if (el) el.click(); }} disabled={logoUploading[s.id]} style={{ ...S.btnGhost, fontSize: 10, padding: "3px 8px" }}>{logoUploading[s.id] ? "..." : "📸"}</button>
+                    </div>
+                  </td>
                   <td style={S.td}>{s.company}</td>
                   <td style={S.td}><span style={{ ...S.roleBadge, background: "rgba(255,255,255,0.05)", color: "#64748b" }}>{s.status || "Not Contacted"}</span></td>
                   <td style={S.td}>

@@ -152,6 +152,7 @@ CREATE TABLE IF NOT EXISTS public.sponsors (
     tier TEXT DEFAULT 'None' CHECK (tier IN ('None', 'Bronze', 'Silver', 'Gold', 'Platinum')),
     follow_up_date DATE,
     assigned_member_id UUID REFERENCES public.members(id) ON DELETE SET NULL,
+    logo_url TEXT,
     assigned_member_name TEXT,
     date_added TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
