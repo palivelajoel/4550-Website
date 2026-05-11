@@ -863,13 +863,34 @@ function Suggestions({ suggestions, reload, showToast }) {
   );
 }
 
+const HUB_TILES = [
+  { id:"projector", icon:"📡", label:"Meeting Projector" },
+  { id:"calendar", icon:"📅", label:"Team Calendar" },
+  { id:"tasks", icon:"✅", label:"Task Board" },
+  { id:"announcements", icon:"📣", label:"Announcements" },
+  { id:"competitions", icon:"🏆", label:"Competitions" },
+  { id:"media", icon:"📸", label:"Media Gallery" },
+  { id:"resources", icon:"📁", label:"Resources" },
+  { id:"inventory", icon:"📦", label:"Inventory" },
+  { id:"sponsor-tracker", icon:"🤝", label:"Sponsor Tracker" },
+];
+
 // ── SITE CONFIG ───────────────────────────────────────────
 function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
   const [vals, setVals] = useState({});
   const [logoFile, setLogoFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
+  const [tileOrder, setTileOrder] = useState([]);
+  const [dragId, setDragId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const [tileSaving, setTileSaving] = useState(false);
   useEffect(() => { setVals({ ...config }); }, [config]);
+  useEffect(() => {
+    sbFetch("site_config?key=eq.hub_tile_order&select=value").then(r => {
+      if (r?.[0]?.value) setTileOrder(r[0].value.split(",").map(s => s.trim()).filter(Boolean));
+    });
+  }, []);
 
   async function saveKey(key) {
     const existing = (await sbFetch(`site_config?key=eq.${key}&select=key`)) || [];
@@ -911,6 +932,51 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
             <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setLogoFile(e.target.files[0])} />
             {logoFile && <button onClick={uploadLogo} disabled={uploading} style={S.btnPrimary}>{uploading ? "Uploading..." : "Upload"}</button>}
           </div>
+        </div>
+      </div>
+      <div style={S.card}>
+        <div style={S.cardTitle}>Hub Tile Order — Drag to reorder</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <button onClick={async () => {
+            setTileSaving(true);
+            const order = tileOrder.length ? tileOrder : HUB_TILES.map(t => t.id);
+            const existing = (await sbFetch("site_config?key=eq.hub_tile_order&select=key")) || [];
+            if (existing?.length) await adminProxy("site_config", "update", { id: existing[0].id, updates: { value: order.join(",") } });
+            else await adminProxy("site_config", "insert", { key: "hub_tile_order", value: order.join(",") });
+            setTileSaving(false); reload(); showToast("✅ Tile order saved.");
+          }} disabled={tileSaving} style={{ ...S.btnPrimary, opacity: tileSaving ? 0.6 : 1 }}>{tileSaving ? "Saving..." : "Save Order"}</button>
+          <button onClick={() => {
+            setTileOrder(HUB_TILES.map(t => t.id));
+          }} style={S.btnGhost}>Reset to Default</button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {(tileOrder.length ? tileOrder : HUB_TILES.map(t => t.id)).map((id, i) => {
+            const tile = HUB_TILES.find(t => t.id === id);
+            if (!tile) return null;
+            return (
+              <div key={tile.id} draggable
+                onDragStart={() => setDragId(tile.id)}
+                onDragOver={e => { e.preventDefault(); setDragOverId(tile.id); }}
+                onDrop={e => {
+                  e.preventDefault();
+                  if (!dragId || dragId === tile.id) return;
+                  const list = tileOrder.length ? [...tileOrder] : HUB_TILES.map(t => t.id);
+                  const from = list.indexOf(dragId);
+                  const to = list.indexOf(tile.id);
+                  if (from < 0 || to < 0) return;
+                  list.splice(from, 1);
+                  list.splice(to, 0, dragId);
+                  setTileOrder(list); setDragId(null); setDragOverId(null);
+                }}
+                onDragEnd={() => { setDragId(null); setDragOverId(null); }}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: dragOverId === tile.id && dragId !== tile.id ? "rgba(239,68,68,0.08)" : "rgba(255,255,255,0.03)", border: dragOverId === tile.id && dragId !== tile.id ? "1px dashed rgba(239,68,68,0.4)" : "1px solid rgba(255,255,255,0.06)", borderRadius: 8, cursor: "grab", opacity: dragId === tile.id ? 0.4 : 1 }}>
+                <span style={{ color: "#475569", fontSize: 16, cursor: "grab" }}>⠿</span>
+                <span style={{ fontSize: 18 }}>{tile.icon}</span>
+                <span style={{ fontSize: 13, color: "#f1f5f9", flex: 1 }}>{tile.label}</span>
+                <span style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>#{i + 1}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
       <div style={S.card}>

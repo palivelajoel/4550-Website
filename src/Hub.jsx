@@ -75,8 +75,13 @@ export default function Hub() {
     return () => window.removeEventListener("resize", fn);
   }, []);
 
+  const [tileOrder, setTileOrder] = useState([]);
+
   useEffect(() => {
     loadLogo();
+    sbFetch("site_config?key=eq.hub_tile_order&select=value").then(r => {
+      if (r?.[0]?.value) setTileOrder(r[0].value.split(",").map(s => s.trim()).filter(Boolean));
+    });
     if (localStorage.getItem("hub_authed") === "true") {
       const r = localStorage.getItem("hub_role") || "Member";
       const st = localStorage.getItem("hub_subteam") || "General";
@@ -277,7 +282,10 @@ export default function Hub() {
 
         {/* Feature grid */}
         <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(auto-fill,minmax(260px,1fr))", gap:isMobile?10:16 }}>
-          {FEATURES.filter(f => f.id !== "projector").map((f, i) => (
+          {FEATURES.filter(f => f.id !== "projector").sort((a, b) => {
+            const ai = tileOrder.indexOf(a.id); const bi = tileOrder.indexOf(b.id);
+            return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+          }).map((f, i) => (
             <FeatureCard key={f.id} feature={f} index={i} isMobile={isMobile} />
           ))}
         </div>
