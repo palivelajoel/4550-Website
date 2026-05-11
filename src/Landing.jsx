@@ -18,10 +18,6 @@ const SlideIn = memo(function SlideIn({ children, direction = "up", delay = 0, s
   );
 });
 
-// Also memoize FadeSection and SponsorBar
-const FadeSection = memo(FadeSectionImpl);
-function FadeSectionImpl({ children, style }) {
-
 // Distorted grid that warps on scroll
 function DistortedGrid({ scrollY }) {
   const warp = Math.sin(scrollY * 0.003) * 2;
