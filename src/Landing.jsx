@@ -2,6 +2,55 @@ import { useEffect, useRef, useState } from "react";
 import Starfield from "./Starfield.jsx";
 import { CaptainPhoto } from "./hubUtils.jsx";
 
+function Typewriter({ texts = [], speed = 60, loopDelay = 6000, style }) {
+  const [displayed, setDisplayed] = useState("");
+  const [phase, setPhase] = useState("typing");
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const txt = texts[index] || texts[0] || "";
+    let timer;
+    if (phase === "typing") {
+      if (displayed.length < txt.length) {
+        timer = setTimeout(() => setDisplayed(txt.slice(0, displayed.length + 1)), speed);
+      } else {
+        timer = setTimeout(() => setPhase("erasing"), loopDelay);
+      }
+    } else if (phase === "erasing") {
+      if (displayed.length > 0) {
+        timer = setTimeout(() => setDisplayed(displayed.slice(0, -1)), speed * 0.5);
+      } else {
+        setIndex(i => (i + 1) % texts.length);
+        setPhase("typing");
+      }
+    }
+    return () => clearTimeout(timer);
+  }, [phase, displayed, index, texts, speed, loopDelay]);
+
+  return (
+    <span style={style}>
+      {displayed}
+      <span style={{ animation: "cursorBlink 0.7s step-end infinite", marginLeft: 2, color: "#ef4444" }}>|</span>
+    </span>
+  );
+}
+
+function SlideIn({ children, direction = "up", delay = 0, style }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, { threshold: 0.08 });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+  const dirs = { left: "translateX(-40px)", right: "translateX(40px)", up: "translateY(30px)", down: "translateY(-30px)" };
+  return (
+    <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translate(0,0)" : dirs[direction], transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`, ...style }}>
+      {children}
+    </div>
+  );
+}
+
 // Distorted grid that warps on scroll
 function DistortedGrid({ scrollY }) {
   const warp = Math.sin(scrollY * 0.003) * 2;
@@ -231,6 +280,7 @@ export default function Landing() {
         @keyframes scanline{0%{top:-4px;}100%{top:100%;}}
         @keyframes glitch{0%,90%,100%{text-shadow:none;}92%{text-shadow:-3px 0 #ef4444,3px 0 #3b82f6;}95%{text-shadow:3px 0 #ef4444,-3px 0 #3b82f6;}97%{text-shadow:none;}}
         @keyframes glitchFade{from{opacity:1;}to{opacity:0;}}
+        @keyframes cursorBlink{0%,100%{opacity:1;}50%{opacity:0;}}
         a{-webkit-tap-highlight-color:transparent;}
         /* Make sections semi-transparent to show the grid */
         section,footer,nav{position:relative;z-index:1;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
@@ -306,8 +356,8 @@ export default function Landing() {
           <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: isMobile ? "clamp(22px,8vw,40px)" : "clamp(32px,6vw,72px)", letterSpacing: isMobile ? 2 : 4, color: "#f1f5f9", animation: "fadeUp 0.8s ease 0.15s both, glitch 10s ease-in-out infinite" }}>SOMETHING'S BRUIN</h1>
           <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: isMobile ? "clamp(16px,5vw,24px)" : "clamp(18px,3vw,32px)", color: "#ef4444", letterSpacing: isMobile ? 6 : 8, marginTop: 6, animation: "fadeUp 0.8s ease 0.25s both, glitch 12s ease-in-out infinite 2s" }}>FRC TEAM 4550</div>
           <div style={{ width: 50, height: 2, background: "linear-gradient(90deg,transparent,#ef4444,transparent)", margin: isMobile ? "18px auto" : "24px auto", animation: "fadeUp 0.8s ease 0.35s both" }} />
-          <p style={{ color: "#94a3b8", fontSize: isMobile ? 14 : 16, maxWidth: 420, margin: "0 auto", marginBottom: isMobile ? 28 : 36, lineHeight: 1.7, animation: "fadeUp 0.8s ease 0.4s both", padding: "0 8px" }}>
-            Engineering excellence. Community impact. Championship mindset.
+          <p style={{ color: "#94a3b8", fontSize: isMobile ? 14 : 16, maxWidth: 420, margin: "0 auto", marginBottom: isMobile ? 28 : 36, lineHeight: 1.7, minHeight: isMobile ? 44 : 28, padding: "0 8px" }}>
+            <Typewriter texts={["Engineering excellence. Community impact. Championship mindset.", "Built by students. Driven by purpose.", "More than a robot. A community."]} speed={50} loopDelay={8000} style={{ color: "#94a3b8" }} />
           </p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", animation: "fadeUp 0.8s ease 0.5s both" }}>
             <a href="#about" style={{ background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>LEARN MORE</a>
@@ -319,19 +369,21 @@ export default function Landing() {
       {/* ABOUT */}
       <section id="about"><div className="sec">
         <FadeSection>
-          <Eyebrow>// WHO WE ARE</Eyebrow>
-          <SectionTitle>About the Team</SectionTitle>
+          <Eyebrow delay={0}>// WHO WE ARE</Eyebrow>
+          <SectionTitle delay={0.1}>About the Team</SectionTitle>
           <div className="about-grid">
-            <div>
+            <SlideIn direction="right" delay={0.2}>
               <p style={{ color: "#94a3b8", lineHeight: 1.8, fontSize: 15 }}>FRC Team 4550 "Something's Bruin" has been competing since 2012, representing Cherry Creek High School in FIRST Robotics Competition. Our team of 40–50 student engineers, programmers, and designers builds competition-ready robots each season — from scratch, in six weeks.</p>
               <p style={{ color: "#94a3b8", lineHeight: 1.8, fontSize: 15, marginTop: 14 }}>We've competed at the 2016 World Championship and continue to push the boundaries of what student-built robots can achieve. Beyond the robot, we're deeply committed to STEM outreach and community impact across the Denver metro area.</p>
-            </div>
+            </SlideIn>
             <div className="stats-grid">
-              {[{ num: "12+", label: "Years Competing" }, { num: "40–50", label: "Members" }, { num: "2016", label: "World Championship" }, { num: "3", label: "Sub-Teams" }].map(s => (
-                <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: isMobile ? "18px 14px" : "24px 20px", textAlign: "center" }}>
-                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 22 : 28, fontWeight: 700, color: "#ef4444" }}>{s.num}</div>
-                  <div style={{ fontSize: 11, color: "#64748b", fontFamily: "'Share Tech Mono', monospace", marginTop: 4 }}>{s.label}</div>
-                </div>
+              {[{ num: "12+", label: "Years Competing" }, { num: "40–50", label: "Members" }, { num: "2016", label: "World Championship" }, { num: "3", label: "Sub-Teams" }].map((s, i) => (
+                <SlideIn key={s.label} direction="up" delay={0.25 + i * 0.1}>
+                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: isMobile ? "18px 14px" : "24px 20px", textAlign: "center" }}>
+                    <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 22 : 28, fontWeight: 700, color: "#ef4444" }}>{s.num}</div>
+                    <div style={{ fontSize: 11, color: "#64748b", fontFamily: "'Share Tech Mono', monospace", marginTop: 4 }}>{s.label}</div>
+                  </div>
+                </SlideIn>
               ))}
             </div>
           </div>
@@ -342,17 +394,19 @@ export default function Landing() {
       {captains.length > 0 && (
         <section id="team" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">
           <FadeSection>
-            <Eyebrow>// LEADERSHIP</Eyebrow>
-            <SectionTitle>Our Team</SectionTitle>
+            <Eyebrow delay={0}>// LEADERSHIP</Eyebrow>
+            <SectionTitle delay={0.1}>Our Team</SectionTitle>
             <div className="captains-grid">
-              {captains.map(c => (
-                <div key={c.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: isMobile ? "20px 14px" : "26px 20px", textAlign: "center" }}>
+              {captains.map((c, i) => (
+                <SlideIn key={c.id} direction="up" delay={0.2 + i * 0.08}>
+                  <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: isMobile ? "20px 14px" : "26px 20px", textAlign: "center" }}>
                   <CaptainPhoto photoUrl={c.photo_url} name={c.name} size={isMobile ? 70 : 88} style={{ display: "block", margin: "0 auto 12px", borderWidth: 2, borderStyle: "solid", borderColor: "rgba(239,68,68,0.4)" }} />
                   <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>{c.name}</div>
                   <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, color: "#ef4444", letterSpacing: 2, marginBottom: c.bio ? 8 : 0 }}>{c.position}</div>
                   {c.bio && <p style={{ color: "#64748b", fontSize: 12, lineHeight: 1.6 }}>{c.bio}</p>}
                 </div>
-              ))}
+              </SlideIn>
+            ))}
             </div>
           </FadeSection>
         </div></section>
@@ -361,15 +415,17 @@ export default function Landing() {
       {/* SUB-TEAMS */}
       <section id="sub-teams"><div className="sec">
         <FadeSection>
-          <Eyebrow>// HOW WE BUILD</Eyebrow>
-          <SectionTitle>Sub-Teams</SectionTitle>
+          <Eyebrow delay={0}>// HOW WE BUILD</Eyebrow>
+          <SectionTitle delay={0.1}>Sub-Teams</SectionTitle>
           <div className="subteams-grid">
-            {SUB_TEAMS.map(st => (
-              <div key={st.name} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(255,255,255,0.08)`, borderTop: `3px solid ${st.color}`, borderRadius: 10, padding: isMobile ? "22px 18px" : "28px 24px" }}>
-                <div style={{ fontSize: 28, marginBottom: 10 }}>{st.icon}</div>
-                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 12, letterSpacing: 1 }}>{st.name}</div>
-                <p style={{ color: "#94a3b8", lineHeight: 1.75, fontSize: 14 }}>{st.description}</p>
-              </div>
+            {SUB_TEAMS.map((st, i) => (
+              <SlideIn key={st.name} direction="up" delay={0.2 + i * 0.12}>
+                <div style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(255,255,255,0.08)`, borderTop: `3px solid ${st.color}`, borderRadius: 10, padding: isMobile ? "22px 18px" : "28px 24px" }}>
+                  <div style={{ fontSize: 28, marginBottom: 10 }}>{st.icon}</div>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 12, letterSpacing: 1 }}>{st.name}</div>
+                  <p style={{ color: "#94a3b8", lineHeight: 1.75, fontSize: 14 }}>{st.description}</p>
+                </div>
+              </SlideIn>
             ))}
           </div>
         </FadeSection>
@@ -378,19 +434,21 @@ export default function Landing() {
       {/* OUTREACH */}
       <section id="outreach" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">
         <FadeSection>
-          <Eyebrow>// COMMUNITY</Eyebrow>
-          <SectionTitle>Community Outreach</SectionTitle>
+          <Eyebrow delay={0}>// COMMUNITY</Eyebrow>
+          <SectionTitle delay={0.1}>Community Outreach</SectionTitle>
           <div className="outreach-grid">
             {[
               { icon: "🤖", title: "Team Mentoring", desc: "We mentor younger FRC and FLL teams throughout the Denver metro area, sharing technical knowledge and competition experience." },
               { icon: "🏫", title: "School Outreach", desc: "Visiting local elementary and middle schools to inspire the next generation of engineers through hands-on robotics demos." },
               { icon: "🌍", title: "Community Events", desc: "Participating in local STEM fairs, library events, and community festivals to promote robotics and engineering education." },
-            ].map(o => (
-              <div key={o.title} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: isMobile ? "22px 18px" : "28px 24px" }}>
-                <div style={{ fontSize: 28, marginBottom: 10 }}>{o.icon}</div>
-                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#f1f5f9", marginBottom: 10 }}>{o.title}</div>
-                <p style={{ color: "#94a3b8", lineHeight: 1.7, fontSize: 14 }}>{o.desc}</p>
-              </div>
+            ].map((o, i) => (
+              <SlideIn key={o.title} direction="up" delay={0.2 + i * 0.12}>
+                <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: isMobile ? "22px 18px" : "28px 24px" }}>
+                  <div style={{ fontSize: 28, marginBottom: 10 }}>{o.icon}</div>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#f1f5f9", marginBottom: 10 }}>{o.title}</div>
+                  <p style={{ color: "#94a3b8", lineHeight: 1.7, fontSize: 14 }}>{o.desc}</p>
+                </div>
+              </SlideIn>
             ))}
           </div>
         </FadeSection>
@@ -399,30 +457,36 @@ export default function Landing() {
       {/* MEDIA */}
       <section id="media-gallery"><div className="sec">
         <FadeSection>
-          <Eyebrow>// GALLERY</Eyebrow>
-          <SectionTitle>Media Gallery</SectionTitle>
-          <p style={{ color: "#94a3b8", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15, textAlign: "center" }}>Browse photos and videos from competitions, outreach events, build season, and team activities.</p>
-          <div style={{ textAlign: "center" }}>
-            <a href="/media" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 36px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>EXPLORE GALLERY →</a>
-          </div>
+          <Eyebrow delay={0}>// GALLERY</Eyebrow>
+          <SectionTitle delay={0.1}>Media Gallery</SectionTitle>
+          <SlideIn direction="up" delay={0.2}>
+            <p style={{ color: "#94a3b8", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15, textAlign: "center" }}>Browse photos and videos from competitions, outreach events, build season, and team activities.</p>
+          </SlideIn>
+          <SlideIn direction="up" delay={0.3}>
+            <div style={{ textAlign: "center" }}>
+              <a href="/media" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 36px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>EXPLORE GALLERY →</a>
+            </div>
+          </SlideIn>
         </FadeSection>
       </div></section>
 
       {/* SOCIAL MEDIA */}
       <section id="media"><div className="sec">
         <FadeSection>
-          <Eyebrow>// FOLLOW ALONG</Eyebrow>
-          <SectionTitle>Social Media</SectionTitle>
+          <Eyebrow delay={0}>// FOLLOW ALONG</Eyebrow>
+          <SectionTitle delay={0.1}>Social Media</SectionTitle>
           <div className="media-row">
             {[
               { href: ig, icon: "📸", title: "Instagram", handle: "@cherrycreek.robotics", border: "rgba(59,130,246,0.3)" },
               { href: yt, icon: "▶️", title: "YouTube", handle: "Team 4550 Something's Bruin", border: "rgba(239,68,68,0.3)" },
-            ].map(m => (
-              <a key={m.title} href={m.href} target="_blank" rel="noreferrer" className="media-card" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${m.border}`, borderRadius: 10, padding: isMobile ? "24px 18px" : "32px 24px", textDecoration: "none", textAlign: "center", display: "block" }}>
-                <div style={{ fontSize: 32, marginBottom: 10 }}>{m.icon}</div>
-                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 6 }}>{m.title}</div>
-                <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: "#64748b" }}>{m.handle}</div>
-              </a>
+            ].map((m, i) => (
+              <SlideIn key={m.title} direction="up" delay={0.2 + i * 0.12}>
+                <a href={m.href} target="_blank" rel="noreferrer" className="media-card" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${m.border}`, borderRadius: 10, padding: isMobile ? "24px 18px" : "32px 24px", textDecoration: "none", textAlign: "center", display: "block" }}>
+                  <div style={{ fontSize: 32, marginBottom: 10 }}>{m.icon}</div>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 6 }}>{m.title}</div>
+                  <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: "#64748b" }}>{m.handle}</div>
+                </a>
+              </SlideIn>
             ))}
           </div>
         </FadeSection>
@@ -432,15 +496,21 @@ export default function Landing() {
       <section id="sponsors" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">
         <FadeSection>
           <div style={{ textAlign: "center" }}>
-            <Eyebrow>// PARTNER WITH US</Eyebrow>
-            <SectionTitle>Become a Sponsor</SectionTitle>
-            <p style={{ color: "#94a3b8", maxWidth: 560, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15 }}>Sponsoring FRC Team 4550 connects your organization with motivated young engineers and demonstrates your commitment to STEM education. Multiple sponsorship tiers are available with recognition at competitions, on our robot, and across our platforms.</p>
+            <Eyebrow delay={0}>// PARTNER WITH US</Eyebrow>
+            <SectionTitle delay={0.1}>Become a Sponsor</SectionTitle>
+            <SlideIn direction="up" delay={0.2}>
+              <p style={{ color: "#94a3b8", maxWidth: 560, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15 }}>Sponsoring FRC Team 4550 connects your organization with motivated young engineers and demonstrates your commitment to STEM education. Multiple sponsorship tiers are available with recognition at competitions, on our robot, and across our platforms.</p>
+            </SlideIn>
             <div className="tier-row">
-              {[{ name: "Bronze", color: "#b45309" }, { name: "Silver", color: "#94a3b8" }, { name: "Gold", color: "#eab308" }, { name: "Platinum", color: "#818cf8" }].map(t => (
-                <div key={t.name} style={{ border: `1px solid ${t.color}`, borderRadius: 20, padding: isMobile ? "5px 14px" : "6px 20px", fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 10 : 12, fontWeight: 700, letterSpacing: 2, color: t.color }}>{t.name}</div>
+              {[{ name: "Bronze", color: "#b45309" }, { name: "Silver", color: "#94a3b8" }, { name: "Gold", color: "#eab308" }, { name: "Platinum", color: "#818cf8" }].map((t, i) => (
+                <SlideIn key={t.name} direction="up" delay={0.3 + i * 0.08}>
+                  <div style={{ border: `1px solid ${t.color}`, borderRadius: 20, padding: isMobile ? "5px 14px" : "6px 20px", fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 10 : 12, fontWeight: 700, letterSpacing: 2, color: t.color }}>{t.name}</div>
+                </SlideIn>
               ))}
             </div>
-            <a href={`mailto:${email}`} style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>CONTACT US TO SPONSOR</a>
+            <SlideIn direction="up" delay={0.65}>
+              <a href={`mailto:${email}`} style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>CONTACT US TO SPONSOR</a>
+            </SlideIn>
           </div>
         </FadeSection>
       </div></section>
@@ -449,10 +519,14 @@ export default function Landing() {
       <section style={{ background: "rgba(239,68,68,0.05)", borderTop: "1px solid rgba(239,68,68,0.2)" }}><div className="sec">
         <FadeSection>
           <div style={{ textAlign: "center" }}>
-            <Eyebrow>// SUPPORT THE TEAM</Eyebrow>
-            <SectionTitle>Make a Donation</SectionTitle>
-            <p style={{ color: "#94a3b8", maxWidth: 460, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15 }}>Every donation goes directly toward robot parts, competition fees, and team travel. Help us compete at the highest level.</p>
-            <a href={donate} target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>DONATE NOW</a>
+            <Eyebrow delay={0}>// SUPPORT THE TEAM</Eyebrow>
+            <SectionTitle delay={0.1}>Make a Donation</SectionTitle>
+            <SlideIn direction="up" delay={0.2}>
+              <p style={{ color: "#94a3b8", maxWidth: 460, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15 }}>Every donation goes directly toward robot parts, competition fees, and team travel. Help us compete at the highest level.</p>
+            </SlideIn>
+            <SlideIn direction="up" delay={0.3}>
+              <a href={donate} target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>DONATE NOW</a>
+            </SlideIn>
           </div>
         </FadeSection>
       </div></section>
@@ -461,13 +535,15 @@ export default function Landing() {
       <section id="contact"><div className="sec">
         <FadeSection>
           <div style={{ textAlign: "center" }}>
-            <Eyebrow>// GET IN TOUCH</Eyebrow>
-            <SectionTitle>Contact</SectionTitle>
+            <Eyebrow delay={0}>// GET IN TOUCH</Eyebrow>
+            <SectionTitle delay={0.1}>Contact</SectionTitle>
             <div className="contact-row">
-              {[{ href: `mailto:${email}`, icon: "✉️", label: email }, { href: ig, icon: "📸", label: "@cherrycreek.robotics" }].map(c => (
-                <a key={c.label} href={c.href} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, color: "#94a3b8", textDecoration: "none", fontSize: isMobile ? 13 : 15, fontFamily: "'Share Tech Mono', monospace", padding: isMobile ? "12px 20px" : 0, background: isMobile ? "rgba(255,255,255,0.04)" : "transparent", borderRadius: isMobile ? 8 : 0, border: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
-                  <span style={{ fontSize: 18 }}>{c.icon}</span>{c.label}
-                </a>
+              {[{ href: `mailto:${email}`, icon: "✉️", label: email }, { href: ig, icon: "📸", label: "@cherrycreek.robotics" }].map((c, i) => (
+                <SlideIn key={c.label} direction="up" delay={0.2 + i * 0.12}>
+                  <a href={c.href} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, color: "#94a3b8", textDecoration: "none", fontSize: isMobile ? 13 : 15, fontFamily: "'Share Tech Mono', monospace", padding: isMobile ? "12px 20px" : 0, background: isMobile ? "rgba(255,255,255,0.04)" : "transparent", borderRadius: isMobile ? 8 : 0, border: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
+                    <span style={{ fontSize: 18 }}>{c.icon}</span>{c.label}
+                  </a>
+                </SlideIn>
               ))}
             </div>
           </div>
@@ -497,9 +573,9 @@ export default function Landing() {
   );
 }
 
-function Eyebrow({ children }) {
-  return <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: "#ef4444", letterSpacing: 3, marginBottom: 10 }}>{children}</div>;
+function Eyebrow({ children, delay = 0 }) {
+  return <SlideIn direction="left" delay={delay}><div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: "#ef4444", letterSpacing: 3, marginBottom: 10 }}>{children}</div></SlideIn>;
 }
-function SectionTitle({ children }) {
-  return <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "clamp(20px,4vw,36px)", color: "#f1f5f9", marginBottom: 36 }}>{children}</h2>;
+function SectionTitle({ children, delay = 0 }) {
+  return <SlideIn direction="left" delay={delay}><h2 style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: "clamp(20px,4vw,36px)", color: "#f1f5f9", marginBottom: 36 }}>{children}</h2></SlideIn>;
 }

@@ -1,5 +1,54 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Starfield from "./Starfield.jsx";
+
+function Typewriter({ texts = [], speed = 60, loopDelay = 6000, style }) {
+  const [displayed, setDisplayed] = useState("");
+  const [phase, setPhase] = useState("typing");
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const txt = texts[index] || texts[0] || "";
+    let timer;
+    if (phase === "typing") {
+      if (displayed.length < txt.length) {
+        timer = setTimeout(() => setDisplayed(txt.slice(0, displayed.length + 1)), speed);
+      } else {
+        timer = setTimeout(() => setPhase("erasing"), loopDelay);
+      }
+    } else if (phase === "erasing") {
+      if (displayed.length > 0) {
+        timer = setTimeout(() => setDisplayed(displayed.slice(0, -1)), speed * 0.5);
+      } else {
+        setIndex(i => (i + 1) % texts.length);
+        setPhase("typing");
+      }
+    }
+    return () => clearTimeout(timer);
+  }, [phase, displayed, index, texts, speed, loopDelay]);
+
+  return (
+    <span style={style}>
+      {displayed}
+      <span style={{ animation: "cursorBlink 0.7s step-end infinite", marginLeft: 2, color: "#ef4444" }}>|</span>
+    </span>
+  );
+}
+
+function SlideIn({ children, direction = "up", delay = 0, style }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect(); } }, { threshold: 0.08 });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+  const dirs = { left: "translateX(-40px)", right: "translateX(40px)", up: "translateY(30px)", down: "translateY(-30px)" };
+  return (
+    <div ref={ref} style={{ opacity: visible ? 1 : 0, transform: visible ? "translate(0,0)" : dirs[direction], transition: `opacity 0.7s ease ${delay}s, transform 0.7s ease ${delay}s`, ...style }}>
+      {children}
+    </div>
+  );
+}
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -62,6 +111,7 @@ export default function PublicMedia() {
         body{background:#080a0f;padding-top:env(safe-area-inset-top,0px);}
         ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:#0d1117;}::-webkit-scrollbar-thumb{background:#ef4444;border-radius:3px;}
         @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes cursorBlink{0%,100%{opacity:1;}50%{opacity:0;}}
         .gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;}
         @media(max-width:600px){.gallery-grid{grid-template-columns:repeat(2,1fr);gap:8px;}}
       `}</style>
@@ -71,7 +121,7 @@ export default function PublicMedia() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: isMobile ? "12px 16px" : "14px 28px", maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <a href="/" style={{ color: "#64748b", textDecoration: "none", fontSize: 12, fontFamily: "monospace" }}>← Home</a>
-            <span style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 13 : 16, color: "#ef4444", letterSpacing: 2 }}>MEDIA GALLERY</span>
+            <Typewriter texts={["MEDIA GALLERY", "PHOTO & VIDEO", "CAPTURED MOMENTS"]} speed={80} loopDelay={10000} style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 13 : 16, color: "#ef4444", letterSpacing: 2 }} />
           </div>
           <a href="/member-hub" style={{ border: "1px solid #ef4444", color: "#ef4444", padding: "6px 14px", borderRadius: 4, textDecoration: "none", fontSize: 11, fontFamily: "'Orbitron', sans-serif", letterSpacing: 1 }}>MEMBERS</a>
         </div>
@@ -81,11 +131,12 @@ export default function PublicMedia() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: isMobile ? "16px 14px 0" : "24px 28px 0" }}>
         {loading ? null : years.length === 0 ? null : (
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center", marginBottom: 4 }}>
-            {years.map(y => {
+            {years.map((y, yi) => {
               const count = items.filter(i => String(i.year) === String(y)).length;
               const isActive = String(activeAlbum) === String(y);
               return (
-                <button key={y} onClick={() => setActiveYear(y)} style={{
+                <SlideIn key={y} direction="up" delay={yi * 0.06}>
+                <button onClick={() => setActiveYear(y)} style={{
                   background: isActive ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.04)",
                   border: `1px solid ${isActive ? "rgba(239,68,68,0.5)" : "rgba(255,255,255,0.08)"}`,
                   color: isActive ? "#ef4444" : "#94a3b8",
@@ -96,7 +147,8 @@ export default function PublicMedia() {
                   {y}
                   <span style={{ fontSize: 11, opacity: 0.7, fontFamily: "monospace", fontWeight: 400 }}>{count}</span>
                 </button>
-              );
+              </SlideIn>
+            );
             })}
           </div>
         )}
@@ -117,39 +169,43 @@ export default function PublicMedia() {
               if (sectionItems.length === 0) return null;
               return (
                 <div key={section.id} style={{ marginBottom: 32 }}>
-                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#94a3b8", letterSpacing: 1, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
-                    <span>{section.icon}</span> {section.label}
-                    <span style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", fontWeight: 400 }}>{sectionItems.length}</span>
-                  </div>
+                  <SlideIn direction="left" delay={0}>
+                    <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#94a3b8", letterSpacing: 1, marginBottom: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span>{section.icon}</span> {section.label}
+                      <span style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", fontWeight: 400 }}>{sectionItems.length}</span>
+                    </div>
+                  </SlideIn>
                   <div className="gallery-grid">
-                    {sectionItems.map(item => {
+                    {sectionItems.map((item, gi) => {
                       const thumb = getThumbnail(item);
                       return (
-                        <div key={item.id} onClick={() => setLightbox(item)} style={{
-                          cursor: "pointer", borderRadius: 8, overflow: "hidden",
-                          border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)",
-                          transition: "transform 0.15s, border-color 0.15s",
-                        }}
-                          onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.03)"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.4)"; }}
-                          onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
-                        >
-                          <div style={{ width: "100%", aspectRatio: "16/10", background: "#0d1117", overflow: "hidden", position: "relative" }}>
-                            {thumb ? (
-                              <img src={thumb} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
-                            ) : (
-                              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🎬</div>
-                            )}
-                            {item.type === "video" && (
-                              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }}>
-                                <div style={{ width: 36, height: 36, background: "rgba(239,68,68,0.9)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff" }}>▶</div>
-                              </div>
-                            )}
+                        <SlideIn key={item.id} direction="up" delay={Math.min(gi * 0.04, 0.5)}>
+                          <div onClick={() => setLightbox(item)} style={{
+                            cursor: "pointer", borderRadius: 8, overflow: "hidden",
+                            border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)",
+                            transition: "transform 0.15s, border-color 0.15s",
+                          }}
+                            onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.03)"; e.currentTarget.style.borderColor = "rgba(239,68,68,0.4)"; }}
+                            onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)"; }}
+                          >
+                            <div style={{ width: "100%", aspectRatio: "16/10", background: "#0d1117", overflow: "hidden", position: "relative" }}>
+                              {thumb ? (
+                                <img src={thumb} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy" />
+                              ) : (
+                                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>🎬</div>
+                              )}
+                              {item.type === "video" && (
+                                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)" }}>
+                                  <div style={{ width: 36, height: 36, background: "rgba(239,68,68,0.9)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff" }}>▶</div>
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ padding: "8px 10px" }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
+                              <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{item.year}</div>
+                            </div>
                           </div>
-                          <div style={{ padding: "8px 10px" }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: "#f1f5f9", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
-                            <div style={{ fontSize: 10, color: "#64748b", fontFamily: "monospace", marginTop: 2 }}>{item.year}</div>
-                          </div>
-                        </div>
+                        </SlideIn>
                       );
                     })}
                   </div>
