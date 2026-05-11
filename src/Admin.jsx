@@ -1241,7 +1241,7 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
 // ── STYLES ────────────────────────────────────────────────
 const S = {
   layout: { display: "flex", minHeight: "100vh", background: "#080a0f", color: "#f1f5f9", fontFamily: "'Exo 2', sans-serif" },
-  sidebar: { width: 224, background: "#0a0e18", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: 0, height: "100vh", overflowY: "auto" },
+  sidebar: { width: 224, background: "#0a0e18", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", flexShrink: 0, position: "sticky", top: "env(safe-area-inset-top,0px)", height: "100vh", overflowY: "auto" },
   sidebarBrand: { display: "flex", alignItems: "center", gap: 10, padding: "18px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" },
   sidebarLogo: { width: 34, height: 34, borderRadius: "50%", objectFit: "cover" },
   sidebarTitle: { fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#ef4444", letterSpacing: 2 },

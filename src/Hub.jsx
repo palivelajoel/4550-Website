@@ -213,7 +213,7 @@ export default function Hub() {
       `}</style>
 
       {/* Header */}
-      <header style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding: isMobile ? "12px 14px" : "14px 28px", borderBottom:`1px solid ${C.border}`, background:"rgba(8,10,15,0.88)", backdropFilter:"blur(16px)", position:"sticky", top:0, zIndex:100, gap:10, flexWrap:"wrap" }}>
+      <header style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding: isMobile ? "12px 14px" : "14px 28px", borderBottom:`1px solid ${C.border}`, background:"rgba(8,10,15,0.88)", backdropFilter:"blur(16px)", position:"sticky", top:"env(safe-area-inset-top,0px)", zIndex:100, gap:10, flexWrap:"wrap" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <img src={logoUrl} alt="logo" style={{ width:isMobile?30:36, height:isMobile?30:36, borderRadius:"50%", objectFit:"cover", border:"1px solid rgba(239,68,68,0.4)", flexShrink:0 }} />
           {!isMobile && (

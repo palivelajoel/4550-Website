@@ -327,7 +327,7 @@ export const dangerBtn = { background:"rgba(239,68,68,0.1)", border:"1px solid r
 
 export function HubHeader({ title }) {
   return (
-    <header style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)", background:"rgba(8,10,15,0.97)", backdropFilter:"blur(14px)", position:"sticky", top:0, zIndex:100, gap:10 }}>
+    <header style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 16px", borderBottom:"1px solid rgba(255,255,255,0.08)", background:"rgba(8,10,15,0.97)", backdropFilter:"blur(14px)", position:"sticky", top:"env(safe-area-inset-top,0px)", zIndex:100, gap:10 }}>
       <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0 }}>
         <a href="/member-hub" style={{ color:"#64748b", textDecoration:"none", fontSize:13, fontFamily:"monospace", flexShrink:0, padding:"6px 0" }}>← Hub</a>
         <div style={{ fontFamily:"'Orbitron',sans-serif", fontSize:14, fontWeight:700, color:"#f1f5f9", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{title}</div>
