@@ -1,3 +1,6 @@
 {
-  "rewrites": [{ "source": "/((?!sw\\.js$|registerSW\\.js$|workbox-.*\\.js$).*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/manifest.json", "destination": "/api/manifest" },
+    { "source": "/((?!sw\\.js$|registerSW\\.js$|workbox-.*\\.js$).*)", "destination": "/index.html" }
+  ]
 }

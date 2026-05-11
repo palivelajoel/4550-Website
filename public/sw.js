@@ -2,9 +2,7 @@ const CACHE = 'team4550-v1';
 const ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
   '/logo.jpg',
-
 ];
 
 self.addEventListener('install', event => {
