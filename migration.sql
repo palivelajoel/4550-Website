@@ -330,6 +330,5 @@ CREATE POLICY "Public select scouting_picklist" ON public.scouting_picklist FOR 
 INSERT INTO public.site_config (key, value) VALUES
     ('logo_url', '/logo.jpg'),
     ('site_title', 'FRC 4550'),
-    ('season_year', '2026'),
-    ('admin_password', 'Admin@4550')
+    ('season_year', '2026')
 ON CONFLICT (key) DO NOTHING;

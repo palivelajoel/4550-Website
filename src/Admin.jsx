@@ -3,7 +3,6 @@ import Starfield from "./Starfield.jsx";
 
 import { CaptainPhoto, sbFetch, uploadFile } from './hubUtils.jsx';
 
-const DEFAULT_ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD;
 const ROLES = ["Member", "Captain", "Admin"];
 const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];
 
@@ -48,7 +47,6 @@ const NAV = [
   { id: "captains", label: "🏆 Leadership" },
   { id: "suggestions", label: "💡 Suggestions" },
   { id: "site", label: "⚙️ Site Config" },
-  { id: "settings", label: "🔐 Admin Settings" },
 ];
 
 export default function Admin() {
@@ -67,7 +65,6 @@ export default function Admin() {
   const [config, setConfig] = useState({});
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [toast, setToast] = useState("");
-  const [adminPassword, setAdminPassword] = useState(DEFAULT_ADMIN_PASSWORD);
   const [editMapId, setEditMapId] = useState(null);
 
   useEffect(() => {
@@ -99,7 +96,6 @@ export default function Admin() {
       cfg.forEach(r => { obj[r.key] = r.value; });
       setConfig(obj);
       if (obj.logo_url) setLogoUrl(obj.logo_url);
-      if (obj.admin_password) setAdminPassword(obj.admin_password);
     }
   }
 
@@ -215,7 +211,6 @@ export default function Admin() {
         {page === "captains" && <CaptainsAdmin captains={captains} reload={loadAll} showToast={showToast} />}
         {page === "suggestions" && <Suggestions suggestions={suggestions} reload={loadAll} showToast={showToast} />}
         {page === "site" && <SiteConfig config={config} logoUrl={logoUrl} setLogoUrl={setLogoUrl} reload={loadAll} showToast={showToast} />}
-        {page === "settings" && <AdminSettings showToast={showToast} />}
       </main>
     </div>
   );
@@ -989,51 +984,6 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-// ── ADMIN SETTINGS ────────────────────────────────────────
-function AdminSettings({ showToast }) {
-  const [newPw, setNewPw] = useState("");
-  const [confirmPw, setConfirmPw] = useState("");
-  const [pwError, setPwError] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  async function changePassword() {
-    setPwError("");
-    if (!newPw) { setPwError("Password cannot be empty."); return; }
-    if (newPw !== confirmPw) { setPwError("Passwords do not match."); return; }
-    if (newPw.length < 6) { setPwError("Password must be at least 6 characters."); return; }
-    setSaving(true);
-    const existing = (await sbFetch("site_config?key=eq.admin_password&select=key")) || [];
-    if (existing?.length) {
-      await adminProxy('site_config', 'update', { id: existing[0].id, updates: { value: newPw } });
-    } else {
-      await adminProxy('site_config', 'insert', { key: 'admin_password', value: newPw });
-    }
-    setSaving(false); setNewPw(""); setConfirmPw("");
-    showToast("✅ Admin password changed! Log out to test.");
-  }
-
-  return (
-    <div>
-      <h1 style={S.pageTitle}>Admin Settings</h1>
-      <div style={S.card}>
-        <div style={S.cardTitle}>Change Admin Password</div>
-        <div style={{ color: "#94a3b8", fontSize: 13, marginBottom: 16, fontFamily: "monospace" }}>
-          This password is used to log into this admin panel. Current default: <code style={{ color: "#ef4444" }}>Admin@4550</code>
-        </div>
-        <div style={S.formCol}>
-          <input type="password" placeholder="New admin password" value={newPw} onChange={e => { setNewPw(e.target.value); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined, maxWidth: 360 }} />
-          <input type="password" placeholder="Confirm new password" value={confirmPw} onChange={e => { setConfirmPw(e.target.value); setPwError(""); }} style={{ ...S.input, borderColor: pwError ? "#ef4444" : undefined, maxWidth: 360 }} />
-          {pwError && <div style={{ color: "#ef4444", fontSize: 12, fontFamily: "monospace" }}>{pwError}</div>}
-          <button onClick={changePassword} disabled={saving} style={{ ...S.btnPrimary, maxWidth: 200, opacity: saving ? 0.6 : 1 }}>
-            {saving ? "Saving..." : "Change Password"}
-          </button>
-        </div>
-      </div>
-
     </div>
   );
 }
