@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { verifyToken, getTokenFromRequest, hashPassword } from './_shared.js';
 
 const ADMIN_TABLES = ['sponsors', 'captains', 'site_config', 'members', 'hub_tasks', 'suggestions', 'hub_calendar', 'inventory_items'];
-const HUB_TABLES = ['hub_tasks', 'inventory_items', 'inventory_transactions'];
+const HUB_TABLES = ['hub_tasks', 'inventory_items', 'inventory_transactions', 'hub_announcements'];
 
 export default async function handler(req, res) {
   try {

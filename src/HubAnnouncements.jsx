@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FONTS, C, sbFetch, isAuthed, canEditHub, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, canEditHub, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
 
 const TAGS = ["General", "Build", "Programming", "Marketing & Outreach", "Competition", "Reminder", "Urgent"];
 const tagColor = { General: "#64748b", Build: "#f59e0b", Programming: "#3b82f6", "Marketing & Outreach": "#22c55e", Competition: "#ef4444", Reminder: "#a855f7", Urgent: "#ef4444" };
@@ -33,33 +33,45 @@ export default function HubAnnouncements() {
   async function post() {
     if (!form.title || !form.body) return showToast("Title and body required.");
     setSaving(true);
-    await sbFetch("hub_announcements", { method: "POST", body: JSON.stringify(form) });
-    // Push to Discord
-    const token = localStorage.getItem("hub_token");
-    if (token) {
-      fetch("/api/announce-to-discord", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form),
-      }).catch(() => {});
+    try {
+      await hubProxy("hub_announcements", "insert", form);
+      // Push to Discord
+      const token = localStorage.getItem("hub_token");
+      if (token) {
+        fetch("/api/announce-to-discord", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(form),
+        }).catch(() => {});
+      }
+      showToast("Posted!");
+    } catch (e) {
+      showToast("Post failed: " + (e.message || e));
     }
     setSaving(false);
     setModal(false);
     setForm(f => ({ ...f, title: "", body: "", tag: "General", pinned: false }));
-    showToast("Posted!");
     load();
   }
 
   async function deleteItem(id) {
     if (!confirm("Delete this announcement?")) return;
-    await sbFetch(`hub_announcements?id=eq.${id}`, { method: "DELETE" });
-    showToast("Deleted.");
+    try {
+      await hubProxy("hub_announcements", "delete", { id });
+      showToast("Deleted.");
+    } catch (e) {
+      showToast("Delete failed: " + (e.message || e));
+    }
     setExpanded(null);
     load();
   }
 
   async function togglePin(item) {
-    await sbFetch(`hub_announcements?id=eq.${item.id}`, { method: "PATCH", body: JSON.stringify({ pinned: !item.pinned }) });
+    try {
+      await hubProxy("hub_announcements", "update", { id: item.id, updates: { pinned: !item.pinned } });
+    } catch (e) {
+      showToast("Pin failed: " + (e.message || e));
+    }
     load();
   }
 
