@@ -66,6 +66,14 @@ export default function Admin() {
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [toast, setToast] = useState("");
   const [editMapId, setEditMapId] = useState(null);
+  const [showMobileNav, setShowMobileNav] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 760);
+
+  useEffect(() => {
+    const fn = () => setIsMobile(window.innerWidth < 760);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
   useEffect(() => {
     if (localStorage.getItem("admin_authed") === "true") { setAuthed(true); loadAll(); }
@@ -171,53 +179,84 @@ export default function Admin() {
         ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:#ef4444;border-radius:3px;}
         @media(max-width:760px){
           .admin-layout{display:block!important;}
-          .admin-sidebar{position:relative!important;width:100%!important;height:auto!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,0.08)!important;}
-          .admin-nav{display:flex!important;overflow-x:auto!important;padding:8px!important;gap:6px!important;}
-          .admin-nav button{min-width:max-content!important;border-left:0!important;border-bottom:2px solid transparent!important;border-radius:8px!important;}
-          .admin-main{padding:18px 12px!important;}
+          .admin-sidebar{position:fixed!important;width:240px!important;height:calc(100vh - 48px)!important;top:48px!important;left:0!important;border-right:1px solid rgba(255,255,255,0.06)!important;z-index:80!important;overflow-y:auto!important;background:#0a0e18!important;}
+          .admin-nav{display:flex!important;flex-direction:column!important;padding:8px 0!important;gap:2px!important;}
+          .admin-nav button{width:100%!important;border-left:3px solid transparent!important;border-bottom:0!important;border-radius:0!important;text-align:left!important;padding:12px 16px!important;min-width:0!important;}
+          .admin-main{padding:60px 10px 18px!important;margin-left:0!important;}
           .admin-card{padding:16px!important;}
+          .admin-table-wrap{overflow-x:auto!important;}
+          .admin-table-wrap table{font-size:12px!important;min-width:500px!important;}
+        }
+        @media(max-width:420px){
+          .login-card{padding:28px 18px!important;}
         }
       `}</style>
 
       {toast && <div style={{ position: "fixed", bottom: 24, right: 24, background: toast.color || "#22c55e", color: "#fff", padding: "12px 20px", borderRadius: 8, fontFamily: "monospace", fontSize: 13, zIndex: 9999, animation: "fadeUp 0.3s ease", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>{toast.msg}</div>}
 
-      {/* Sidebar */}
-      <aside className="admin-sidebar" style={S.sidebar}>
-        <div style={S.sidebarBrand}>
-          <img src={logoUrl} alt="logo" style={S.sidebarLogo} />
-          <div>
-            <div style={S.sidebarTitle}>ADMIN</div>
-            <div style={S.sidebarSub}>Team 4550</div>
-          </div>
+      {/* Mobile top bar + hamburger */}
+      {isMobile && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 48, background: "#0a0e18", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 12px", zIndex: 60, gap: 10 }}>
+          <button onClick={() => setShowMobileNav(v => !v)} style={{ background: "none", border: "none", color: "#ef4444", fontSize: 22, cursor: "pointer", padding: "6px 8px", lineHeight: 1 }}>☰</button>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, fontWeight: 700, color: "#ef4444", letterSpacing: 2 }}>ADMIN</div>
+          <div style={{ flex: 1 }} />
+          <button onClick={handleLogout} style={{ background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "5px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "monospace" }}>Log Out</button>
         </div>
+      )}
+
+      {/* Mobile sidebar overlay */}
+      {isMobile && showMobileNav && (
+        <div onClick={() => setShowMobileNav(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 70 }} />
+      )}
+      <aside className="admin-sidebar" style={{
+        ...S.sidebar,
+        ...(isMobile ? {
+          position: "fixed",
+          top: 48, left: 0, bottom: 0,
+          width: 240,
+          transform: showMobileNav ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.25s ease",
+          zIndex: 80,
+          height: "calc(100vh - 48px)",
+        } : {}),
+      }}>
+        {!isMobile && (
+          <div style={S.sidebarBrand}>
+            <img src={logoUrl} alt="logo" style={S.sidebarLogo} />
+            <div>
+              <div style={S.sidebarTitle}>ADMIN</div>
+              <div style={S.sidebarSub}>Team 4550</div>
+            </div>
+          </div>
+        )}
         <nav className="admin-nav" style={S.sidebarNav}>
           {NAV.map(n => (
-            <button key={n.id} onClick={() => setPage(n.id)} style={{ ...S.navItem, background: page === n.id ? "rgba(239,68,68,0.15)" : "transparent", color: page === n.id ? "#ef4444" : "#94a3b8", borderLeft: page === n.id ? "3px solid #ef4444" : "3px solid transparent" }}>
+            <button key={n.id} onClick={() => { setPage(n.id); if (isMobile) setShowMobileNav(false); }} style={{ ...S.navItem, background: page === n.id ? "rgba(239,68,68,0.15)" : "transparent", color: page === n.id ? "#ef4444" : "#94a3b8", borderLeft: page === n.id ? "3px solid #ef4444" : "3px solid transparent" }}>
               {n.label}
               {n.id === "suggestions" && suggestions.length > 0 && <span style={S.badge}>{suggestions.length}</span>}
             </button>
           ))}
         </nav>
-        <button onClick={handleLogout} style={S.logoutBtn}>Log Out</button>
+        {!isMobile && <button onClick={handleLogout} style={S.logoutBtn}>Log Out</button>}
       </aside>
 
-      <main className="admin-main" style={S.main}>
-        {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} events={hubCalendar} overdue={overdue} competitions={competitions} />}
-        {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} adminProxy={adminProxy} />}
-        {page === "competitions" && <CompetitionsAdmin competitions={competitions} config={config} reload={loadAll} showToast={showToast} />}
-        {page === "hub-tasks" && <Tasks tasks={tasks} members={members} reload={loadAll} showToast={showToast} />}
-        {page === "hub-calendar" && <HubCalendarAdmin events={hubCalendar} reload={loadAll} showToast={showToast} />}
-        {page === "sponsors-assign" && <SponsorAssign sponsors={sponsors} members={members} reload={loadAll} showToast={showToast} />}
-        {page === "captains" && <CaptainsAdmin captains={captains} reload={loadAll} showToast={showToast} />}
+      <main className="admin-main" style={{ ...S.main, ...(isMobile ? { marginLeft: 0, padding: "60px 10px 18px" } : {}) }}>
+        {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} events={hubCalendar} overdue={overdue} competitions={competitions} isMobile={isMobile} />}
+        {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} adminProxy={adminProxy} isMobile={isMobile} />}
+        {page === "competitions" && <CompetitionsAdmin competitions={competitions} config={config} reload={loadAll} showToast={showToast} isMobile={isMobile} />}
+        {page === "hub-tasks" && <Tasks tasks={tasks} members={members} reload={loadAll} showToast={showToast} isMobile={isMobile} />}
+        {page === "hub-calendar" && <HubCalendarAdmin events={hubCalendar} reload={loadAll} showToast={showToast} isMobile={isMobile} />}
+        {page === "sponsors-assign" && <SponsorAssign sponsors={sponsors} members={members} reload={loadAll} showToast={showToast} isMobile={isMobile} />}
+        {page === "captains" && <CaptainsAdmin captains={captains} reload={loadAll} showToast={showToast} isMobile={isMobile} />}
         {page === "suggestions" && <Suggestions suggestions={suggestions} reload={loadAll} showToast={showToast} />}
-        {page === "site" && <SiteConfig config={config} logoUrl={logoUrl} setLogoUrl={setLogoUrl} reload={loadAll} showToast={showToast} />}
+        {page === "site" && <SiteConfig config={config} logoUrl={logoUrl} setLogoUrl={setLogoUrl} reload={loadAll} showToast={showToast} isMobile={isMobile} />}
       </main>
     </div>
   );
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────
-function Overview({ members, tasks, suggestions, sponsors, events, overdue, competitions }) {
+function Overview({ members, tasks, suggestions, sponsors, events, overdue, competitions, isMobile }) {
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
   const openTasks = tasks.filter(t => t.status !== "Done");
@@ -239,17 +278,17 @@ function Overview({ members, tasks, suggestions, sponsors, events, overdue, comp
   ];
   return (
     <div>
-      <h1 style={S.pageTitle}>Overview</h1>
-      <div style={S.statRow}>
+      <h1 style={{ ...S.pageTitle, fontSize: isMobile ? 16 : 20 }}>Overview</h1>
+      <div style={{ ...S.statRow, gap: isMobile ? 8 : 14 }}>
         {stats.map(s => (
-          <div key={s.label} style={{ ...S.statCard, borderColor: s.color }}>
-            <div style={{ ...S.statNum, color: s.color }}>{s.val}</div>
+          <div key={s.label} style={{ ...S.statCard, borderColor: s.color, minWidth: isMobile ? 90 : 140, padding: isMobile ? "12px 8px" : "20px", flex: isMobile ? "0 1 calc(33.33% - 8px)" : undefined }}>
+            <div style={{ ...S.statNum, color: s.color, fontSize: isMobile ? 18 : 24 }}>{s.val}</div>
             <div style={S.statLabel}>{s.label}</div>
           </div>
         ))}
       </div>
       {overdue > 0 && <div style={S.alertBanner}>⚠️ {overdue} overdue task{overdue !== 1 ? "s" : ""}</div>}
-      <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 12, marginTop: 24 }}>
         <a href="/" target="_blank" style={{ flex: 1, padding: '16px 24px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#94a3b8', textDecoration: 'none', fontSize: 14, fontFamily: "'Exo 2', sans-serif", textAlign: 'center' }}>Public Site ↗</a>
         <a href="/member-hub" target="_blank" style={{ flex: 1, padding: '16px 24px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#94a3b8', textDecoration: 'none', fontSize: 14, fontFamily: "'Exo 2', sans-serif", textAlign: 'center' }}>Member Hub ↗</a>
       </div>
@@ -258,7 +297,7 @@ function Overview({ members, tasks, suggestions, sponsors, events, overdue, comp
 }
 
 // ── ACCOUNTS ──────────────────────────────────────────────
-function Accounts({ members, reload, showToast, adminProxy }) {
+function Accounts({ members, reload, showToast, adminProxy, isMobile }) {
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
   const [savingMemberId, setSavingMemberId] = useState(null);
@@ -314,17 +353,17 @@ function Accounts({ members, reload, showToast, adminProxy }) {
 
   return (
     <div>
-      <h1 style={S.pageTitle}>Account Management</h1>
+      <h1 style={{ ...S.pageTitle, fontSize: isMobile ? 16 : 20 }}>Account Management</h1>
 
       {/* Create Account */}
       <div style={S.card}>
         <div style={S.cardTitle}>Create Account</div>
         <div style={S.formCol}>
-          <div style={S.formRow}>
+          <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
             <input placeholder="Username *" value={createForm.username} onChange={e => setCreateForm({ ...createForm, username: e.target.value })} style={S.input} />
             <input placeholder="Full Name" value={createForm.full_name} onChange={e => setCreateForm({ ...createForm, full_name: e.target.value })} style={S.input} />
           </div>
-          <div style={S.formRow}>
+          <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
             <input type="password" placeholder="Password *" value={createForm.password} onChange={e => setCreateForm({ ...createForm, password: e.target.value })} style={S.input} />
             <input type="password" placeholder="Confirm Password *" value={createForm.confirmPassword} onChange={e => setCreateForm({ ...createForm, confirmPassword: e.target.value })} style={S.input} />
             <select value={createForm.role} onChange={e => setCreateForm({ ...createForm, role: e.target.value })} style={S.select}>
@@ -333,7 +372,7 @@ function Accounts({ members, reload, showToast, adminProxy }) {
             <select value={createForm.subteam} onChange={e => setCreateForm({ ...createForm, subteam: e.target.value })} style={S.select}>
               {SUBTEAMS.map(s => <option key={s}>{s}</option>)}
             </select>
-            <button onClick={createMember} style={S.btnPrimary}>Create</button>
+            <button onClick={createMember} style={{ ...S.btnPrimary, width: isMobile ? '100%' : undefined }}>Create</button>
           </div>
         </div>
       </div>
@@ -349,12 +388,12 @@ function Accounts({ members, reload, showToast, adminProxy }) {
               <div style={{ ...S.cardTitle, marginBottom: 0 }}>{st} <span style={{ color: "#64748b", fontSize: 11 }}>({sub.length})</span></div>
             </div>
             {sub.map(m => (
-              <div key={m.id} style={S.memberRow}>
+              <div key={m.id} style={{ ...S.memberRow, flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center' }}>
                 {editId === m.id ? (
                   <div style={{ ...S.formCol, flex: 1 }}>
-                    <div style={S.formRow}>
+                    <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
                       <input placeholder="Full Name" value={editData.full_name || ""} onChange={e => setEditData({ ...editData, full_name: e.target.value })} style={S.input} />
-                      <input type="password" placeholder="New password (leave blank to keep)" value={editData.password || ""} onChange={e => setEditData({ ...editData, password: e.target.value })} style={{ ...S.input, maxWidth: 200 }} />
+                      <input type="password" placeholder="New password (leave blank to keep)" value={editData.password || ""} onChange={e => setEditData({ ...editData, password: e.target.value })} style={{ ...S.input, maxWidth: isMobile ? '100%' : 200 }} />
                       <select value={editData.role || m.role} onChange={e => setEditData({ ...editData, role: e.target.value })} style={S.select}>
                         {ROLES.map(r => <option key={r}>{r}</option>)}
                       </select>
@@ -362,45 +401,45 @@ function Accounts({ members, reload, showToast, adminProxy }) {
                         {SUBTEAMS.map(s => <option key={s}>{s}</option>)}
                       </select>
                     </div>
-                    <div style={S.formRow}>
-                      <button onClick={() => updateMember(m.id)} style={S.btnPrimary}>Save</button>
-                      <button onClick={() => { setEditId(null); setPwError(""); }} style={S.btnGhost}>Cancel</button>
+                    <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
+                      <button onClick={() => updateMember(m.id)} style={{ ...S.btnPrimary, width: isMobile ? '100%' : undefined }}>Save</button>
+                      <button onClick={() => { setEditId(null); setPwError(""); }} style={{ ...S.btnGhost, width: isMobile ? '100%' : undefined }}>Cancel</button>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div style={{ ...S.memberInfo, flexWrap: "wrap", gap: 10 }}>
+                    <div style={{ ...S.memberInfo, flexWrap: "wrap", gap: 10, flex: 1 }}>
                       <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${ROLE_COLORS[m.role] || "#64748b"}22`, border: `1px solid ${ROLE_COLORS[m.role] || "#64748b"}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: ROLE_COLORS[m.role] || "#64748b", flexShrink: 0 }}>{(m.full_name || m.username)[0]}</div>
                       <div style={{ minWidth: 0 }}>
                         <span style={S.memberName}>{m.full_name || m.username}</span>
                         <span style={S.memberUser}> @{m.username}</span>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginLeft: "auto" }}>
-                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>
+                      <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "center", flexDirection: isMobile ? "column" : "row", gap: 8, marginLeft: isMobile ? 0 : "auto", width: isMobile ? '100%' : undefined }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#64748b", fontFamily: "monospace", width: isMobile ? '100%' : undefined }}>
                           Role
                           <select
                             value={m.role || "Member"}
                             disabled={savingMemberId === m.id}
                             onChange={e => patchMemberQuick(m.id, { role: e.target.value })}
-                            style={{ ...S.select, minWidth: 110, maxWidth: 140, fontSize: 12, padding: "6px 8px", opacity: savingMemberId === m.id ? 0.6 : 1 }}
+                            style={{ ...S.select, minWidth: isMobile ? 0 : 110, maxWidth: isMobile ? '100%' : 140, fontSize: 12, padding: "6px 8px", opacity: savingMemberId === m.id ? 0.6 : 1, flex: isMobile ? 1 : undefined }}
                           >
                             {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
                         </label>
-                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#64748b", fontFamily: "monospace", width: isMobile ? '100%' : undefined }}>
                           Sub-team
                           <select
                             value={m.subteam || "General"}
                             disabled={savingMemberId === m.id}
                             onChange={e => patchMemberQuick(m.id, { subteam: e.target.value })}
-                            style={{ ...S.select, minWidth: 130, maxWidth: 220, fontSize: 12, padding: "6px 8px", opacity: savingMemberId === m.id ? 0.6 : 1 }}
+                            style={{ ...S.select, minWidth: isMobile ? 0 : 130, maxWidth: isMobile ? '100%' : 220, fontSize: 12, padding: "6px 8px", opacity: savingMemberId === m.id ? 0.6 : 1, flex: isMobile ? 1 : undefined }}
                           >
                             {SUBTEAMS.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         </label>
                       </div>
                     </div>
-                    <div style={S.memberActions}>
+                    <div style={{ ...S.memberActions, justifyContent: isMobile ? 'flex-end' : undefined }}>
                       <button onClick={() => { setEditId(m.id); setEditData({ full_name: m.full_name, role: m.role, subteam: m.subteam || "General", password: "" }); setPwError(""); }} style={S.btnGhost}>Edit</button>
                       <button onClick={() => deleteMember(m.id)} style={S.btnDanger}>Delete</button>
                     </div>
@@ -416,7 +455,7 @@ function Accounts({ members, reload, showToast, adminProxy }) {
 }
 
 // ── TASKS ─────────────────────────────────────────────────
-function Tasks({ tasks, members, reload, showToast }) {
+function Tasks({ tasks, members, reload, showToast, isMobile }) {
   const [form, setForm] = useState({ title: "", description: "", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status: "To Do", subteam: "General" });
 
   async function createTask() {
@@ -444,13 +483,13 @@ function Tasks({ tasks, members, reload, showToast }) {
 
   return (
     <div>
-      <h1 style={S.pageTitle}>Hub Task Management</h1>
+      <h1 style={{ ...S.pageTitle, fontSize: isMobile ? 16 : 20 }}>Hub Task Management</h1>
       <div style={S.card}>
         <div style={S.cardTitle}>Create Task</div>
         <div style={S.formCol}>
           <input placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={S.input} />
           <input placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={S.input} />
-          <div style={S.formRow}>
+          <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
             <select value={form.subteam} onChange={e => setForm({ ...form, subteam: e.target.value })} style={S.select}>
               {SUBTEAMS.map(s => <option key={s}>{s}</option>)}
             </select>
@@ -462,11 +501,11 @@ function Tasks({ tasks, members, reload, showToast }) {
             <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={S.select}>
               {["Low", "Medium", "High"].map(p => <option key={p}>{p}</option>)}
             </select>
-            <button onClick={createTask} style={S.btnPrimary}>Create</button>
+            <button onClick={createTask} style={{ ...S.btnPrimary, width: isMobile ? '100%' : undefined }}>Create</button>
           </div>
         </div>
       </div>
-      <div style={S.taskColumns}>
+      <div style={{ ...S.taskColumns, gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)' }}>
         {Object.entries(groups).map(([status, list]) => (
           <div key={status} style={S.taskCol}>
             <div style={S.taskColHeader}>{status} <span style={S.taskCount}>{list.length}</span></div>
@@ -495,7 +534,7 @@ function Tasks({ tasks, members, reload, showToast }) {
 }
 
 // ── HUB CALENDAR ──────────────────────────────────────────
-function HubCalendarAdmin({ events, reload, showToast }) {
+function HubCalendarAdmin({ events, reload, showToast, isMobile }) {
   const [form, setForm] = useState({ title: "", type: "event", date: "", end_date: "", time: "", description: "", all_day: true });
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -524,23 +563,23 @@ function HubCalendarAdmin({ events, reload, showToast }) {
 
   return (
     <div>
-      <h1 style={S.pageTitle}>Hub Calendar</h1>
+      <h1 style={{ ...S.pageTitle, fontSize: isMobile ? 16 : 20 }}>Hub Calendar</h1>
       <div style={S.card}>
         <div style={S.cardTitle}>{editingId ? "Edit Event" : "Add Event"}</div>
         <div style={S.formCol}>
-          <div style={S.formRow}>
+          <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
             <input placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={S.input} />
             <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} style={S.select}>
               {EVENT_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
-          <div style={S.formRow}>
+          <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
             <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} style={S.input} />
             <input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} style={S.input} />
             <input type="time" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} style={S.input} />
           </div>
           <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={{ ...S.input, minHeight: 80, resize: "vertical" }} />
-          <div style={S.formRow}>
+          <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
             <label style={{ color: "#94a3b8", fontSize: 13, fontFamily: "monospace", display: "flex", alignItems: "center", gap: 8 }}>
               <input type="checkbox" checked={form.all_day} onChange={e => setForm({ ...form, all_day: e.target.checked })} /> All day
             </label>
@@ -572,7 +611,7 @@ function HubCalendarAdmin({ events, reload, showToast }) {
 }
 
 // ── SPONSOR ASSIGNMENT ────────────────────────────────────
-function SponsorAssign({ sponsors, members, reload, showToast }) {
+function SponsorAssign({ sponsors, members, reload, showToast, isMobile }) {
   const [assignments, setAssignments] = useState({});
   const [filter, setFilter] = useState("");
   const [autoLoading, setAutoLoading] = useState(false);
@@ -627,27 +666,27 @@ function SponsorAssign({ sponsors, members, reload, showToast }) {
 
   return (
     <div>
-      <h1 style={S.pageTitle}>Sponsors</h1>
+      <h1 style={{ ...S.pageTitle, fontSize: isMobile ? 16 : 20 }}>Sponsors</h1>
       <div style={S.card}>
-        <div style={S.statRow}>
+        <div style={{ ...S.statRow, gap: isMobile ? 8 : 14 }}>
           {[{ label: "Total", val: sponsors.length, color: "#3b82f6" }, { label: "Assigned", val: sponsors.filter(s => s.assigned_member_id).length, color: "#22c55e" }, { label: "Unassigned", val: sponsors.filter(s => !s.assigned_member_id).length, color: "#f59e0b" }].map(s => (
-            <div key={s.label} style={S.statCard}>
-              <div style={{ ...S.statNum, color: s.color }}>{s.val}</div>
+            <div key={s.label} style={{ ...S.statCard, minWidth: isMobile ? 90 : 140, padding: isMobile ? "12px 8px" : "20px", flex: isMobile ? "0 1 calc(33.33% - 8px)" : undefined }}>
+              <div style={{ ...S.statNum, color: s.color, fontSize: isMobile ? 18 : 24 }}>{s.val}</div>
               <div style={S.statLabel}>{s.label}</div>
             </div>
           ))}
         </div>
         <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-          <button onClick={autoAssign} disabled={autoLoading} style={S.btnPrimary}>{autoLoading ? "Assigning..." : "⚡ Auto-Assign Evenly"}</button>
+          <button onClick={autoAssign} disabled={autoLoading} style={{ ...S.btnPrimary, width: isMobile ? '100%' : undefined }}>{autoLoading ? "Assigning..." : "⚡ Auto-Assign Evenly"}</button>
         </div>
       </div>
       <div style={S.card}>
-        <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+        <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: 10, marginBottom: 14 }}>
           <div style={S.cardTitle}>Sponsor Management</div>
-          <input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} style={{ ...S.input, maxWidth: 220, marginBottom: 0 }} />
+          <input placeholder="Search..." value={filter} onChange={e => setFilter(e.target.value)} style={{ ...S.input, maxWidth: isMobile ? '100%' : 220, marginBottom: 0 }} />
         </div>
         <div style={{ overflowX: "auto" }}>
-          <table style={S.table}>
+          <table style={{ ...S.table, fontSize: isMobile ? 12 : undefined }}>
             <thead><tr>
               <th style={S.th}>Logo</th><th style={S.th}>Company</th><th style={S.th}>Status</th><th style={S.th}>Assigned To</th><th style={S.th}>Save</th>
             </tr></thead>
@@ -688,7 +727,7 @@ function SponsorAssign({ sponsors, members, reload, showToast }) {
 }
 
 // ── CAPTAINS ADMIN ────────────────────────────────────────
-function CaptainsAdmin({ captains, reload, showToast }) {
+function CaptainsAdmin({ captains, reload, showToast, isMobile }) {
   const [form, setForm] = useState({ name: "", position: "", bio: "", sort_order: 0 });
   const [photoFile, setPhotoFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -774,20 +813,20 @@ function CaptainsAdmin({ captains, reload, showToast }) {
 
   return (
     <div>
-      <h1 style={S.pageTitle}>Leadership</h1>
+      <h1 style={{ ...S.pageTitle, fontSize: isMobile ? 16 : 20 }}>Leadership</h1>
       <div style={S.card}>
         <div style={S.cardTitle}>Add Person</div>
         <div style={S.formCol}>
-          <div style={S.formRow}>
+          <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
             <input placeholder="Full Name *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={S.input} />
             <input placeholder="Position *" value={form.position} onChange={e => setForm({ ...form, position: e.target.value })} style={S.input} />
-            <input placeholder="Order" type="number" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })} style={{ ...S.input, maxWidth: 100 }} />
+            <input placeholder="Order" type="number" value={form.sort_order} onChange={e => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })} style={{ ...S.input, maxWidth: isMobile ? '100%' : 100 }} />
           </div>
           <textarea placeholder="Bio (optional)" value={form.bio} onChange={e => setForm({ ...form, bio: e.target.value })} style={{ ...S.input, minHeight: 60, resize: "vertical" }} />
-          <div style={S.formRow}>
-            <button onClick={() => fileRef.current?.click()} style={S.btnGhost}>{photoFile ? `📸 ${photoFile.name}` : "Upload Photo"}</button>
+          <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
+            <button onClick={() => fileRef.current?.click()} style={{ ...S.btnGhost, width: isMobile ? '100%' : undefined }}>{photoFile ? `📸 ${photoFile.name}` : "Upload Photo"}</button>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setPhotoFile(e.target.files[0])} />
-            <button onClick={createCaptain} disabled={uploading} style={{ ...S.btnPrimary, opacity: uploading ? 0.6 : 1 }}>{uploading ? "Uploading..." : "Add Person"}</button>
+            <button onClick={createCaptain} disabled={uploading} style={{ ...S.btnPrimary, width: isMobile ? '100%' : undefined, opacity: uploading ? 0.6 : 1 }}>{uploading ? "Uploading..." : "Add Person"}</button>
           </div>
         </div>
       </div>
@@ -799,16 +838,16 @@ function CaptainsAdmin({ captains, reload, showToast }) {
             style={{ ...S.memberRow, opacity: draggingId === c.id ? 0.4 : 1, background: dragOverId === c.id && draggingId !== c.id ? "rgba(239,68,68,0.06)" : "transparent", border: dragOverId === c.id && draggingId !== c.id ? "1px dashed rgba(239,68,68,0.4)" : "1px solid transparent", cursor: "grab" }}>
             {editId === c.id ? (
               <div style={{ ...S.formCol, flex: 1 }}>
-                <div style={S.formRow}>
+                <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
                   <input value={editData.name || ""} onChange={e => setEditData({ ...editData, name: e.target.value })} style={S.input} placeholder="Name" />
                   <input value={editData.position || ""} onChange={e => setEditData({ ...editData, position: e.target.value })} style={S.input} placeholder="Position" />
                 </div>
                 <textarea value={editData.bio || ""} onChange={e => setEditData({ ...editData, bio: e.target.value })} style={{ ...S.input, minHeight: 50, resize: "vertical" }} placeholder="Bio" />
-                <div style={S.formRow}>
-                  <button onClick={() => editFileRef.current?.click()} style={S.btnGhost}>{editPhotoFile ? `📸 ${editPhotoFile.name}` : "Change Photo"}</button>
+                <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
+                  <button onClick={() => editFileRef.current?.click()} style={{ ...S.btnGhost, width: isMobile ? '100%' : undefined }}>{editPhotoFile ? `📸 ${editPhotoFile.name}` : "Change Photo"}</button>
                   <input ref={editFileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setEditPhotoFile(e.target.files[0])} />
-                  <button onClick={() => updateCaptain(c.id)} disabled={uploading} style={S.btnPrimary}>Save</button>
-                  <button onClick={() => setEditId(null)} style={S.btnGhost}>Cancel</button>
+                  <button onClick={() => updateCaptain(c.id)} disabled={uploading} style={{ ...S.btnPrimary, width: isMobile ? '100%' : undefined }}>Save</button>
+                  <button onClick={() => setEditId(null)} style={{ ...S.btnGhost, width: isMobile ? '100%' : undefined }}>Cancel</button>
                 </div>
               </div>
             ) : (
@@ -871,7 +910,7 @@ const HUB_TILES = [
 ];
 
 // ── SITE CONFIG ───────────────────────────────────────────
-function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
+function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }) {
   const [vals, setVals] = useState({});
   const [logoFile, setLogoFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -917,21 +956,21 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
 
   return (
     <div>
-      <h1 style={S.pageTitle}>Site Configuration</h1>
+      <h1 style={{ ...S.pageTitle, fontSize: isMobile ? 16 : 20 }}>Site Configuration</h1>
       <div style={S.card}>
         <div style={S.cardTitle}>Team Logo</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <img src={logoUrl} alt="logo" style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)" }} />
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => fileRef.current?.click()} style={S.btnGhost}>{logoFile ? `📸 ${logoFile.name}` : "Choose Image"}</button>
+        <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'center' : 'center', gap: isMobile ? 12 : 20, textAlign: isMobile ? 'center' : undefined }}>
+          <img src={logoUrl} alt="logo" style={{ width: isMobile ? 56 : 72, height: isMobile ? 56 : 72, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)" }} />
+          <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: 10 }}>
+            <button onClick={() => fileRef.current?.click()} style={{ ...S.btnGhost, width: isMobile ? '100%' : undefined }}>{logoFile ? `📸 ${logoFile.name}` : "Choose Image"}</button>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => setLogoFile(e.target.files[0])} />
-            {logoFile && <button onClick={uploadLogo} disabled={uploading} style={S.btnPrimary}>{uploading ? "Uploading..." : "Upload"}</button>}
+            {logoFile && <button onClick={uploadLogo} disabled={uploading} style={{ ...S.btnPrimary, width: isMobile ? '100%' : undefined }}>{uploading ? "Uploading..." : "Upload"}</button>}
           </div>
         </div>
       </div>
       <div style={S.card}>
         <div style={S.cardTitle}>Hub Tile Order — Drag to reorder</div>
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: 8, marginBottom: 14 }}>
           <button onClick={async () => {
             setTileSaving(true);
             const order = tileOrder.length ? tileOrder : HUB_TILES.map(t => t.id);
@@ -977,10 +1016,10 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast }) {
       <div style={S.card}>
         <div style={S.cardTitle}>Site Details</div>
         {fields.map(f => (
-          <div key={f.key} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "center" }}>
-            <label style={{ color: "#94a3b8", fontSize: 12, minWidth: 120, fontFamily: "monospace" }}>{f.label}</label>
+          <div key={f.key} style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 6 : 10, marginBottom: 12, alignItems: isMobile ? 'stretch' : 'center' }}>
+            <label style={{ color: "#94a3b8", fontSize: 12, minWidth: isMobile ? 0 : 120, fontFamily: "monospace" }}>{f.label}</label>
             <input value={vals[f.key] || ""} onChange={e => setVals({ ...vals, [f.key]: e.target.value })} style={{ ...S.input, flex: 1, marginBottom: 0 }} />
-            <button onClick={() => saveKey(f.key)} style={S.btnGhost}>Save</button>
+            <button onClick={() => saveKey(f.key)} style={{ ...S.btnGhost, width: isMobile ? '100%' : undefined }}>Save</button>
           </div>
         ))}
       </div>
@@ -1046,7 +1085,7 @@ function PitMapEditor({ comp, reload, showToast }) {
 }
 
 // ── COMPETITIONS ADMIN ─────────────────────────────────────
-function CompetitionsAdmin({ competitions, config, reload, showToast }) {
+function CompetitionsAdmin({ competitions, config, reload, showToast, isMobile }) {
   const [search, setSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
   const [frcEvents, setFrcEvents] = useState([]);
@@ -1173,30 +1212,30 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
 
   return (
     <div>
-      <h1 style={S.pageTitle}>Competitions</h1>
+      <h1 style={{ ...S.pageTitle, fontSize: isMobile ? 16 : 20 }}>Competitions</h1>
 
       <div style={S.card}>
         <div style={S.cardTitle}>Fetch FRC Events</div>
-        <div style={S.formRow}>
+        <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
           <input placeholder="TBA API Key" value={tbaKey} onChange={e => setTbaKey(e.target.value)} style={S.input} />
-          <button onClick={saveTbaKey} disabled={savingKey} style={S.btnGhost}>{savingKey ? "Saving..." : "Save Key"}</button>
-          <button onClick={fetchFrcEvents} disabled={loading} style={S.btnPrimary}>{loading ? "Fetching..." : "Fetch Events"}</button>
+          <button onClick={saveTbaKey} disabled={savingKey} style={{ ...S.btnGhost, width: isMobile ? '100%' : undefined }}>{savingKey ? "Saving..." : "Save Key"}</button>
+          <button onClick={fetchFrcEvents} disabled={loading} style={{ ...S.btnPrimary, width: isMobile ? '100%' : undefined }}>{loading ? "Fetching..." : "Fetch Events"}</button>
         </div>
         {frcEvents.length > 0 && (
           <div style={{ marginTop: 16 }}>
-            <div style={{ ...S.formRow, marginBottom: 12 }}>
-              <input placeholder="Search FRC events by name, city, state, or key..." value={eventSearch} onChange={e => setEventSearch(e.target.value)} style={S.input} />
+            <div style={{ ...S.formRow, marginBottom: 12, flexDirection: isMobile ? 'column' : 'row' }}>
+              <input placeholder="Search events..." value={eventSearch} onChange={e => setEventSearch(e.target.value)} style={S.input} />
               <div style={{ color: "#64748b", fontFamily: "monospace", fontSize: 12 }}>{eventFiltered.length} events</div>
             </div>
             <div style={S.cardTitle}>Available Events</div>
             <div style={{ maxHeight: 360, overflowY: "auto", paddingRight: 4 }}>
               {eventFiltered.map(ev => (
-                <div key={ev.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                  <div>
+                <div key={ev.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)", gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
                     <div style={{ color: "#f1f5f9", fontSize: 14 }}>{ev.name}</div>
-                    <div style={{ color: "#64748b", fontSize: 12 }}>{ev.start_date} - {ev.city}, {ev.state_prov}</div>
+                    <div style={{ color: "#64748b", fontSize: isMobile ? 11 : 12 }}>{ev.start_date} - {ev.city}, {ev.state_prov}</div>
                   </div>
-                  <button onClick={() => addCompetition(ev)} disabled={competitions.some(c => c.event_key === ev.key)} style={{ ...S.btnGhost, opacity: competitions.some(c => c.event_key === ev.key) ? 0.45 : 1 }}>
+                  <button onClick={() => addCompetition(ev)} disabled={competitions.some(c => c.event_key === ev.key)} style={{ ...S.btnGhost, opacity: competitions.some(c => c.event_key === ev.key) ? 0.45 : 1, flexShrink: 0 }}>
                     {competitions.some(c => c.event_key === ev.key) ? "Added" : "Add"}
                   </button>
                 </div>
@@ -1212,28 +1251,28 @@ function CompetitionsAdmin({ competitions, config, reload, showToast }) {
         </div>
         <div style={S.cardTitle}>Our Competitions</div>
         {filtered.map(c => (
-          <div key={c.id} style={{ marginBottom: 16, padding: 16, background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div key={c.id} style={{ marginBottom: 16, padding: isMobile ? 12 : 16, background: "rgba(255,255,255,0.04)", borderRadius: 8 }}>
+            <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', justifyContent: "space-between", alignItems: isMobile ? 'flex-start' : "center", marginBottom: 8, gap: 8 }}>
               <div>
-                <div style={{ color: "#f1f5f9", fontSize: 16, fontWeight: 600 }}>{c.name}</div>
-                <div style={{ color: "#64748b", fontSize: 12 }}>{c.start_date} - {c.location}</div>
+                <div style={{ color: "#f1f5f9", fontSize: isMobile ? 14 : 16, fontWeight: 600 }}>{c.name}</div>
+                <div style={{ color: "#64748b", fontSize: isMobile ? 11 : 12 }}>{c.start_date} - {c.location}</div>
               </div>
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
                 <input type="checkbox" checked={c.attending} onChange={e => toggleAttending(c.id, e.target.checked)} />
                 Attending
               </label>
             </div>
-            <div style={S.formRow}>
+            <div style={{ ...S.formRow, flexDirection: isMobile ? 'column' : 'row' }}>
               <input placeholder="Venue Map URL" defaultValue={c.venue_map_url || ""} onBlur={e => saveCompetitionFields(c.id, { venue_map_url: e.target.value }, "Venue map saved.")} style={S.input} />
               <input placeholder="Pit Map URL" defaultValue={c.pit_map_url || ""} onBlur={e => saveCompetitionFields(c.id, { pit_map_url: e.target.value }, "Pit map saved.")} style={S.input} />
               <input placeholder="Stream URL" defaultValue={c.stream_url || ""} onBlur={e => saveCompetitionFields(c.id, { stream_url: e.target.value }, "Stream saved.")} style={S.input} />
             </div>
-            <div style={{ ...S.formRow, marginTop: 10 }}>
+            <div style={{ ...S.formRow, marginTop: 10, flexDirection: isMobile ? 'column' : 'row' }}>
               <input placeholder="Map check status" defaultValue={c.map_status || ""} onBlur={e => saveCompetitionFields(c.id, { map_status: e.target.value, last_map_check: new Date().toISOString() }, "Map check saved.")} style={S.input} />
-              <button onClick={() => autoFindLinks(c)} disabled={findingId === c.id} style={{ ...S.btnPrimary, opacity: findingId === c.id ? 0.65 : 1 }}>{findingId === c.id ? "Finding..." : "AI Find Links"}</button>
-              <button onClick={() => setEditMapId(c.id)} style={S.btnGhost}>{editMapId === c.id ? "Close Editor" : "Map Editor"}</button>
-              <a href={`https://www.thebluealliance.com/event/${c.event_key}`} target="_blank" rel="noreferrer" style={S.quickBtn}>TBA Event</a>
-              <a href="/member-hub/venuemap" target="_blank" rel="noreferrer" style={S.quickBtn}>Preview Maps</a>
+              <button onClick={() => autoFindLinks(c)} disabled={findingId === c.id} style={{ ...S.btnPrimary, width: isMobile ? '100%' : undefined, opacity: findingId === c.id ? 0.65 : 1 }}>{findingId === c.id ? "Finding..." : "AI Find Links"}</button>
+              <button onClick={() => setEditMapId(c.id)} style={{ ...S.btnGhost, width: isMobile ? '100%' : undefined }}>{editMapId === c.id ? "Close Editor" : "Map Editor"}</button>
+              <a href={`https://www.thebluealliance.com/event/${c.event_key}`} target="_blank" rel="noreferrer" style={{ ...S.quickBtn, width: isMobile ? '100%' : undefined, textAlign: 'center' }}>TBA Event</a>
+              <a href="/member-hub/venuemap" target="_blank" rel="noreferrer" style={{ ...S.quickBtn, width: isMobile ? '100%' : undefined, textAlign: 'center' }}>Preview Maps</a>
             </div>
           </div>
         ))}
