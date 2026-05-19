@@ -49,8 +49,8 @@ export default async function handler(req, res) {
         dataPayload = { ...bodyPayload, password_hash: hashPassword(bodyPayload.password) };
         delete dataPayload.password;
       }
-      if (isHub) {
-        dataPayload = { ...dataPayload, added_by: dataPayload.added_by || payload.userId };
+      if (isHub && dataPayload.added_by === undefined && table === 'inventory_items') {
+        dataPayload = { ...dataPayload, added_by: payload.userId };
       }
       const { data, error } = await supabase.from(table).insert(dataPayload).select();
       if (error) return res.status(500).json({ error: error.message });
