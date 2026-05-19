@@ -179,10 +179,10 @@ export default function Admin() {
         ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:#ef4444;border-radius:3px;}
         @media(max-width:760px){
           .admin-layout{display:block!important;}
-          .admin-sidebar{position:fixed!important;width:240px!important;height:calc(100vh - 48px)!important;top:48px!important;left:0!important;border-right:1px solid rgba(255,255,255,0.06)!important;z-index:80!important;overflow-y:auto!important;background:#0a0e18!important;}
+          .admin-sidebar{position:fixed!important;width:240px!important;height:calc(100vh - 48px - env(safe-area-inset-top, 0px))!important;top:calc(48px + env(safe-area-inset-top, 0px))!important;left:0!important;border-right:1px solid rgba(255,255,255,0.06)!important;z-index:80!important;overflow-y:auto!important;background:#0a0e18!important;}
           .admin-nav{display:flex!important;flex-direction:column!important;padding:8px 0!important;gap:2px!important;}
           .admin-nav button{width:100%!important;border-left:3px solid transparent!important;border-bottom:0!important;border-radius:0!important;text-align:left!important;padding:12px 16px!important;min-width:0!important;}
-          .admin-main{padding:60px 10px 18px!important;margin-left:0!important;}
+          .admin-main{padding:calc(60px + env(safe-area-inset-top, 0px)) 10px 18px!important;margin-left:0!important;}
           .admin-card{padding:16px!important;}
           .admin-table-wrap{overflow-x:auto!important;}
           .admin-table-wrap table{font-size:12px!important;min-width:500px!important;}
@@ -196,11 +196,11 @@ export default function Admin() {
 
       {/* Mobile top bar + hamburger */}
       {isMobile && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 48, background: "#0a0e18", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", padding: "0 12px", zIndex: 60, gap: 10 }}>
-          <button onClick={() => setShowMobileNav(v => !v)} style={{ background: "none", border: "none", color: "#ef4444", fontSize: 22, cursor: "pointer", padding: "6px 8px", lineHeight: 1 }}>☰</button>
-          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, fontWeight: 700, color: "#ef4444", letterSpacing: 2 }}>ADMIN</div>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, minHeight: 48, paddingTop: "env(safe-area-inset-top, 0px)", display: "flex", alignItems: "flex-end", padding: "0 12px 8px", gap: 10, background: "#0a0e18", borderBottom: "1px solid rgba(255,255,255,0.06)", zIndex: 60, boxSizing: "content-box" }}>
+          <button onClick={() => setShowMobileNav(v => !v)} style={{ background: "none", border: "none", color: "#ef4444", fontSize: 22, cursor: "pointer", padding: "0 8px", lineHeight: 1 }}>☰</button>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 12, fontWeight: 700, color: "#ef4444", letterSpacing: 2, lineHeight: 1 }}>ADMIN</div>
           <div style={{ flex: 1 }} />
-          <button onClick={handleLogout} style={{ background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "5px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "monospace" }}>Log Out</button>
+          <button onClick={handleLogout} style={{ background: "transparent", border: "1px solid rgba(239,68,68,0.3)", color: "#ef4444", padding: "5px 10px", borderRadius: 6, cursor: "pointer", fontSize: 11, fontFamily: "monospace", lineHeight: 1 }}>Log Out</button>
         </div>
       )}
 
@@ -212,12 +212,12 @@ export default function Admin() {
         ...S.sidebar,
         ...(isMobile ? {
           position: "fixed",
-          top: 48, left: 0, bottom: 0,
+          top: "calc(48px + env(safe-area-inset-top, 0px))", left: 0, bottom: 0,
           width: 240,
           transform: showMobileNav ? "translateX(0)" : "translateX(-100%)",
           transition: "transform 0.25s ease",
           zIndex: 80,
-          height: "calc(100vh - 48px)",
+          height: "calc(100vh - 48px - env(safe-area-inset-top, 0px))",
         } : {}),
       }}>
         {!isMobile && (
@@ -240,7 +240,7 @@ export default function Admin() {
         {!isMobile && <button onClick={handleLogout} style={S.logoutBtn}>Log Out</button>}
       </aside>
 
-      <main className="admin-main" style={{ ...S.main, ...(isMobile ? { marginLeft: 0, padding: "60px 10px 18px" } : {}) }}>
+      <main className="admin-main" style={{ ...S.main, ...(isMobile ? { marginLeft: 0, padding: "calc(60px + env(safe-area-inset-top, 0px)) 10px 18px" } : {}) }}>
         {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} events={hubCalendar} overdue={overdue} competitions={competitions} isMobile={isMobile} />}
         {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} adminProxy={adminProxy} isMobile={isMobile} />}
         {page === "competitions" && <CompetitionsAdmin competitions={competitions} config={config} reload={loadAll} showToast={showToast} isMobile={isMobile} />}
