@@ -114,8 +114,11 @@ CREATE TABLE IF NOT EXISTS public.hub_resources (
     category TEXT DEFAULT 'Other' CHECK (category IN ('All', 'CAD & Design', 'Programming', 'Documentation', 'Marketing', 'Finance', 'Competition', 'Other')),
     url TEXT NOT NULL,
     file_name TEXT,
+    folder TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.hub_resources ADD COLUMN IF NOT EXISTS folder TEXT DEFAULT '';
 
 ALTER TABLE public.hub_resources ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select hub_resources" ON public.hub_resources;
@@ -132,8 +135,11 @@ CREATE TABLE IF NOT EXISTS public.hub_media (
     year INT,
     url TEXT NOT NULL,
     type TEXT DEFAULT 'image' CHECK (type IN ('image', 'video')),
+    folder TEXT DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.hub_media ADD COLUMN IF NOT EXISTS folder TEXT DEFAULT '';
 
 ALTER TABLE public.hub_media ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public select hub_media" ON public.hub_media;

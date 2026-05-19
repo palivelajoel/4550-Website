@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch, isAuthed, uploadFile, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, canEditHub, uploadFile, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
 
 const CATEGORIES = ["All", "Competition", "Build Season", "Outreach", "Team", "Other"];
 
@@ -106,16 +106,19 @@ function CropTool({ file, onCrop, onCancel }) {
     </div>
   );
 }
+
 export default function HubMedia() {
   const [authed] = useState(isAuthed());
+  const [canEdit] = useState(canEditHub());
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("All");
+  const [folderFilter, setFolderFilter] = useState(null);
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
   const [lightbox, setLightbox] = useState(null);
   const [addModal, setAddModal] = useState(false);
-  const [form, setForm] = useState({ title: "", category: "Competition", description: "", year: new Date().getFullYear(), url: "" });
-  const [uploadMode, setUploadMode] = useState("file"); // "file" | "url"
+  const [form, setForm] = useState({ title: "", category: "Competition", description: "", year: new Date().getFullYear(), url: "", folder: "" });
+  const [uploadMode, setUploadMode] = useState("file");
   const [file, setFile] = useState(null);
   const [toast, setToast] = useState("");
   const [cropFile, setCropFile] = useState(null);
@@ -145,19 +148,27 @@ export default function HubMedia() {
     if (!url) { showToast("Provide a file or URL."); setUploading(false); return; }
 
     const isVideo = url.includes("youtube") || url.includes("youtu.be") || url.includes("vimeo") || (file && file.type.startsWith("video"));
-    await sbFetch("hub_media", { method: "POST", body: JSON.stringify({ ...form, url, type: isVideo ? "video" : "image" }) });
-    showToast("Added!");
+    try {
+      await hubProxy("hub_media", "insert", { ...form, url, type: isVideo ? "video" : "image" });
+      showToast("Added!");
+    } catch (e) {
+      showToast("Add failed: " + (e.message || e));
+    }
     setAddModal(false);
     setFile(null);
-    setForm({ title: "", category: "Competition", description: "", year: new Date().getFullYear(), url: "" });
+    setForm({ title: "", category: "Competition", description: "", year: new Date().getFullYear(), url: "", folder: "" });
     setUploading(false);
     load();
   }
 
   async function deleteItem(id) {
     if (!confirm("Delete this item?")) return;
-    await sbFetch(`hub_media?id=eq.${id}`, { method: "DELETE" });
-    showToast("Deleted.");
+    try {
+      await hubProxy("hub_media", "delete", { id });
+      showToast("Deleted.");
+    } catch (e) {
+      showToast("Delete failed: " + (e.message || e));
+    }
     setLightbox(null);
     load();
   }
@@ -176,8 +187,11 @@ export default function HubMedia() {
     return item.url;
   }
 
+  const folders = [...new Set(items.map(i => i.folder || ""))].sort();
+
   const filtered = items.filter(i => {
     if (filter !== "All" && i.category !== filter) return false;
+    if (folderFilter !== null && (i.folder || "") !== folderFilter) return false;
     if (search && !i.title.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -195,7 +209,7 @@ export default function HubMedia() {
 
       {/* Toolbar */}
       <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", background: "rgba(13,17,23,0.8)" }}>
-        <button onClick={() => setAddModal(true)} style={addBtnStyle}>+ Add Media</button>
+        {canEdit ? <button onClick={() => setAddModal(true)} style={addBtnStyle}>+ Add Media</button> : <div style={{ color: C.dim, fontSize: 12, fontFamily: "monospace", padding: "10px 0" }}>View only</div>}
         <input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, width: 180 }} />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {CATEGORIES.map(cat => (
@@ -207,6 +221,31 @@ export default function HubMedia() {
             }}>{cat}</button>
           ))}
         </div>
+        {folders.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", width: "100%" }}>
+            <span style={{ fontSize: 10, color: C.dim, fontFamily: "monospace", padding: "5px 0", marginRight: 4 }}>Folders:</span>
+            <button onClick={() => setFolderFilter(null)} style={{
+              background: folderFilter === null ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.04)",
+              border: `1px solid ${folderFilter === null ? "rgba(239,68,68,0.5)" : C.border}`,
+              color: folderFilter === null ? C.red : C.muted,
+              borderRadius: 20, padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "monospace",
+            }}>All</button>
+            <button onClick={() => setFolderFilter("")} style={{
+              background: folderFilter === "" ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.04)",
+              border: `1px solid ${folderFilter === "" ? "rgba(239,68,68,0.5)" : C.border}`,
+              color: folderFilter === "" ? C.red : C.muted,
+              borderRadius: 20, padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "monospace",
+            }}>Uncategorized</button>
+            {folders.filter(f => f).map(f => (
+              <button key={f} onClick={() => setFolderFilter(f)} style={{
+                background: folderFilter === f ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.04)",
+                border: `1px solid ${folderFilter === f ? "rgba(239,68,68,0.5)" : C.border}`,
+                color: folderFilter === f ? C.red : C.muted,
+                borderRadius: 20, padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "monospace",
+              }}>{f}</button>
+            ))}
+          </div>
+        )}
         <div style={{ marginLeft: "auto", fontSize: 12, color: C.dim, fontFamily: "monospace" }}>{filtered.length} items</div>
       </div>
 
@@ -240,7 +279,10 @@ export default function HubMedia() {
                 </div>
                 <div style={{ padding: "8px 10px" }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
-                  <div style={{ fontSize: 10, color: C.dim, fontFamily: "monospace", marginTop: 2 }}>{item.year}</div>
+                  <div style={{ fontSize: 10, color: C.dim, fontFamily: "monospace", marginTop: 2, display: "flex", gap: 6 }}>
+                    <span>{item.year}</span>
+                    {item.folder && <span>· {item.folder}</span>}
+                  </div>
                 </div>
               </div>
             );
@@ -255,10 +297,10 @@ export default function HubMedia() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div>
                 <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 16, fontWeight: 700, color: C.text }}>{lightbox.title}</div>
-                <div style={{ fontSize: 12, color: C.dim, fontFamily: "monospace", marginTop: 2 }}>{lightbox.category} · {lightbox.year}</div>
+                <div style={{ fontSize: 12, color: C.dim, fontFamily: "monospace", marginTop: 2 }}>{lightbox.category} · {lightbox.year}{lightbox.folder ? ` · ${lightbox.folder}` : ""}</div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => deleteItem(lightbox.id)} style={dangerBtn}>Delete</button>
+                {canEdit && <button onClick={() => deleteItem(lightbox.id)} style={dangerBtn}>Delete</button>}
                 <button onClick={() => setLightbox(null)} style={ghostBtn}>✕ Close</button>
               </div>
             </div>
@@ -290,6 +332,10 @@ export default function HubMedia() {
               <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={selectStyle}>
                 {CATEGORIES.filter(c => c !== "All").map(c => <option key={c}>{c}</option>)}
               </select>
+              <input placeholder="Folder (optional)" value={form.folder} onChange={e => setForm({ ...form, folder: e.target.value })} list="media-folders" style={inputStyle} />
+              <datalist id="media-folders">
+                {folders.filter(f => f).map(f => <option key={f} value={f} />)}
+              </datalist>
               <input type="number" placeholder="Year" value={form.year} onChange={e => setForm({ ...form, year: e.target.value })} style={inputStyle} />
               <textarea placeholder="Description (optional)" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} />
 

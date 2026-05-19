@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch, isAuthed, uploadFile, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, canEditHub, uploadFile, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
 
 const CATEGORIES = ["All", "CAD & Design", "Programming", "Documentation", "Marketing", "Finance", "Competition", "Other"];
 const catIcon = { "CAD & Design": "🔧", Programming: "💻", Documentation: "📄", Marketing: "📢", Finance: "💰", Competition: "🏆", Other: "📁" };
 
 export default function HubResources() {
   const [authed] = useState(isAuthed());
+  const [canEdit] = useState(canEditHub());
   const [items, setItems] = useState([]);
   const [filter, setFilter] = useState("All");
+  const [folderFilter, setFolderFilter] = useState(null);
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", category: "Documentation", url: "", file_name: "" });
+  const [form, setForm] = useState({ title: "", description: "", category: "Documentation", url: "", file_name: "", folder: "" });
   const [uploadMode, setUploadMode] = useState("url");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -41,24 +43,35 @@ export default function HubResources() {
       file_name = file.name;
     }
     if (!url) { showToast("Provide a URL or file."); setUploading(false); return; }
-    await sbFetch("hub_resources", { method: "POST", body: JSON.stringify({ ...form, url, file_name }) });
-    showToast("Resource added!");
+    try {
+      await hubProxy("hub_resources", "insert", { ...form, url, file_name });
+      showToast("Resource added!");
+    } catch (e) {
+      showToast("Add failed: " + (e.message || e));
+    }
     setModal(false);
     setFile(null);
-    setForm({ title: "", description: "", category: "Documentation", url: "", file_name: "" });
+    setForm({ title: "", description: "", category: "Documentation", url: "", file_name: "", folder: "" });
     setUploading(false);
     load();
   }
 
   async function deleteItem(id) {
     if (!confirm("Delete this resource?")) return;
-    await sbFetch(`hub_resources?id=eq.${id}`, { method: "DELETE" });
-    showToast("Deleted.");
+    try {
+      await hubProxy("hub_resources", "delete", { id });
+      showToast("Deleted.");
+    } catch (e) {
+      showToast("Delete failed: " + (e.message || e));
+    }
     load();
   }
 
+  const folders = [...new Set(items.map(i => i.folder || ""))].sort();
+
   const filtered = items.filter(i => {
     if (filter !== "All" && i.category !== filter) return false;
+    if (folderFilter !== null && (i.folder || "") !== folderFilter) return false;
     if (search && !i.title.toLowerCase().includes(search.toLowerCase()) && !i.description?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -94,7 +107,7 @@ export default function HubResources() {
 
       {/* Toolbar */}
       <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <button onClick={() => setModal(true)} style={addBtnStyle}>+ Add Resource</button>
+        {canEdit ? <button onClick={() => setModal(true)} style={addBtnStyle}>+ Add Resource</button> : <div style={{ color: C.dim, fontSize: 12, fontFamily: "monospace", padding: "10px 0" }}>View only</div>}
         <input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, width: 180 }} />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {CATEGORIES.map(cat => (
@@ -106,6 +119,31 @@ export default function HubResources() {
             }}>{cat}</button>
           ))}
         </div>
+        {folders.length > 0 && (
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", width: "100%" }}>
+            <span style={{ fontSize: 10, color: C.dim, fontFamily: "monospace", padding: "5px 0", marginRight: 4 }}>Folders:</span>
+            <button onClick={() => setFolderFilter(null)} style={{
+              background: folderFilter === null ? "rgba(236,72,153,0.15)" : "rgba(255,255,255,0.04)",
+              border: `1px solid ${folderFilter === null ? "#ec4899" : C.border}`,
+              color: folderFilter === null ? "#ec4899" : C.muted,
+              borderRadius: 20, padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "monospace",
+            }}>All</button>
+            <button onClick={() => setFolderFilter("")} style={{
+              background: folderFilter === "" ? "rgba(236,72,153,0.15)" : "rgba(255,255,255,0.04)",
+              border: `1px solid ${folderFilter === "" ? "#ec4899" : C.border}`,
+              color: folderFilter === "" ? "#ec4899" : C.muted,
+              borderRadius: 20, padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "monospace",
+            }}>Uncategorized</button>
+            {folders.filter(f => f).map(f => (
+              <button key={f} onClick={() => setFolderFilter(f)} style={{
+                background: folderFilter === f ? "rgba(236,72,153,0.15)" : "rgba(255,255,255,0.04)",
+                border: `1px solid ${folderFilter === f ? "#ec4899" : C.border}`,
+                color: folderFilter === f ? "#ec4899" : C.muted,
+                borderRadius: 20, padding: "3px 10px", cursor: "pointer", fontSize: 11, fontFamily: "monospace",
+              }}>{f}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -136,12 +174,17 @@ export default function HubResources() {
                       onMouseLeave={e => e.target.style.color = C.text}
                     >{item.title}</a>
                     {item.description && <div style={{ fontSize: 11, color: C.dim, marginTop: 3, lineHeight: 1.5 }}>{item.description}</div>}
-                    {item.file_name && <div style={{ fontSize: 10, color: "#475569", fontFamily: "monospace", marginTop: 3 }}>{item.file_name}</div>}
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 3 }}>
+                      {item.file_name && <div style={{ fontSize: 10, color: "#475569", fontFamily: "monospace" }}>{item.file_name}</div>}
+                      {item.folder && <div style={{ fontSize: 10, color: "#475569", fontFamily: "monospace" }}>📁 {item.folder}</div>}
+                    </div>
                   </div>
-                  <button onClick={() => deleteItem(item.id)} style={{ background: "transparent", border: "none", color: "#475569", cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "0 2px" }}
-                    onMouseEnter={e => e.target.style.color = C.red}
-                    onMouseLeave={e => e.target.style.color = "#475569"}
-                  >✕</button>
+                  {canEdit && (
+                    <button onClick={() => deleteItem(item.id)} style={{ background: "transparent", border: "none", color: "#475569", cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "0 2px" }}
+                      onMouseEnter={e => e.target.style.color = C.red}
+                      onMouseLeave={e => e.target.style.color = "#475569"}
+                    >✕</button>
+                  )}
                 </div>
               ))}
             </div>
@@ -160,6 +203,10 @@ export default function HubResources() {
               <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={selectStyle}>
                 {CATEGORIES.filter(c => c !== "All").map(c => <option key={c}>{c}</option>)}
               </select>
+              <input placeholder="Folder (optional)" value={form.folder} onChange={e => setForm({ ...form, folder: e.target.value })} list="res-folders" style={inputStyle} />
+              <datalist id="res-folders">
+                {folders.filter(f => f).map(f => <option key={f} value={f} />)}
+              </datalist>
               <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: `1px solid ${C.border}` }}>
                 {["url", "file"].map(m => (
                   <button key={m} onClick={() => setUploadMode(m)} style={{ flex: 1, padding: "8px", background: uploadMode === m ? "rgba(236,72,153,0.2)" : "transparent", border: "none", color: uploadMode === m ? "#ec4899" : C.muted, cursor: "pointer", fontSize: 12, fontFamily: "monospace" }}>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import Starfield from "./Starfield.jsx";
 import { CaptainPhoto } from "./hubUtils.jsx";
 
@@ -65,6 +65,80 @@ function GlitchOverlay() {
           }}
         />
       ))}
+    </div>
+  );
+}
+
+// Wraps a section and randomly applies a visual glitch burst (filter + offset + flicker overlay)
+const GlitchSection = memo(function GlitchSection({ children }) {
+  const [glitching, setGlitching] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    const schedule = () => {
+      const delay = 5000 + Math.random() * 15000;
+      timerRef.current = setTimeout(() => {
+        setGlitching(true);
+        timerRef.current = setTimeout(() => {
+          setGlitching(false);
+          schedule();
+        }, 600 + Math.random() * 1400);
+      }, delay);
+    };
+    schedule();
+    return () => clearTimeout(timerRef.current);
+  }, []);
+
+  const dx = glitching ? (Math.random() - 0.5) * 10 : 0;
+  const dy = glitching ? (Math.random() - 0.5) * 5 : 0;
+  const sk = glitching ? (Math.random() - 0.5) * 3 : 0;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <div style={{
+        filter: glitching ? "hue-rotate(90deg) brightness(1.6) contrast(2) saturate(3)" : "none",
+        transform: glitching ? `translate(${dx}px, ${dy}px) skewX(${sk}deg)` : "none",
+        transition: glitching ? "none" : "filter 0.4s ease-out, transform 0.3s ease-out",
+      }}>
+        {children}
+      </div>
+      {glitching && (
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10,
+          background: "linear-gradient(90deg, rgba(239,68,68,0.18), rgba(59,130,246,0.14), rgba(239,68,68,0.18))",
+          mixBlendMode: "screen",
+          animation: "glitchFlicker 0.08s linear infinite",
+        }} />
+      )}
+    </div>
+  );
+});
+
+// Subtle bear / Bruin references scattered in the background
+function BruinBg() {
+  return (
+    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: 0 }}>
+      <div style={{ position: "absolute", top: "18%", left: "2%", fontSize: 140, fontWeight: 900, color: "rgba(239,68,68,0.025)", fontFamily: "'Orbitron', sans-serif", transform: "rotate(-12deg)", letterSpacing: 24, whiteSpace: "nowrap" }}>BRUIN</div>
+      <div style={{ position: "absolute", bottom: "28%", right: "1%", fontSize: 100, fontWeight: 900, color: "rgba(59,130,246,0.025)", fontFamily: "'Orbitron', sans-serif", transform: "rotate(8deg)", letterSpacing: 18, whiteSpace: "nowrap" }}>BEAR DOWN</div>
+      <div style={{ position: "absolute", top: "55%", left: "55%", fontSize: 70, fontWeight: 900, color: "rgba(239,68,68,0.02)", fontFamily: "'Orbitron', sans-serif", transform: "rotate(-6deg)", letterSpacing: 12, whiteSpace: "nowrap" }}>#BRUINNATION</div>
+      <div style={{ position: "absolute", top: "5%", right: "12%", fontSize: 50, fontWeight: 900, color: "rgba(239,68,68,0.015)", fontFamily: "'Orbitron', sans-serif", transform: "rotate(20deg)", letterSpacing: 8, whiteSpace: "nowrap" }}>GO BRUINS</div>
+      <div style={{ position: "absolute", bottom: "50%", left: "35%", fontSize: 36, fontWeight: 900, color: "rgba(59,130,246,0.015)", fontFamily: "'Orbitron', sans-serif", transform: "rotate(-2deg)", letterSpacing: 6, whiteSpace: "nowrap" }}>#BEARPRIDE</div>
+      <span style={{ position: "absolute", top: "12%", left: "78%", fontSize: 32, opacity: 0.035 }}>🐻</span>
+      <span style={{ position: "absolute", top: "70%", left: "8%", fontSize: 26, opacity: 0.03 }}>🐻</span>
+      <span style={{ position: "absolute", top: "38%", left: "42%", fontSize: 20, opacity: 0.025 }}>🐻</span>
+      <span style={{ position: "absolute", top: "4%", left: "28%", fontSize: 18, opacity: 0.02 }}>🐻</span>
+      <span style={{ position: "absolute", bottom: "8%", left: "72%", fontSize: 28, opacity: 0.03 }}>🐻</span>
+      <span style={{ position: "absolute", top: "82%", left: "45%", fontSize: 22, opacity: 0.02 }}>🐻</span>
+      <svg style={{ position: "absolute", top: "25%", left: "70%", width: 40, height: 40, opacity: 0.025 }} viewBox="0 0 100 100">
+        <path d="M50 15 C35 15 25 25 25 40 C25 55 35 65 50 80 C65 65 75 55 75 40 C75 25 65 15 50 15Z" fill="#ef4444" />
+        <circle cx="38" cy="35" r="6" fill="#080a0f" /><circle cx="62" cy="35" r="6" fill="#080a0f" />
+        <circle cx="50" cy="48" r="8" fill="#080a0f" />
+      </svg>
+      <svg style={{ position: "absolute", bottom: "15%", right: "20%", width: 32, height: 32, opacity: 0.02 }} viewBox="0 0 100 100">
+        <path d="M50 15 C35 15 25 25 25 40 C25 55 35 65 50 80 C65 65 75 55 75 40 C75 25 65 15 50 15Z" fill="#3b82f6" />
+        <circle cx="38" cy="35" r="6" fill="#080a0f" /><circle cx="62" cy="35" r="6" fill="#080a0f" />
+        <circle cx="50" cy="48" r="8" fill="#080a0f" />
+      </svg>
     </div>
   );
 }
@@ -260,6 +334,7 @@ export default function Landing() {
         <div style={{ position:"absolute", inset:0, backgroundImage:"linear-gradient(rgba(239,68,68,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.04) 1px,transparent 1px)", backgroundSize:"44px 44px" }} />
         <div style={{ position:"absolute", left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,rgba(239,68,68,0.3),transparent)", animation:"scanline 4s linear infinite", top:"-4px" }} />
       </div>
+      <BruinBg />
       {/* Distorted grid that warps on scroll */}
         <DistortedGrid />
       <style>{`
@@ -274,6 +349,7 @@ export default function Landing() {
         @keyframes scanline{0%{top:-4px;}100%{top:100%;}}
         @keyframes glitch{0%,90%,100%{text-shadow:none;}92%{text-shadow:-3px 0 #ef4444,3px 0 #3b82f6;}95%{text-shadow:3px 0 #ef4444,-3px 0 #3b82f6;}97%{text-shadow:none;}}
         @keyframes glitchFade{from{opacity:1;}to{opacity:0;}}
+        @keyframes glitchFlicker{0%,100%{opacity:1;}50%{opacity:0.2;}}
         a{-webkit-tap-highlight-color:transparent;}
         /* Make sections semi-transparent to show the grid */
         section,footer,nav{position:relative;z-index:1;background:rgba(8,10,15,0.85);backdrop-filter:blur(10px);}
@@ -343,180 +419,200 @@ export default function Landing() {
       <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(180deg,rgba(8,10,15,0.55) 0%,rgba(13,17,23,0.66) 100%)", paddingTop: 70, position: "relative", overflow: "hidden" }}>
         <ParticleCanvas isMobile={isMobile} />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(239,68,68,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(239,68,68,0.04) 1px,transparent 1px)", backgroundSize: isMobile ? "40px 40px" : "60px 60px", pointerEvents: "none" }} />
-        <div ref={heroParallaxRef} style={{ textAlign: "center", zIndex: 1, padding: isMobile ? "0 20px" : "0 24px", transform: isMobile ? "none" : "none" }}>
-          <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: isMobile ? 9 : 11, color: "#64748b", letterSpacing: isMobile ? 2 : 3, marginBottom: 20 }}>FRC ROBOTICS · CHERRY CREEK HIGH SCHOOL · GREENWOOD VILLAGE, CO</div>
-          <img src={logoUrl} alt="Team Logo" style={{ width: isMobile ? 88 : 110, height: isMobile ? 88 : 110, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)", boxShadow: "0 0 40px rgba(239,68,68,0.2)", marginBottom: isMobile ? 20 : 28, animation: "fadeUp 0.8s ease both" }} />
-          <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: isMobile ? "clamp(22px,8vw,40px)" : "clamp(32px,6vw,72px)", letterSpacing: isMobile ? 2 : 4, color: "#f1f5f9", animation: "fadeUp 0.8s ease 0.15s both, glitch 10s ease-in-out infinite" }}>SOMETHING'S BRUIN</h1>
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: isMobile ? "clamp(16px,5vw,24px)" : "clamp(18px,3vw,32px)", color: "#ef4444", letterSpacing: isMobile ? 6 : 8, marginTop: 6, animation: "fadeUp 0.8s ease 0.25s both, glitch 12s ease-in-out infinite 2s" }}>FRC TEAM 4550</div>
-          <div style={{ width: 50, height: 2, background: "linear-gradient(90deg,transparent,#ef4444,transparent)", margin: isMobile ? "18px auto" : "24px auto", animation: "fadeUp 0.8s ease 0.35s both" }} />
-          <p style={{ color: "#94a3b8", fontSize: isMobile ? 14 : 16, maxWidth: 420, margin: "0 auto", marginBottom: isMobile ? 28 : 36, lineHeight: 1.7, minHeight: isMobile ? 44 : 28, padding: "0 8px" }}>
-            Engineering excellence. Community impact. Championship mindset.
-          </p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", animation: "fadeUp 0.8s ease 0.5s both" }}>
-            <a href="#about" style={{ background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>LEARN MORE</a>
-            <a href={donate} target="_blank" rel="noreferrer" style={{ background: "transparent", color: "#ef4444", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, border: "1px solid #ef4444", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>SUPPORT US</a>
+        <GlitchSection>
+          <div ref={heroParallaxRef} style={{ textAlign: "center", zIndex: 1, padding: isMobile ? "0 20px" : "0 24px", transform: isMobile ? "none" : "none" }}>
+            <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: isMobile ? 9 : 11, color: "#64748b", letterSpacing: isMobile ? 2 : 3, marginBottom: 20 }}>FRC ROBOTICS · CHERRY CREEK HIGH SCHOOL · GREENWOOD VILLAGE, CO</div>
+            <img src={logoUrl} alt="Team Logo" style={{ width: isMobile ? 88 : 110, height: isMobile ? 88 : 110, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.4)", boxShadow: "0 0 40px rgba(239,68,68,0.2)", marginBottom: isMobile ? 20 : 28, animation: "fadeUp 0.8s ease both" }} />
+            <h1 style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: isMobile ? "clamp(22px,8vw,40px)" : "clamp(32px,6vw,72px)", letterSpacing: isMobile ? 2 : 4, color: "#f1f5f9", animation: "fadeUp 0.8s ease 0.15s both, glitch 10s ease-in-out infinite" }}>SOMETHING'S BRUIN</h1>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: isMobile ? "clamp(16px,5vw,24px)" : "clamp(18px,3vw,32px)", color: "#ef4444", letterSpacing: isMobile ? 6 : 8, marginTop: 6, animation: "fadeUp 0.8s ease 0.25s both, glitch 12s ease-in-out infinite 2s" }}>FRC TEAM 4550</div>
+            <div style={{ width: 50, height: 2, background: "linear-gradient(90deg,transparent,#ef4444,transparent)", margin: isMobile ? "18px auto" : "24px auto", animation: "fadeUp 0.8s ease 0.35s both" }} />
+            <p style={{ color: "#94a3b8", fontSize: isMobile ? 14 : 16, maxWidth: 420, margin: "0 auto", marginBottom: isMobile ? 28 : 36, lineHeight: 1.7, minHeight: isMobile ? 44 : 28, padding: "0 8px" }}>
+              Engineering excellence. Community impact. Championship mindset.
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap", animation: "fadeUp 0.8s ease 0.5s both" }}>
+              <a href="#about" style={{ background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>LEARN MORE</a>
+              <a href={donate} target="_blank" rel="noreferrer" style={{ background: "transparent", color: "#ef4444", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, border: "1px solid #ef4444", fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>SUPPORT US</a>
+            </div>
           </div>
-        </div>
+        </GlitchSection>
       </section>
 
       {/* ABOUT */}
       <section id="about"><div className="sec">
-        <FadeSection>
-          <Eyebrow>// WHO WE ARE</Eyebrow>
-          <SectionTitle>About the Team</SectionTitle>
-          <div className="about-grid">
-            <div>
-              <p style={{ color: "#94a3b8", lineHeight: 1.8, fontSize: 15 }}>FRC Team 4550 "Something's Bruin" has been competing since 2012, representing Cherry Creek High School in FIRST Robotics Competition. Our team of 40–50 student engineers, programmers, and designers builds competition-ready robots each season — from scratch, in six weeks.</p>
-              <p style={{ color: "#94a3b8", lineHeight: 1.8, fontSize: 15, marginTop: 14 }}>We've competed at the 2016 World Championship and continue to push the boundaries of what student-built robots can achieve. Beyond the robot, we're deeply committed to STEM outreach and community impact across the Denver metro area.</p>
+        <GlitchSection>
+          <FadeSection>
+            <Eyebrow>// WHO WE ARE</Eyebrow>
+            <SectionTitle>About the Team</SectionTitle>
+            <div className="about-grid">
+              <div>
+                <p style={{ color: "#94a3b8", lineHeight: 1.8, fontSize: 15 }}>FRC Team 4550 "Something's Bruin" has been competing since 2012, representing Cherry Creek High School in FIRST Robotics Competition. Our team of 40–50 student engineers, programmers, and designers builds competition-ready robots each season — from scratch, in six weeks.</p>
+                <p style={{ color: "#94a3b8", lineHeight: 1.8, fontSize: 15, marginTop: 14 }}>We've competed at the 2016 World Championship and continue to push the boundaries of what student-built robots can achieve. Beyond the robot, we're deeply committed to STEM outreach and community impact across the Denver metro area.</p>
+              </div>
+              <div className="stats-grid">
+                {[{ num: "12+", label: "Years Competing" }, { num: "40–50", label: "Members" }, { num: "2016", label: "World Championship" }, { num: "3", label: "Sub-Teams" }].map((s, i) => (
+                  <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: isMobile ? "18px 14px" : "24px 20px", textAlign: "center" }}>
+                    <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 22 : 28, fontWeight: 700, color: "#ef4444" }}>{s.num}</div>
+                    <div style={{ fontSize: 11, color: "#64748b", fontFamily: "'Share Tech Mono', monospace", marginTop: 4 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="stats-grid">
-              {[{ num: "12+", label: "Years Competing" }, { num: "40–50", label: "Members" }, { num: "2016", label: "World Championship" }, { num: "3", label: "Sub-Teams" }].map((s, i) => (
-                <div key={s.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: isMobile ? "18px 14px" : "24px 20px", textAlign: "center" }}>
-                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 22 : 28, fontWeight: 700, color: "#ef4444" }}>{s.num}</div>
-                  <div style={{ fontSize: 11, color: "#64748b", fontFamily: "'Share Tech Mono', monospace", marginTop: 4 }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </FadeSection>
+          </FadeSection>
+        </GlitchSection>
       </div></section>
 
       {/* OUR TEAM */}
       {captains.length > 0 && (
         <section id="team" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">
-          <FadeSection>
-            <Eyebrow>// LEADERSHIP</Eyebrow>
-            <SectionTitle>Our Team</SectionTitle>
-            <div className="captains-grid">
-              {captains.map((c, i) => (
-                <div key={c.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: isMobile ? "20px 14px" : "26px 20px", textAlign: "center" }}>
-                  <CaptainPhoto photoUrl={c.photo_url} name={c.name} size={isMobile ? 70 : 88} style={{ display: "block", margin: "0 auto 12px", borderWidth: 2, borderStyle: "solid", borderColor: "rgba(239,68,68,0.4)" }} />
-                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>{c.name}</div>
-                  <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, color: "#ef4444", letterSpacing: 2, marginBottom: c.bio ? 8 : 0 }}>{c.position}</div>
-                  {c.bio && <p style={{ color: "#64748b", fontSize: 12, lineHeight: 1.6 }}>{c.bio}</p>}
-                </div>
-              ))}
-            </div>
-          </FadeSection>
+          <GlitchSection>
+            <FadeSection>
+              <Eyebrow>// LEADERSHIP</Eyebrow>
+              <SectionTitle>Our Team</SectionTitle>
+              <div className="captains-grid">
+                {captains.map((c, i) => (
+                  <div key={c.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: isMobile ? "20px 14px" : "26px 20px", textAlign: "center" }}>
+                    <CaptainPhoto photoUrl={c.photo_url} name={c.name} size={isMobile ? 70 : 88} style={{ display: "block", margin: "0 auto 12px", borderWidth: 2, borderStyle: "solid", borderColor: "rgba(239,68,68,0.4)" }} />
+                    <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 11 : 13, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>{c.name}</div>
+                    <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, color: "#ef4444", letterSpacing: 2, marginBottom: c.bio ? 8 : 0 }}>{c.position}</div>
+                    {c.bio && <p style={{ color: "#64748b", fontSize: 12, lineHeight: 1.6 }}>{c.bio}</p>}
+                  </div>
+                ))}
+              </div>
+            </FadeSection>
+          </GlitchSection>
         </div></section>
       )}
 
       {/* SUB-TEAMS */}
       <section id="sub-teams"><div className="sec">
-        <FadeSection>
-          <Eyebrow>// HOW WE BUILD</Eyebrow>
-          <SectionTitle>Sub-Teams</SectionTitle>
-          <div className="subteams-grid">
-            {SUB_TEAMS.map((st, i) => (
-              <div key={st.name} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(255,255,255,0.08)`, borderTop: `3px solid ${st.color}`, borderRadius: 10, padding: isMobile ? "22px 18px" : "28px 24px" }}>
-                <div style={{ fontSize: 28, marginBottom: 10 }}>{st.icon}</div>
-                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 12, letterSpacing: 1 }}>{st.name}</div>
-                <p style={{ color: "#94a3b8", lineHeight: 1.75, fontSize: 14 }}>{st.description}</p>
-              </div>
-            ))}
-          </div>
-        </FadeSection>
+        <GlitchSection>
+          <FadeSection>
+            <Eyebrow>// HOW WE BUILD</Eyebrow>
+            <SectionTitle>Sub-Teams</SectionTitle>
+            <div className="subteams-grid">
+              {SUB_TEAMS.map((st, i) => (
+                <div key={st.name} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(255,255,255,0.08)`, borderTop: `3px solid ${st.color}`, borderRadius: 10, padding: isMobile ? "22px 18px" : "28px 24px" }}>
+                  <div style={{ fontSize: 28, marginBottom: 10 }}>{st.icon}</div>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 12, letterSpacing: 1 }}>{st.name}</div>
+                  <p style={{ color: "#94a3b8", lineHeight: 1.75, fontSize: 14 }}>{st.description}</p>
+                </div>
+              ))}
+            </div>
+          </FadeSection>
+        </GlitchSection>
       </div></section>
 
       {/* OUTREACH */}
       <section id="outreach" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">
-        <FadeSection>
-          <Eyebrow>// COMMUNITY</Eyebrow>
-          <SectionTitle>Community Outreach</SectionTitle>
-          <div className="outreach-grid">
-            {[
-              { icon: "🤖", title: "Team Mentoring", desc: "We mentor younger FRC and FLL teams throughout the Denver metro area, sharing technical knowledge and competition experience." },
-              { icon: "🏫", title: "School Outreach", desc: "Visiting local elementary and middle schools to inspire the next generation of engineers through hands-on robotics demos." },
-              { icon: "🌍", title: "Community Events", desc: "Participating in local STEM fairs, library events, and community festivals to promote robotics and engineering education." },
-            ].map((o, i) => (
-              <div key={o.title} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: isMobile ? "22px 18px" : "28px 24px" }}>
-                <div style={{ fontSize: 28, marginBottom: 10 }}>{o.icon}</div>
-                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#f1f5f9", marginBottom: 10 }}>{o.title}</div>
-                <p style={{ color: "#94a3b8", lineHeight: 1.7, fontSize: 14 }}>{o.desc}</p>
-              </div>
-            ))}
-          </div>
-        </FadeSection>
+        <GlitchSection>
+          <FadeSection>
+            <Eyebrow>// COMMUNITY</Eyebrow>
+            <SectionTitle>Community Outreach</SectionTitle>
+            <div className="outreach-grid">
+              {[
+                { icon: "🤖", title: "Team Mentoring", desc: "We mentor younger FRC and FLL teams throughout the Denver metro area, sharing technical knowledge and competition experience." },
+                { icon: "🏫", title: "School Outreach", desc: "Visiting local elementary and middle schools to inspire the next generation of engineers through hands-on robotics demos." },
+                { icon: "🌍", title: "Community Events", desc: "Participating in local STEM fairs, library events, and community festivals to promote robotics and engineering education." },
+              ].map((o, i) => (
+                <div key={o.title} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: isMobile ? "22px 18px" : "28px 24px" }}>
+                  <div style={{ fontSize: 28, marginBottom: 10 }}>{o.icon}</div>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 13, fontWeight: 700, color: "#f1f5f9", marginBottom: 10 }}>{o.title}</div>
+                  <p style={{ color: "#94a3b8", lineHeight: 1.7, fontSize: 14 }}>{o.desc}</p>
+                </div>
+              ))}
+            </div>
+          </FadeSection>
+        </GlitchSection>
       </div></section>
 
       {/* MEDIA */}
       <section id="media-gallery"><div className="sec">
-        <FadeSection>
-          <Eyebrow>// GALLERY</Eyebrow>
-          <SectionTitle>Media Gallery</SectionTitle>
-          <p style={{ color: "#94a3b8", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15, textAlign: "center" }}>Browse photos and videos from competitions, outreach events, build season, and team activities.</p>
-          <div style={{ textAlign: "center" }}>
-            <a href="/media" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 36px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>EXPLORE GALLERY →</a>
-          </div>
-        </FadeSection>
+        <GlitchSection>
+          <FadeSection>
+            <Eyebrow>// GALLERY</Eyebrow>
+            <SectionTitle>Media Gallery</SectionTitle>
+            <p style={{ color: "#94a3b8", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15, textAlign: "center" }}>Browse photos and videos from competitions, outreach events, build season, and team activities.</p>
+            <div style={{ textAlign: "center" }}>
+              <a href="/media" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 36px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>EXPLORE GALLERY →</a>
+            </div>
+          </FadeSection>
+        </GlitchSection>
       </div></section>
 
       {/* SOCIAL MEDIA */}
       <section id="media"><div className="sec">
-        <FadeSection>
-          <Eyebrow>// FOLLOW ALONG</Eyebrow>
-          <SectionTitle>Social Media</SectionTitle>
-          <div className="media-row">
-            {[
-              { href: ig, icon: "📸", title: "Instagram", handle: "@cherrycreek.robotics", border: "rgba(59,130,246,0.3)" },
-              { href: yt, icon: "▶️", title: "YouTube", handle: "Team 4550 Something's Bruin", border: "rgba(239,68,68,0.3)" },
-            ].map((m, i) => (
-              <a key={m.title} href={m.href} target="_blank" rel="noreferrer" className="media-card" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${m.border}`, borderRadius: 10, padding: isMobile ? "24px 18px" : "32px 24px", textDecoration: "none", textAlign: "center", display: "block" }}>
-                <div style={{ fontSize: 32, marginBottom: 10 }}>{m.icon}</div>
-                <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 6 }}>{m.title}</div>
-                <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: "#64748b" }}>{m.handle}</div>
-              </a>
-            ))}
-          </div>
-        </FadeSection>
+        <GlitchSection>
+          <FadeSection>
+            <Eyebrow>// FOLLOW ALONG</Eyebrow>
+            <SectionTitle>Social Media</SectionTitle>
+            <div className="media-row">
+              {[
+                { href: ig, icon: "📸", title: "Instagram", handle: "@cherrycreek.robotics", border: "rgba(59,130,246,0.3)" },
+                { href: yt, icon: "▶️", title: "YouTube", handle: "Team 4550 Something's Bruin", border: "rgba(239,68,68,0.3)" },
+              ].map((m, i) => (
+                <a key={m.title} href={m.href} target="_blank" rel="noreferrer" className="media-card" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${m.border}`, borderRadius: 10, padding: isMobile ? "24px 18px" : "32px 24px", textDecoration: "none", textAlign: "center", display: "block" }}>
+                  <div style={{ fontSize: 32, marginBottom: 10 }}>{m.icon}</div>
+                  <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 15, fontWeight: 700, color: "#f1f5f9", marginBottom: 6 }}>{m.title}</div>
+                  <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 12, color: "#64748b" }}>{m.handle}</div>
+                </a>
+              ))}
+            </div>
+          </FadeSection>
+        </GlitchSection>
       </div></section>
 
       <SponsorBar sponsors={sponsors} />
 
       {/* SPONSORS */}
       <section id="sponsors" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">
-        <FadeSection>
-          <div style={{ textAlign: "center" }}>
-            <Eyebrow>// PARTNER WITH US</Eyebrow>
-            <SectionTitle>Become a Sponsor</SectionTitle>
-            <p style={{ color: "#94a3b8", maxWidth: 560, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15 }}>Sponsoring FRC Team 4550 connects your organization with motivated young engineers and demonstrates your commitment to STEM education. Multiple sponsorship tiers are available with recognition at competitions, on our robot, and across our platforms.</p>
-            <div className="tier-row">
-              {[{ name: "Bronze", color: "#b45309" }, { name: "Silver", color: "#94a3b8" }, { name: "Gold", color: "#eab308" }, { name: "Platinum", color: "#818cf8" }].map((t, i) => (
-                <div key={t.name} style={{ border: `1px solid ${t.color}`, borderRadius: 20, padding: isMobile ? "5px 14px" : "6px 20px", fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 10 : 12, fontWeight: 700, letterSpacing: 2, color: t.color }}>{t.name}</div>
-              ))}
+        <GlitchSection>
+          <FadeSection>
+            <div style={{ textAlign: "center" }}>
+              <Eyebrow>// PARTNER WITH US</Eyebrow>
+              <SectionTitle>Become a Sponsor</SectionTitle>
+              <p style={{ color: "#94a3b8", maxWidth: 560, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15 }}>Sponsoring FRC Team 4550 connects your organization with motivated young engineers and demonstrates your commitment to STEM education. Multiple sponsorship tiers are available with recognition at competitions, on our robot, and across our platforms.</p>
+              <div className="tier-row">
+                {[{ name: "Bronze", color: "#b45309" }, { name: "Silver", color: "#94a3b8" }, { name: "Gold", color: "#eab308" }, { name: "Platinum", color: "#818cf8" }].map((t, i) => (
+                  <div key={t.name} style={{ border: `1px solid ${t.color}`, borderRadius: 20, padding: isMobile ? "5px 14px" : "6px 20px", fontFamily: "'Orbitron', sans-serif", fontSize: isMobile ? 10 : 12, fontWeight: 700, letterSpacing: 2, color: t.color }}>{t.name}</div>
+                ))}
+              </div>
+              <a href={`mailto:${email}`} style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>CONTACT US TO SPONSOR</a>
             </div>
-            <a href={`mailto:${email}`} style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 24px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>CONTACT US TO SPONSOR</a>
-          </div>
-        </FadeSection>
+          </FadeSection>
+        </GlitchSection>
       </div></section>
 
       {/* DONATE */}
       <section style={{ background: "rgba(239,68,68,0.05)", borderTop: "1px solid rgba(239,68,68,0.2)" }}><div className="sec">
-        <FadeSection>
-          <div style={{ textAlign: "center" }}>
-            <Eyebrow>// SUPPORT THE TEAM</Eyebrow>
-            <SectionTitle>Make a Donation</SectionTitle>
-            <p style={{ color: "#94a3b8", maxWidth: 460, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15 }}>Every donation goes directly toward robot parts, competition fees, and team travel. Help us compete at the highest level.</p>
-            <a href={donate} target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>DONATE NOW</a>
-          </div>
-        </FadeSection>
+        <GlitchSection>
+          <FadeSection>
+            <div style={{ textAlign: "center" }}>
+              <Eyebrow>// SUPPORT THE TEAM</Eyebrow>
+              <SectionTitle>Make a Donation</SectionTitle>
+              <p style={{ color: "#94a3b8", maxWidth: 460, margin: "0 auto 28px", lineHeight: 1.8, fontSize: 15 }}>Every donation goes directly toward robot parts, competition fees, and team travel. Help us compete at the highest level.</p>
+              <a href={donate} target="_blank" rel="noreferrer" style={{ display: "inline-block", background: "#ef4444", color: "#fff", textDecoration: "none", padding: isMobile ? "12px 28px" : "14px 32px", borderRadius: 6, fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 11 : 13, letterSpacing: 2 }}>DONATE NOW</a>
+            </div>
+          </FadeSection>
+        </GlitchSection>
       </div></section>
 
       {/* CONTACT */}
       <section id="contact"><div className="sec">
-        <FadeSection>
-          <div style={{ textAlign: "center" }}>
-            <Eyebrow>// GET IN TOUCH</Eyebrow>
-            <SectionTitle>Contact</SectionTitle>
-            <div className="contact-row">
-              {[{ href: `mailto:${email}`, icon: "✉️", label: email }, { href: ig, icon: "📸", label: "@cherrycreek.robotics" }].map((c, i) => (
-                <a key={c.label} href={c.href} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, color: "#94a3b8", textDecoration: "none", fontSize: isMobile ? 13 : 15, fontFamily: "'Share Tech Mono', monospace", padding: isMobile ? "12px 20px" : 0, background: isMobile ? "rgba(255,255,255,0.04)" : "transparent", borderRadius: isMobile ? 8 : 0, border: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
-                  <span style={{ fontSize: 18 }}>{c.icon}</span>{c.label}
-                </a>
-              ))}
+        <GlitchSection>
+          <FadeSection>
+            <div style={{ textAlign: "center" }}>
+              <Eyebrow>// GET IN TOUCH</Eyebrow>
+              <SectionTitle>Contact</SectionTitle>
+              <div className="contact-row">
+                {[{ href: `mailto:${email}`, icon: "✉️", label: email }, { href: ig, icon: "📸", label: "@cherrycreek.robotics" }].map((c, i) => (
+                  <a key={c.label} href={c.href} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, color: "#94a3b8", textDecoration: "none", fontSize: isMobile ? 13 : 15, fontFamily: "'Share Tech Mono', monospace", padding: isMobile ? "12px 20px" : 0, background: isMobile ? "rgba(255,255,255,0.04)" : "transparent", borderRadius: isMobile ? 8 : 0, border: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
+                    <span style={{ fontSize: 18 }}>{c.icon}</span>{c.label}
+                  </a>
+                ))}
+              </div>
             </div>
-          </div>
-        </FadeSection>
+          </FadeSection>
+        </GlitchSection>
       </div></section>
 
       {/* FOOTER */}

@@ -26,6 +26,23 @@ export default function HubTasks() {
     load();
   }, []);
 
+  // Auto-delete completed tasks older than 24 hours
+  useEffect(() => {
+    const cleanup = async () => {
+      try {
+        const r = await sbFetch("hub_tasks?select=id,status,created_at&status=eq.Done");
+        if (!r) return;
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        await Promise.all(r.filter(t => t.created_at && new Date(t.created_at).getTime() < cutoff).map(t =>
+          hubProxy("hub_tasks", "delete", { id: t.id }).catch(() => {})
+        ));
+      } catch {}
+    };
+    cleanup();
+    const interval = setInterval(cleanup, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(""), 3000); }
 
   async function load() {
