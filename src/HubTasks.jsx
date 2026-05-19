@@ -71,9 +71,11 @@ export default function HubTasks() {
     try {
       if (modal.mode === "add") {
         await hubProxy("hub_tasks", "insert", payload);
+        if (payload.status === "Done") notifyTaskDone(payload);
         showToast("Task created.");
       } else {
         await hubProxy("hub_tasks", "update", { id: modal.task.id, updates: payload });
+        if (payload.status === "Done") notifyTaskDone({ ...modal.task, ...payload });
         showToast("Task updated.");
       }
     } catch (e) {
@@ -82,6 +84,21 @@ export default function HubTasks() {
     setSaving(false);
     setModal(null);
     load();
+  }
+
+  function notifyTaskDone(task) {
+    const token = localStorage.getItem("hub_token");
+    if (!token) return;
+    const by = localStorage.getItem("hub_username") || "Someone";
+    fetch("/api/announce-to-discord", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        title: `✅ Task Completed: ${task.title}`,
+        body: `**${task.title}**\nCompleted by: ${by}\nPriority: ${task.priority}${task.assigned_name ? `\nAssigned to: ${task.assigned_name}` : ""}${task.subteam && task.subteam !== "All" ? `\nSubteam: ${task.subteam}` : ""}`,
+        tag: "General",
+      }),
+    }).catch(() => {});
   }
 
   async function deleteTask(id) {
@@ -97,8 +114,10 @@ export default function HubTasks() {
 
   async function moveTask(id, newStatus) {
     try {
+      const task = tasks.find(t => t.id === id);
       await hubProxy("hub_tasks", "update", { id, updates: { status: newStatus } });
       setTasks(prev => prev.map(t => t.id === id ? { ...t, status: newStatus } : t));
+      if (newStatus === "Done" && task) notifyTaskDone(task);
     } catch { showToast("Move failed."); }
   }
 
