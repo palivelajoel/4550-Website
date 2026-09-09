@@ -934,7 +934,7 @@ export default function Landing() {
               <Eyebrow>// GET IN TOUCH</Eyebrow>
               <SectionTitle>Contact</SectionTitle>
               <motion.div className="contact-row" variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-                {[{ href: `mailto:${email}`, icon: "✉️", label: email }, { href: ig, icon: "📸", label: "@cherrycreek.robotics" }].map((c, i) => (
+                {[{ href: `mailto:${email}`, icon: "✉️", label: email }, { href: ig, icon: "📸", label: `@${(ig.match(/instagram\.com\/([^/?#]+)/)?.[1] || "cherrycreek.robotics").replace(/^@/,"")}` }].map((c, i) => (
                   <motion.a key={c.label} href={c.href} target="_blank" rel="noreferrer" variants={cardItem} whileHover={{ scale: 1.05, borderColor: "rgba(239,68,68,0.4)", color: "#ef4444" }} style={{ display: "flex", alignItems: "center", gap: 8, color: "#94a3b8", textDecoration: "none", fontSize: isMobile ? 13 : 15, fontFamily: "'Share Tech Mono', monospace", padding: isMobile ? "12px 20px" : 0, background: isMobile ? "rgba(255,255,255,0.04)" : "transparent", borderRadius: isMobile ? 8 : 0, border: isMobile ? "1px solid rgba(255,255,255,0.08)" : "none" }}>
                     <span style={{ fontSize: 18 }}>{c.icon}</span>{c.label}
                   </motion.a>
