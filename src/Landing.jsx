@@ -862,7 +862,7 @@ export default function Landing() {
             <SectionTitle>Social Media</SectionTitle>
             <motion.div className="media-row" variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }}>
               {[
-                { href: ig, icon: "📸", title: "Instagram", handle: "@cherrycreek.robotics", border: "rgba(59,130,246,0.3)" },
+                { href: ig, icon: "📸", title: "Instagram", handle: `@${(ig.match(/instagram\.com\/([^/?#]+)/)?.[1] || "cherrycreek.robotics").replace(/^@/,"")}`, border: "rgba(59,130,246,0.3)" },
                 { href: yt, icon: "▶️", title: "YouTube", handle: "Team 4550 Something's Bruin", border: "rgba(239,68,68,0.3)" },
               ].map((m, i) => (
                 <motion.a key={m.title} href={m.href} target="_blank" rel="noreferrer" className="media-card" variants={cardItem} whileHover={{ scale: 1.05, borderColor: m.border.replace("0.3", "0.7") }} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${m.border}`, borderRadius: 10, padding: isMobile ? "24px 18px" : "32px 24px", textDecoration: "none", textAlign: "center", display: "block" }}>
