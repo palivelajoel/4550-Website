@@ -116,20 +116,30 @@ export default function HubAdvertisement() {
     window.location.href = "/member-hub";
   }
 
+  // Keep focus on the presentation container so Space reaches us even when a YT iframe is present
+  useEffect(() => {
+    if (started) containerRef.current?.focus();
+  }, [started, slideIndex, showQR]);
+
   useEffect(() => {
     function onKey(e) {
       if (e.repeat) return;
       if (escArmed && e.key !== "Enter" && e.key !== "Escape") return;
       if (e.code === "Space") {
-        const active = slides[slideIndex];
-        // When a video is playing, let the video handle Space (play/pause) instead of toggling QR — prevents mount/unmount thrash that bricks the YT player
-        if (started && active?.type === "video") return;
         e.preventDefault();
         if (!started) {
           start(e);
-        } else {
-          setShowQR(s => !s);
+          return;
         }
+        const active = slides[slideIndex];
+        if (active?.type === "video") {
+          // Pause first, then show QR — prevents YT mount/unmount thrash
+          const v = document.querySelector("video");
+          if (v && !v.paused) try { v.pause(); } catch {}
+          const yt = window.__adYtPlayer;
+          if (yt?.pauseVideo) try { yt.pauseVideo(); } catch {}
+        }
+        setShowQR(s => !s);
         return;
       }
       if (e.key === "Enter") {
@@ -153,7 +163,7 @@ export default function HubAdvertisement() {
 
   if (!started) {
     return (
-      <div ref={containerRef} onClick={start} style={{ minHeight: "100vh", background: "#050709", color: C.text, fontFamily: "'Exo 2', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexDirection: "column", gap: 28, padding: 24, textAlign: "center" }}>
+      <div ref={containerRef} tabIndex={0} onClick={start} style={{ minHeight: "100vh", background: "#050709", color: C.text, fontFamily: "'Exo 2', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexDirection: "column", gap: 28, padding: 24, textAlign: "center", outline: "none" }}>
         <style>{FONTS}</style>
         <img src={logoUrl} alt="logo" style={{ width: 120, height: 120, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.5)", boxShadow: "0 0 40px rgba(239,68,68,0.3)" }} />
         <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: "clamp(24px,5vw,44px)", letterSpacing: 3, color: C.text }}>SOMETHING'S BRUIN</div>
@@ -172,7 +182,7 @@ export default function HubAdvertisement() {
   const slide = slides[slideIndex];
 
   return (
-    <div ref={containerRef} style={{ minHeight: "100vh", background: "#050709", color: C.text, fontFamily: "'Exo 2', sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div ref={containerRef} tabIndex={0} style={{ minHeight: "100vh", background: "#050709", color: C.text, fontFamily: "'Exo 2', sans-serif", display: "flex", flexDirection: "column", overflow: "hidden", outline: "none" }}>
       <style>{FONTS + `
         @keyframes advertIn { from { opacity: 0; } to { opacity: 1; } }
         .advert-slide { animation: advertIn 0.4s ease both; }
@@ -255,7 +265,7 @@ function VideoSlide({ slide, onEnded, isSingle }) {
         height: "100%",
         playerVars: { autoplay: 1, mute: 1, rel: 0, modestbranding: 1, playsinline: 1, enablejsapi: 1, origin: window.location.origin, loop: isSingle ? 1 : 0, playlist: isSingle ? vid : undefined },
         events: {
-          onReady: (e) => { try { e.target.mute(); e.target.playVideo(); } catch {} },
+          onReady: (e) => { try { e.target.mute(); e.target.playVideo(); } catch {} window.__adYtPlayer = e.target; },
           onStateChange: (e) => {
             if (e.data === 0) {
               if (isSingle) { try { e.target.seekTo(0); e.target.playVideo(); } catch { onEnded(); } }
@@ -266,11 +276,16 @@ function VideoSlide({ slide, onEnded, isSingle }) {
         },
       });
       playerRef.current = player;
+      window.__adYtPlayer = player;
     });
     return () => {
       cancelled = true;
       try { playerRef.current?.destroy(); } catch {}
       playerRef.current = null;
+      if (window.__adYtPlayer === playerRef.current) window.__adYtPlayer = null;
+      // also clear global if it points to this player
+      try { if (window.__adYtPlayer && window.__adYtPlayer === playerRef.current) window.__adYtPlayer = null; } catch {}
+      window.__adYtPlayer = null;
     };
   }, [vid, onEnded, isSingle]);
 
