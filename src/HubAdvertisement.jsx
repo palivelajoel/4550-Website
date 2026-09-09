@@ -163,7 +163,7 @@ export default function HubAdvertisement() {
 
   if (!started) {
     return (
-      <div ref={containerRef} tabIndex={0} onClick={start} style={{ minHeight: "100vh", background: "#050709", color: C.text, fontFamily: "'Exo 2', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexDirection: "column", gap: 28, padding: 24, textAlign: "center", outline: "none" }}>
+      <div ref={containerRef} tabIndex={0} data-ad-container onClick={start} style={{ minHeight: "100vh", background: "#050709", color: C.text, fontFamily: "'Exo 2', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexDirection: "column", gap: 28, padding: 24, textAlign: "center", outline: "none" }}>
         <style>{FONTS}</style>
         <img src={logoUrl} alt="logo" style={{ width: 120, height: 120, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(239,68,68,0.5)", boxShadow: "0 0 40px rgba(239,68,68,0.3)" }} />
         <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 900, fontSize: "clamp(24px,5vw,44px)", letterSpacing: 3, color: C.text }}>SOMETHING'S BRUIN</div>
@@ -182,7 +182,7 @@ export default function HubAdvertisement() {
   const slide = slides[slideIndex];
 
   return (
-    <div ref={containerRef} tabIndex={0} style={{ minHeight: "100vh", background: "#050709", color: C.text, fontFamily: "'Exo 2', sans-serif", display: "flex", flexDirection: "column", overflow: "hidden", outline: "none" }}>
+    <div ref={containerRef} tabIndex={0} data-ad-container style={{ minHeight: "100vh", background: "#050709", color: C.text, fontFamily: "'Exo 2', sans-serif", display: "flex", flexDirection: "column", overflow: "hidden", outline: "none" }}>
       <style>{FONTS + `
         @keyframes advertIn { from { opacity: 0; } to { opacity: 1; } }
         .advert-slide { animation: advertIn 0.4s ease both; }
@@ -290,7 +290,13 @@ function VideoSlide({ slide, onEnded, isSingle }) {
   }, [vid, onEnded, isSingle]);
 
   if (vid) {
-    return <div ref={ytContainerRef} style={{ width: "100%", height: "100%", background: "#000" }} />;
+    return (
+      <div style={{ width: "100%", height: "100%", position: "relative", background: "#000" }}>
+        <div ref={ytContainerRef} style={{ width: "100%", height: "100%", pointerEvents: "none" }} />
+        {/* Transparent overlay keeps focus on the presentation container so Space reaches the parent window (YT iframe is cross-origin and would otherwise swallow it) */}
+        <div onClick={() => document.querySelector("[data-ad-container]")?.focus()} style={{ position: "absolute", inset: 0, cursor: "pointer" }} />
+      </div>
+    );
   }
   return (
     <video src={slide.url} poster={slide.poster} autoPlay muted playsInline loop={!!isSingle} style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }} onEnded={isSingle ? undefined : onEnded} onError={onEnded} />
