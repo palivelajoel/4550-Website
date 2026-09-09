@@ -1711,6 +1711,9 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }
     if (type === "cad") return 12;
     return 10;
   }
+  function isYoutubeSlideUrl(url) {
+    return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)/.test(String(url || ""));
+  }
 
   function updateAdSlide(idx, patch) {
     setAdSlides(arr => arr.map((s, i) => i === idx ? { ...s, ...patch } : s));
@@ -2132,7 +2135,7 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }
                 </div>
               )}
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {slide.type === "video" ? (
+                {slide.type === "video" && !isYoutubeSlideUrl(slide.url) ? (
                   <span style={{ color: "#475569", fontSize: 12, fontFamily: "monospace" }}>▶ Video plays its full length, then advances.</span>
                 ) : (
                   <>
