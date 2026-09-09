@@ -29,6 +29,7 @@ export default function HubResources() {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState("");
+  const [preview, setPreview] = useState(null);
   const fileRef = useRef(null);
   // Your Stuff state
   const [templates, setTemplates] = useState([]);
@@ -123,18 +124,33 @@ export default function HubResources() {
     groups[key].push(i);
   });
 
+  function getExt(url, fname) {
+    const src = (fname || url || "").split("?")[0];
+    const parts = src.split(".");
+    return parts.length > 1 ? parts.pop().toLowerCase() : "";
+  }
+  function toViewUrl(url) {
+    if (!url) return url;
+    // raw.githubusercontent.com is not embeddable (X-Frame-Options: deny), use site-relative /uploads/ instead
+    const m = url.match(/raw\.githubusercontent\.com\/[^/]+\/[^/]+\/[^/]+\/public\/uploads\/(.+)/);
+    if (m) return `/uploads/${m[1]}`;
+    return url;
+  }
+  function isImageExt(ext) { return ["png","jpg","jpeg","gif","svg","webp","avif","bmp"].includes(ext); }
+  function isPdfExt(ext) { return ext === "pdf"; }
+  function isViewableExt(ext) { return isImageExt(ext) || isPdfExt(ext) || ["txt","md","csv"].includes(ext); }
   function getFileIcon(url, fname) {
-    const ext = (fname || url || "").split(".").pop().toLowerCase();
+    const ext = getExt(url, fname);
     if (["pdf"].includes(ext)) return "📕";
     if (["doc", "docx"].includes(ext)) return "📝";
     if (["xls", "xlsx"].includes(ext)) return "📊";
     if (["ppt", "pptx"].includes(ext)) return "📊";
     if (["zip", "rar"].includes(ext)) return "🗜️";
-    if (["png", "jpg", "jpeg", "gif", "svg"].includes(ext)) return "🖼️";
+    if (isImageExt(ext)) return "🖼️";
     if (url?.includes("drive.google.com")) return "📂";
     if (url?.includes("figma.com")) return "🎨";
     if (url?.includes("github.com")) return "💻";
-    return catIcon[url] || "🔗";
+    return "🔗";
   }
 
   if (!authed) return null;
@@ -213,13 +229,18 @@ export default function HubResources() {
               <span style={{ fontSize: 11, color: C.dim, fontFamily: "monospace" }}>{items.length}</span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 10 }}>
-              {items.map((item, i) => (
+              {items.map((item, i) => {
+                const ext = getExt(item.url, item.file_name);
+                const viewable = isViewableExt(ext);
+                const viewUrl = toViewUrl(item.url);
+                return (
                 <motion.div key={item.id} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.3, delay: i * 0.03 }} whileHover={{ borderColor: "rgba(255,255,255,0.2)" }}
-                  style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}
+                  onClick={() => viewable && setPreview({ ...item, _viewUrl: viewUrl, _ext: ext })}
+                  style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "14px 16px", display: "flex", gap: 12, alignItems: "flex-start", cursor: viewable ? "pointer" : "default" }}
                 >
                   <div style={{ fontSize: 22, flexShrink: 0 }}>{getFileIcon(item.url, item.file_name)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <a href={item.url} target="_blank" rel="noreferrer" style={{ fontWeight: 600, fontSize: 13, color: C.text, textDecoration: "none", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    <a href={viewable ? undefined : item.url} target={viewable ? undefined : "_blank"} rel="noreferrer" onClick={e => { if (viewable) { e.preventDefault(); setPreview({ ...item, _viewUrl: viewUrl, _ext: ext }); } }} style={{ fontWeight: 600, fontSize: 13, color: C.text, textDecoration: "none", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                       onMouseEnter={e => e.target.style.color = "#ec4899"}
                       onMouseLeave={e => e.target.style.color = C.text}
                     >{item.title}</a>
@@ -232,15 +253,16 @@ export default function HubResources() {
                         <div style={{ fontSize: 10, color: "#475569", fontFamily: "monospace" }}>📁 {item.folder}</div>
                       )}
                     </div>
+                    {viewable && <div style={{ fontSize: 10, color: "#ec4899", fontFamily: "monospace", marginTop: 6 }}>👁 View in browser</div>}
                   </div>
                   {canEdit && (
-                    <button onClick={() => deleteItem(item.id)} style={{ background: "transparent", border: "none", color: "#475569", cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "0 2px" }}
+                    <button onClick={e => { e.stopPropagation(); deleteItem(item.id); }} style={{ background: "transparent", border: "none", color: "#475569", cursor: "pointer", fontSize: 14, flexShrink: 0, padding: "0 2px" }}
                       onMouseEnter={e => e.target.style.color = C.red}
                       onMouseLeave={e => e.target.style.color = "#475569"}
                     >✕</button>
                   )}
                 </motion.div>
-              ))}
+                );})}
             </div>
           </div>
         ))}
@@ -280,6 +302,37 @@ export default function HubResources() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Preview modal — view in browser, not download */}
+      {preview && (
+        <div style={{ ...overlayStyle, background: "rgba(0,0,0,0.88)", zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) setPreview(null); }}>
+          <div style={{ background: "#0d1117", border: `1px solid ${C.border}`, borderRadius: 14, width: "100%", maxWidth: 900, maxHeight: "92vh", display: "flex", flexDirection: "column", overflow: "hidden", margin: "0 12px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", borderBottom: `1px solid ${C.border}`, gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 14, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview.title}</div>
+                {preview.file_name && <div style={{ fontSize: 11, color: C.dim, fontFamily: "monospace" }}>{preview.file_name}</div>}
+              </div>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <a href={preview._viewUrl} target="_blank" rel="noreferrer" style={{ ...ghostBtn, fontSize: 11, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Open ↗</a>
+                <a href={preview._viewUrl} download={preview.file_name || ""} style={{ ...ghostBtn, fontSize: 11, textDecoration: "none", display: "inline-flex", alignItems: "center" }}>Download ↓</a>
+                <button onClick={() => setPreview(null)} style={ghostBtn}>✕</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflow: "auto", background: "#080a0f", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
+              {isImageExt(preview._ext) ? (
+                <img src={preview._viewUrl} alt={preview.title} style={{ maxWidth: "100%", maxHeight: "80vh", objectFit: "contain", display: "block" }} />
+              ) : isPdfExt(preview._ext) ? (
+                <iframe src={preview._viewUrl} title={preview.title} style={{ width: "100%", height: "80vh", border: "none", background: "#fff" }} />
+              ) : (
+                <div style={{ padding: 24, textAlign: "center", color: C.muted, fontFamily: "monospace", fontSize: 12 }}>
+                  Preview not available for .{preview._ext} — use Open to view.
+                  <div style={{ marginTop: 8 }}><a href={preview._viewUrl} target="_blank" rel="noreferrer" style={{ color: "#ec4899" }}>{preview._viewUrl}</a></div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
