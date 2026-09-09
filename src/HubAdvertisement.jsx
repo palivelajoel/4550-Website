@@ -118,8 +118,12 @@ export default function HubAdvertisement() {
 
   useEffect(() => {
     function onKey(e) {
+      if (e.repeat) return;
       if (escArmed && e.key !== "Enter" && e.key !== "Escape") return;
       if (e.code === "Space") {
+        const active = slides[slideIndex];
+        // When a video is playing, let the video handle Space (play/pause) instead of toggling QR — prevents mount/unmount thrash that bricks the YT player
+        if (started && active?.type === "video") return;
         e.preventDefault();
         if (!started) {
           start(e);
@@ -143,7 +147,7 @@ export default function HubAdvertisement() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [started, escArmed]);
+  }, [started, escArmed, slides, slideIndex]);
 
   if (!authed) return null;
 
