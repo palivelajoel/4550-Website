@@ -2135,7 +2135,7 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }
                 </div>
               )}
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {slide.type === "video" && !isYoutubeSlideUrl(slide.url) ? (
+                {slide.type === "video" ? (
                   <span style={{ color: "#475569", fontSize: 12, fontFamily: "monospace" }}>▶ Video plays its full length, then advances.</span>
                 ) : (
                   <>

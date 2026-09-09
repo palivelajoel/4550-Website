@@ -15,6 +15,25 @@ function ensureModelViewerScript() {
   document.head.appendChild(script);
 }
 
+let ytApiPromise = null;
+function ensureYouTubeApi() {
+  if (typeof window !== "undefined" && window.YT && window.YT.Player) return Promise.resolve(window.YT);
+  if (ytApiPromise) return ytApiPromise;
+  ytApiPromise = new Promise((resolve) => {
+    const existing = document.querySelector('script[src*="youtube.com/iframe_api"]');
+    if (!existing) {
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+    }
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { if (prev) try { prev(); } catch {} resolve(window.YT); };
+    // fallback if event doesn't fire
+    setTimeout(() => resolve(window.YT), 4000);
+  });
+  return ytApiPromise;
+}
+
 export default function HubAdvertisement() {
   const [authed] = useState(isAuthed());
   const [started, setStarted] = useState(false);
@@ -76,26 +95,13 @@ export default function HubAdvertisement() {
 
   const advance = () => setSlideIndex(s => (s + 1) % Math.max(slides.length, 1));
 
-  function isYoutubeUrl(url) {
-    return /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&\s?/]+)/.test(String(url || ""));
-  }
-  function youtubeEmbedUrl(url) {
-    const m = String(url || "").match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&\s?/]+)/);
-    return m ? `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1` : null;
-  }
-
   useEffect(() => {
     if (!started || showQR || escArmed || slides.length === 0) return;
     const slide = slides[slideIndex];
-    // YouTube iframes can't signal onEnded without the API, so treat them like
-    // timed slides (durationSec or fallback)
-    const isYtVideo = slide?.type === "video" && isYoutubeUrl(slide?.url);
-    if (slide?.type === "video" && !isYtVideo) return; // native <video> advances onEnded
+    if (slide?.type === "video") return; // both native and YouTube advance onEnded
     const ms = (slide?.durationSec || 0) * 1000;
     const fallbackMs = ms || (slide?.type === "cad" ? 12000 : slide?.type === "info" ? 10000 : 8000);
-    // YouTube videos get a longer default so they can play a bit
-    const ytFallback = isYtVideo ? (ms || 30000) : fallbackMs;
-    timerRef.current = setTimeout(() => advance(), ytFallback);
+    timerRef.current = setTimeout(() => advance(), fallbackMs);
     return () => clearTimeout(timerRef.current);
   }, [started, showQR, escArmed, slideIndex, slides]);
 
@@ -226,14 +232,41 @@ export default function HubAdvertisement() {
 }
 
 function VideoSlide({ slide, onEnded }) {
-  const yt = (() => {
+  const vid = (() => {
     const m = String(slide.url || "").match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&\s?/]+)/);
-    return m ? `https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1` : null;
+    return m ? m[1] : null;
   })();
-  if (yt) {
-    return (
-      <iframe src={yt} title={slide.title || "video"} style={{ width: "100%", height: "100%", border: "none", background: "#000" }} allow="autoplay; encrypted-media; fullscreen" allowFullScreen />
-    );
+  const ytContainerRef = useRef(null);
+  const playerRef = useRef(null);
+
+  useEffect(() => {
+    if (!vid) return;
+    let cancelled = false;
+    ensureYouTubeApi().then((YT) => {
+      if (cancelled || !YT || !YT.Player || !ytContainerRef.current) return;
+      try { playerRef.current?.destroy(); } catch {}
+      const player = new YT.Player(ytContainerRef.current, {
+        videoId: vid,
+        width: "100%",
+        height: "100%",
+        playerVars: { autoplay: 1, mute: 1, rel: 0, modestbranding: 1, playsinline: 1, enablejsapi: 1, origin: window.location.origin },
+        events: {
+          onReady: (e) => { try { e.target.mute(); e.target.playVideo(); } catch {} },
+          onStateChange: (e) => { if (e.data === 0) onEnded(); },
+          onError: () => onEnded(),
+        },
+      });
+      playerRef.current = player;
+    });
+    return () => {
+      cancelled = true;
+      try { playerRef.current?.destroy(); } catch {}
+      playerRef.current = null;
+    };
+  }, [vid, onEnded]);
+
+  if (vid) {
+    return <div ref={ytContainerRef} style={{ width: "100%", height: "100%", background: "#000" }} />;
   }
   return (
     <video src={slide.url} poster={slide.poster} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }} onEnded={onEnded} onError={onEnded} />
