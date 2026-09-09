@@ -209,7 +209,7 @@ export default function HubAdvertisement() {
         <div className="advert-slide" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative" }}>
           <div style={{ flex: 1, display: "flex", position: "relative", overflow: "hidden" }}>
             {slide?.type === "video" && (
-              <VideoSlide key={slideIndex} slide={slide} onEnded={advance} />
+              <VideoSlide key={`${slideIndex}-${slides.length === 1 ? 'single' : 'multi'}`} slide={slide} onEnded={advance} isSingle={slides.length === 1} />
             )}
             {slide?.type === "image" && (
               <img key={slideIndex} src={slide.url} alt={slide.title || ""} style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }} />
@@ -231,7 +231,7 @@ export default function HubAdvertisement() {
   );
 }
 
-function VideoSlide({ slide, onEnded }) {
+function VideoSlide({ slide, onEnded, isSingle }) {
   const vid = (() => {
     const m = String(slide.url || "").match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([^&\s?/]+)/);
     return m ? m[1] : null;
@@ -249,10 +249,15 @@ function VideoSlide({ slide, onEnded }) {
         videoId: vid,
         width: "100%",
         height: "100%",
-        playerVars: { autoplay: 1, mute: 1, rel: 0, modestbranding: 1, playsinline: 1, enablejsapi: 1, origin: window.location.origin },
+        playerVars: { autoplay: 1, mute: 1, rel: 0, modestbranding: 1, playsinline: 1, enablejsapi: 1, origin: window.location.origin, loop: isSingle ? 1 : 0, playlist: isSingle ? vid : undefined },
         events: {
           onReady: (e) => { try { e.target.mute(); e.target.playVideo(); } catch {} },
-          onStateChange: (e) => { if (e.data === 0) onEnded(); },
+          onStateChange: (e) => {
+            if (e.data === 0) {
+              if (isSingle) { try { e.target.seekTo(0); e.target.playVideo(); } catch { onEnded(); } }
+              else onEnded();
+            }
+          },
           onError: () => onEnded(),
         },
       });
@@ -263,13 +268,13 @@ function VideoSlide({ slide, onEnded }) {
       try { playerRef.current?.destroy(); } catch {}
       playerRef.current = null;
     };
-  }, [vid, onEnded]);
+  }, [vid, onEnded, isSingle]);
 
   if (vid) {
     return <div ref={ytContainerRef} style={{ width: "100%", height: "100%", background: "#000" }} />;
   }
   return (
-    <video src={slide.url} poster={slide.poster} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }} onEnded={onEnded} onError={onEnded} />
+    <video src={slide.url} poster={slide.poster} autoPlay muted playsInline loop={!!isSingle} style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }} onEnded={isSingle ? undefined : onEnded} onError={onEnded} />
   );
 }
 
