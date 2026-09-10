@@ -106,18 +106,27 @@ async function handleSelect(env, body) {
 async function handleInsert(env, body) {
   const { table, data } = body;
   if (!data || typeof data !== "object") return json({ error: "Missing data" }, 400);
+  // Auto-generate UUID for tables that use TEXT ids (migrated from Supabase) when no id is supplied.
+  if (data.id == null) {
+    try { data.id = crypto.randomUUID(); } catch { data.id = `${Date.now()}-${Math.random().toString(36).slice(2,10)}`; }
+  }
   const cols = Object.keys(data);
   if (cols.length === 0) return json({ error: "No columns to insert" }, 400);
   const placeholders = cols.map(() => "?").join(",");
   const sql = `INSERT INTO "${table}" ("${cols.join('","')}") VALUES (${placeholders})`;
   const stmt = env.DB.prepare(sql).bind(...cols.map(c => data[c]));
   const { success, last_row_id, meta } = await stmt.run();
-  return json({ success, id: last_row_id ?? null, meta: meta?.changes ?? null });
+  return json({ success, id: data.id ?? last_row_id ?? null, meta: meta?.changes ?? null });
 }
 
 async function handleInsertMany(env, body) {
   const { table, rows } = body;
   if (!Array.isArray(rows) || rows.length === 0) return json({ error: "Missing rows" }, 400);
+  for (const r of rows) {
+    if (r && r.id == null) {
+      try { r.id = crypto.randomUUID(); } catch { r.id = `${Date.now()}-${Math.random().toString(36).slice(2,10)}`; }
+    }
+  }
   const cols = [...new Set(rows.flatMap(r => Object.keys(r || {})))];
   if (cols.length === 0) return json({ error: "No columns" }, 400);
   const tx = env.DB.batch(

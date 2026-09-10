@@ -110,6 +110,10 @@ export async function d1SelectOne(table, { filters = [], order = [] } = {}) {
 export async function d1Insert(table, data) {
   const normalized = {};
   for (const k of Object.keys(data)) normalized[k] = normVal(k, data[k]);
+  // Hub tables use TEXT UUIDs (migrated from Supabase) — generate one if not supplied so we don't end up with id=null.
+  if (normalized.id == null) {
+    try { normalized.id = crypto.randomUUID(); } catch { normalized.id = `${Date.now()}-${Math.random().toString(36).slice(2,10)}`; }
+  }
   const j = await d1("insert", { table, data: normalized });
   if (j.error) throw new Error(j.error);
   return { id: j.id };
@@ -120,6 +124,9 @@ export async function d1InsertMany(table, rows) {
   const normalized = rows.map(r => {
     const o = {};
     for (const k of Object.keys(r || {})) o[k] = normVal(k, r[k]);
+    if (o.id == null) {
+      try { o.id = crypto.randomUUID(); } catch { o.id = `${Date.now()}-${Math.random().toString(36).slice(2,10)}`; }
+    }
     return o;
   });
   const j = await d1("insertMany", { table, rows: normalized });
