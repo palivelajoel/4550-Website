@@ -263,9 +263,16 @@ function VideoSlide({ slide, onEnded, isSingle }) {
         videoId: vid,
         width: "100%",
         height: "100%",
-        playerVars: { autoplay: 1, mute: 1, rel: 0, modestbranding: 1, playsinline: 1, enablejsapi: 1, origin: window.location.origin, loop: isSingle ? 1 : 0, playlist: isSingle ? vid : undefined },
+        playerVars: { autoplay: 1, mute: 1, rel: 0, modestbranding: 1, playsinline: 1, enablejsapi: 1, origin: window.location.origin, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, loop: isSingle ? 1 : 0, playlist: isSingle ? vid : undefined },
         events: {
-          onReady: (e) => { try { e.target.mute(); e.target.playVideo(); } catch {} window.__adYtPlayer = e.target; },
+          onReady: (e) => {
+            try { e.target.mute(); e.target.playVideo(); } catch {}
+            try {
+              const ifr = e.target.getIframe();
+              if (ifr) { ifr.setAttribute("tabindex", "-1"); ifr.style.pointerEvents = "none"; }
+            } catch {}
+            window.__adYtPlayer = e.target;
+          },
           onStateChange: (e) => {
             if (e.data === 0) {
               if (isSingle) { try { e.target.seekTo(0); e.target.playVideo(); } catch { onEnded(); } }
