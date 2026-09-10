@@ -263,10 +263,10 @@ function VideoSlide({ slide, onEnded, isSingle }) {
         videoId: vid,
         width: "100%",
         height: "100%",
-        playerVars: { autoplay: 1, mute: 1, rel: 0, modestbranding: 1, playsinline: 1, enablejsapi: 1, origin: window.location.origin, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, loop: isSingle ? 1 : 0, playlist: isSingle ? vid : undefined },
+        playerVars: { autoplay: 1, mute: 0, rel: 0, modestbranding: 1, playsinline: 1, enablejsapi: 1, origin: window.location.origin, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, loop: isSingle ? 1 : 0, playlist: isSingle ? vid : undefined },
         events: {
           onReady: (e) => {
-            try { e.target.mute(); e.target.playVideo(); } catch {}
+            try { e.target.unMute(); e.target.setVolume(100); e.target.playVideo(); } catch { try { e.target.mute(); e.target.playVideo(); } catch {} }
             try {
               const ifr = e.target.getIframe();
               if (ifr) { ifr.setAttribute("tabindex", "-1"); ifr.style.pointerEvents = "none"; }
@@ -306,7 +306,7 @@ function VideoSlide({ slide, onEnded, isSingle }) {
     );
   }
   return (
-    <video src={slide.url} poster={slide.poster} autoPlay muted playsInline loop={!!isSingle} style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }} onEnded={isSingle ? undefined : onEnded} onError={onEnded} />
+    <video ref={(el) => { if (el) el.play().catch(() => { el.muted = true; el.play().catch(()=>{}); }); }} src={slide.url} poster={slide.poster} autoPlay muted={false} playsInline loop={!!isSingle} style={{ width: "100%", height: "100%", objectFit: "contain", background: "#000" }} onEnded={isSingle ? undefined : onEnded} onError={onEnded} />
   );
 }
 
