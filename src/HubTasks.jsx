@@ -430,9 +430,22 @@ function GanttChart({ tasks, priorityColor, statusColor, openEdit, isOverdue }) 
   function barWidth(task) {
     const s = parseDate(task.start_date) || parseDate(task.due_date) || range.start;
     const e = parseDate(task.due_date) || s;
-    const dur = Math.max(e - s, 86400000);
-    const pct = (dur / (range.end - range.start)) * 100;
-    return Math.max(2, Math.min(100 - barLeft(task), pct));
+    // Inclusive days — single-day tasks get 1 day, not 0. Use dayCount for correct % and enforce visible minimum.
+    const durDays = Math.max(1, Math.round((e - s) / 86400000) + 1);
+    const pct = (durDays / dayCount) * 100;
+    // At 60 days visible, 8% ≈ 48px on 600px container — readable without dominating.
+    return Math.max(8, Math.min(100 - barLeft(task), pct));
+  }
+
+  function barLabel(task) {
+    if (task.start_date && task.due_date) {
+      const sd = task.start_date.slice(5);
+      const dd = task.due_date.slice(5);
+      return sd === dd ? sd : `${sd} → ${dd}`;
+    }
+    if (task.due_date) return `Due ${task.due_date.slice(5)}`;
+    if (task.start_date) return `Start ${task.start_date.slice(5)}`;
+    return "";
   }
 
   return (
@@ -469,10 +482,13 @@ function GanttChart({ tasks, priorityColor, statusColor, openEdit, isOverdue }) 
             })}
           </div>
 
-          {/* Today line */}
+          {/* Today line + week grid */}
           <div style={{ position: "relative" }}>
+            <div style={{ position: "absolute", left: 200, right: 0, top: 0, bottom: 0, pointerEvents: "none", display: "flex" }}>
+              {weeks.map(w => <div key={w} style={{ flex: 1, borderLeft: "1px solid rgba(255,255,255,0.06)" }} />)}
+            </div>
             <div style={{ position: "absolute", left: 200, right: 0, top: 0, bottom: 0, pointerEvents: "none" }}>
-              <div style={{ position: "absolute", left: `${((today - range.start) / (range.end - range.start)) * 100}%`, top: 0, bottom: 0, width: 1, background: C.red, opacity: 0.6 }} />
+              <div style={{ position: "absolute", left: `${((today - range.start) / (range.end - range.start)) * 100}%`, top: 0, bottom: 0, width: 2, background: C.red, opacity: 0.75, boxShadow: `0 0 8px ${C.red}` }} />
             </div>
 
             {/* Bar rows */}
@@ -481,24 +497,30 @@ function GanttChart({ tasks, priorityColor, statusColor, openEdit, isOverdue }) 
                 No tasks with dates. Set a start or due date on a task to see it here.
               </div>
             )}
-            {barTasks.map(task => (
-              <div key={task.id} onClick={() => openEdit(task)} style={{ display: "flex", alignItems: "center", height: 28, marginBottom: 3, cursor: "pointer", position: "relative" }}>
-                <div style={{ width: 200, flexShrink: 0, fontSize: 11, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>{task.title}</div>
+            {barTasks.map(task => {
+              const w = barWidth(task);
+              const showInsideLabel = w > 14;
+              return (
+              <div key={task.id} onClick={() => openEdit(task)} title={`${task.title} — ${barLabel(task)}${task.priority ? ` · ${task.priority}` : ''}${task.status ? ` · ${task.status}` : ''}`} style={{ display: "flex", alignItems: "center", height: 30, marginBottom: 4, cursor: "pointer", position: "relative" }}>
+                <div style={{ width: 200, flexShrink: 0, fontSize: 11, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8, fontWeight: 500 }}>{task.title}</div>
                 <div style={{ position: "absolute", left: 200, right: 0, height: "100%" }}>
                   <div style={{
-                    position: "absolute", left: `${barLeft(task)}%`, width: `${barWidth(task)}%`,
-                    top: 3, height: 22, borderRadius: 4,
-                    background: isOverdue(task) ? "rgba(239,68,68,0.25)" : `${priorityColor[task.priority] || "#64748b"}33`,
-                    borderLeft: `3px solid ${isOverdue(task) ? C.red : priorityColor[task.priority] || "#64748b"}`,
+                    position: "absolute", left: `${barLeft(task)}%`, width: `${w}%`,
+                    top: 4, height: 22, borderRadius: 6,
+                    background: isOverdue(task) ? "rgba(239,68,68,0.32)" : `${priorityColor[task.priority] || "#64748b"}4D`,
+                    border: `1px solid ${isOverdue(task) ? C.red : priorityColor[task.priority] || "#64748b"}`,
+                    borderLeft: `4px solid ${isOverdue(task) ? C.red : priorityColor[task.priority] || "#64748b"}`,
+                    boxShadow: `0 1px 6px ${priorityColor[task.priority] || "#64748b"}33`,
+                    display: "flex", alignItems: "center", overflow: "hidden",
                   }}>
-                    <div style={{ fontSize: 9, color: C.text, padding: "3px 6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {task.start_date ? task.start_date.slice(5) + (task.start_time ? ' ' + task.start_time.slice(0,5) : '') : ''}
-                      {task.due_date ? ' – ' + task.due_date.slice(5) + (task.due_time ? ' ' + task.due_time.slice(0,5) : '') : ''}
+                    <div style={{ fontSize: 9, color: "#e2e8f0", padding: "0 7px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600, letterSpacing: 0.2, flex: 1 }}>
+                      {showInsideLabel ? task.title : "●"}
                     </div>
+                    {showInsideLabel && <div style={{ fontSize: 8, color: "rgba(255,255,255,0.85)", paddingRight: 6, whiteSpace: "nowrap", fontFamily: "monospace" }}>{barLabel(task)}</div>}
                   </div>
                 </div>
               </div>
-            ))}
+            );})}
           </div>
 
           {/* Tasks without dates */}
