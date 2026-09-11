@@ -21,7 +21,7 @@ export default function HubTasks() {
   const [filterTeam, setFilterTeam] = useState("All");
   const [filterMember, setFilterMember] = useState("");
   const [viewMode, setViewMode] = useState("board");
-  const [form, setForm] = useState({ title: "", description: "", subteam: "General", assigned_to: "", assigned_name: "", start_date: "", start_time: "", due_date: "", due_time: "", priority: "Medium", status: "To Do" });
+  const [form, setForm] = useState({ title: "", description: "", subteam: "General", assigned_to: "", assigned_name: "", start_date: "", start_time: "", due_date: "", due_time: "18:00", priority: "Medium", status: "To Do" });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
   const [dragId, setDragId] = useState(null);
@@ -64,7 +64,7 @@ export default function HubTasks() {
     if (m) setMembers(m);
   }
 
-  function openAdd(status = "To Do") {    if (!canEdit) return;    setForm({ title: "", description: "", subteam: "General", assigned_to: "", assigned_name: "", start_date: "", start_time: "", due_date: "", due_time: "", priority: "Medium", status });
+  function openAdd(status = "To Do") {    if (!canEdit) return;    setForm({ title: "", description: "", subteam: "General", assigned_to: "", assigned_name: "", start_date: "", start_time: "", due_date: "", due_time: "18:00", priority: "Medium", status });
     setModal({ mode: "add" });
   }
 
@@ -372,7 +372,7 @@ export default function HubTasks() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 10, color: C.dim, marginBottom: 3, fontFamily: "monospace" }}>Due Date</div>
-                  <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} style={inputStyle} />
+                  <input type="date" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value, due_time: e.target.value && !form.due_time ? "18:00" : form.due_time })} style={inputStyle} />
                   <input type="time" value={form.due_time} onChange={e => setForm({ ...form, due_time: e.target.value })} style={{ ...inputStyle, marginTop: 4 }} />
                 </div>
               </div>
@@ -513,31 +513,9 @@ function GanttChart({ tasks, priorityColor, statusColor, openEdit, isOverdue }) 
                     display: "flex", alignItems: "center", overflow: "hidden",
                   }}>
                     <div style={{ fontSize: 11, color: "#f1f5f9", padding: "0 10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 700, letterSpacing: 0.2, flex: 1 }}>
-                      {task.title}
+                      {task.title}{task.due_date ? ` — Due ${task.due_date.slice(5)}${task.due_time ? ' ' + task.due_time.slice(0,5) : ''}` : ''}
                     </div>
                   </div>
-                  {/* End date badge — always visible just past the bar, high contrast */}
-                  {task.due_date && (
-                    <div title={`Due ${task.due_date}${task.due_time ? ' ' + task.due_time : ''}`} style={{
-                      position: "absolute", left: `calc(${barLeft(task)}% + ${w}% + 6px)`, top: 5, height: 28, display: "flex", alignItems: "center", pointerEvents: "none"
-                    }}>
-                      <div style={{
-                        background: isOverdue(task) ? C.red : "#0f172a", color: isOverdue(task) ? "#fff" : "#e2e8f0",
-                        border: `1px solid ${isOverdue(task) ? C.red : priorityColor[task.priority] || "#475569"}`,
-                        borderRadius: 12, padding: "3px 9px", fontSize: 10, fontWeight: 800, fontFamily: "monospace", whiteSpace: "nowrap",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.5)", display: "flex", alignItems: "center", gap: 4
-                      }}>
-                        <span style={{ fontSize: 10 }}>{isOverdue(task) ? "⚠️" : "📅"}</span> {task.due_date.slice(5)}{task.due_time ? ' ' + task.due_time.slice(0,5) : ''}
-                      </div>
-                    </div>
-                  )}
-                  {/* Diamond end-cap on the bar */}
-                  {task.due_date && (
-                    <div style={{
-                      position: "absolute", left: `calc(${barLeft(task)}% + ${w}% - 5px)`, top: 19, width: 10, height: 10, background: isOverdue(task) ? C.red : priorityColor[task.priority] || "#64748b",
-                      border: "2px solid #0f172a", transform: "rotate(45deg)", boxShadow: `0 1px 4px ${priorityColor[task.priority] || "#64748b"}88`, pointerEvents: "none"
-                    }} />
-                  )}
                 </div>
               </div>
             );})}
