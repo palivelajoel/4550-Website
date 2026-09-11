@@ -433,8 +433,8 @@ function GanttChart({ tasks, priorityColor, statusColor, openEdit, isOverdue }) 
     // Inclusive days — single-day tasks get 1 day, not 0. Use dayCount for correct % and enforce visible minimum.
     const durDays = Math.max(1, Math.round((e - s) / 86400000) + 1);
     const pct = (durDays / dayCount) * 100;
-    // At 60 days visible, 8% ≈ 48px on 600px container — readable without dominating.
-    return Math.max(8, Math.min(100 - barLeft(task), pct));
+    // Bigger minimum so single-day tasks are clearly readable and titles fit.
+    return Math.max(14, Math.min(100 - barLeft(task), pct));
   }
 
   function barLabel(task) {
@@ -499,24 +499,23 @@ function GanttChart({ tasks, priorityColor, statusColor, openEdit, isOverdue }) 
             )}
             {barTasks.map(task => {
               const w = barWidth(task);
-              const showInsideLabel = w > 14;
               return (
-              <div key={task.id} onClick={() => openEdit(task)} title={`${task.title} — ${barLabel(task)}${task.priority ? ` · ${task.priority}` : ''}${task.status ? ` · ${task.status}` : ''}`} style={{ display: "flex", alignItems: "center", height: 30, marginBottom: 4, cursor: "pointer", position: "relative" }}>
-                <div style={{ width: 200, flexShrink: 0, fontSize: 11, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8, fontWeight: 500 }}>{task.title}</div>
+              <div key={task.id} onClick={() => openEdit(task)} title={`${task.title} — ${barLabel(task)}${task.priority ? ` · ${task.priority}` : ''}${task.status ? ` · ${task.status}` : ''}`} style={{ display: "flex", alignItems: "center", height: 38, marginBottom: 6, cursor: "pointer", position: "relative" }}>
+                <div style={{ width: 180, flexShrink: 0, fontSize: 12, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 10, fontWeight: 600 }}>{task.title}</div>
                 <div style={{ position: "absolute", left: 200, right: 0, height: "100%" }}>
                   <div style={{
                     position: "absolute", left: `${barLeft(task)}%`, width: `${w}%`,
-                    top: 4, height: 22, borderRadius: 6,
-                    background: isOverdue(task) ? "rgba(239,68,68,0.32)" : `${priorityColor[task.priority] || "#64748b"}4D`,
+                    top: 5, height: 28, borderRadius: 8,
+                    background: isOverdue(task) ? "rgba(239,68,68,0.38)" : `${priorityColor[task.priority] || "#64748b"}5A`,
                     border: `1px solid ${isOverdue(task) ? C.red : priorityColor[task.priority] || "#64748b"}`,
-                    borderLeft: `4px solid ${isOverdue(task) ? C.red : priorityColor[task.priority] || "#64748b"}`,
-                    boxShadow: `0 1px 6px ${priorityColor[task.priority] || "#64748b"}33`,
+                    borderLeft: `5px solid ${isOverdue(task) ? C.red : priorityColor[task.priority] || "#64748b"}`,
+                    boxShadow: `0 2px 10px ${priorityColor[task.priority] || "#64748b"}44`,
                     display: "flex", alignItems: "center", overflow: "hidden",
                   }}>
-                    <div style={{ fontSize: 9, color: "#e2e8f0", padding: "0 7px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 600, letterSpacing: 0.2, flex: 1 }}>
-                      {showInsideLabel ? task.title : "●"}
+                    <div style={{ fontSize: 11, color: "#f1f5f9", padding: "0 10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 700, letterSpacing: 0.2, flex: 1 }}>
+                      {task.title}
                     </div>
-                    {showInsideLabel && <div style={{ fontSize: 8, color: "rgba(255,255,255,0.85)", paddingRight: 6, whiteSpace: "nowrap", fontFamily: "monospace" }}>{barLabel(task)}</div>}
+                    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.9)", paddingRight: 8, whiteSpace: "nowrap", fontFamily: "monospace", fontWeight: 600 }}>{barLabel(task)}</div>
                   </div>
                 </div>
               </div>
