@@ -1253,7 +1253,7 @@ const SITE_SECTIONS = [
   { id: "about", icon: "ℹ️", label: "About Section" },
   { id: "team", icon: "👥", label: "Our Team" },
   { id: "subteams", icon: "🔧", label: "Sub-Teams" },
-  { id: "flip", icon: "📖", label: "Flipped Story Section" },
+  { id: "flip", icon: "📖", label: "Flipped Section" },
   { id: "outreach", icon: "🌍", label: "Community Outreach" },
   { id: "media", icon: "🖼️", label: "Media Gallery" },
   { id: "articles", icon: "📝", label: "Team Articles" },
@@ -1997,7 +1997,7 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }
         </div>
       </div>
       <div style={S.card}>
-        <div style={S.cardTitle}>Flipped Section (Our Story)</div>
+        <div style={S.cardTitle}>Flipped Section</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0" }}>
             <input type="checkbox" checked={vals.flip_enabled !== "false"} onChange={e => setVals({ ...vals, flip_enabled: e.target.checked ? "true" : "false" })} style={{ width: 16, height: 16, cursor: "pointer" }} />
