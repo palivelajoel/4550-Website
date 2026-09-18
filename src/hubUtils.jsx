@@ -201,10 +201,10 @@ export async function prepareFileForUpload(file) {
  * GitHub URL or null on failure.
  */
 export async function uploadFile(file, _bucket) {
-  const { fileName, base64, contentType } = await prepareFileForUpload(file);
-  const token = localStorage.getItem("admin_token") || localStorage.getItem("hub_token");
-  if (!token) { await keepLastUploadError("Upload failed: no auth token — please log in again."); return null; }
   try {
+    const { fileName, base64, contentType } = await prepareFileForUpload(file);
+    const token = localStorage.getItem("admin_token") || localStorage.getItem("hub_token");
+    if (!token) { await keepLastUploadError("Upload failed: no auth token — please log in again."); return null; }
     const res = await fetch("/api/upload", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -230,8 +230,16 @@ export function getLastUploadError() { return _lastUploadError; }
  * PDFs/CAD files) to the GitHub repo via /api/upload.
  */
 export async function uploadMediaFile(file, _bucket, opts) {
-  if (needsLargeUpload(file)) return uploadLargeFile(file, opts);
-  return uploadFile(file);
+  try {
+    if (needsLargeUpload(file)) {
+      const r = await uploadLargeFile(file, opts);
+      return r;
+    }
+    return await uploadFile(file);
+  } catch (e) {
+    await keepLastUploadError((e && e.message) || "Upload failed.");
+    return null;
+  }
 }
 
 // ---- Large media (non-video) uploads via the media-gateway Cloudflare Worker ----
@@ -276,7 +284,7 @@ export async function uploadLargeFile(file, { onProgress } = {}) {
   const token = getToken() || localStorage.getItem("admin_token");
   if (!token) {
     await keepLastUploadError("Upload failed: no auth token — please log in again.");
-    throw new Error("Upload failed: no auth token — please log in again.");
+    return null;
   }
   const base = mediaWorkerBase();
 
@@ -321,7 +329,7 @@ export async function uploadLargeFile(file, { onProgress } = {}) {
       });
     } catch {}
     await keepLastUploadError((e && e.message) || "Upload failed.");
-    throw e;
+    return null;
   }
 }
 

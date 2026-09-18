@@ -182,44 +182,39 @@ export default function HubMedia() {
     if (!form.title) return showToast("Title required.");
     setUploading(true);
     setUploadPct(null);
-    let url = form.url.trim();
-    // YouTube links are free & autoplay — no upload needed
-    const ytDirect = youtubeEmbedUrl(url);
-    if (ytDirect) {
-      // use the raw YouTube URL as-is; render layer converts to embed
-    } else if (file) {
-      if (file.type.startsWith("video")) {
-        // Direct 500MB video files can't go via GitHub (3MB cap) and R2 is not free,
-        // so guide to YouTube for free unlimited hosting.
-        if ((file.size || 0) > 3 * 1024 * 1024) {
-          showToast("Videos over 3MB: upload to YouTube (Unlisted) and paste the link — it will autoplay.");
-          setUploading(false);
-          setUploadPct(null);
-          return;
-        }
-        // Small videos (<3MB) can still go via GitHub if needed
-        url = await uploadMediaFile(file, "team-media");
-        if (!url) { showToast(getLastUploadError() || "Upload failed."); setUploading(false); return; }
-      } else {
-        url = await uploadMediaFile(file, "team-media");
-        if (!url) { showToast(getLastUploadError() || "Upload failed."); setUploading(false); return; }
-      }
-    }
-    if (!url) { showToast("Provide a file or YouTube link."); setUploading(false); return; }
-
-    const isVideo = url.includes("youtube") || url.includes("youtu.be") || url.includes("vimeo") || (file && file.type.startsWith("video"));
     try {
+      let url = form.url.trim();
+      const ytDirect = youtubeEmbedUrl(url);
+      if (ytDirect) {
+        // use the raw YouTube URL as-is; render layer converts to embed
+      } else if (file) {
+        if (file.type.startsWith("video")) {
+          if ((file.size || 0) > 3 * 1024 * 1024) {
+            showToast("Videos over 3MB: upload to YouTube (Unlisted) and paste the link — it will autoplay.");
+            return;
+          }
+          url = await uploadMediaFile(file, "team-media");
+          if (!url) { showToast(getLastUploadError() || "Upload failed."); return; }
+        } else {
+          url = await uploadMediaFile(file, "team-media");
+          if (!url) { showToast(getLastUploadError() || "Upload failed."); return; }
+        }
+      }
+      if (!url) { showToast("Provide a file or YouTube link."); return; }
+
+      const isVideo = url.includes("youtube") || url.includes("youtu.be") || url.includes("vimeo") || (file && file.type.startsWith("video"));
       await hubProxy("hub_media", "insert", { ...form, url, type: isVideo ? "video" : "image" });
       showToast("Added!");
+      setAddModal(false);
+      setFile(null);
+      setForm({ title: "", category: "Competition", description: "", year: new Date().getFullYear(), url: "", folder: "" });
+      load();
     } catch (e) {
       showToast("Add failed: " + (e.message || e));
+    } finally {
+      setUploading(false);
+      setUploadPct(null);
     }
-    setAddModal(false);
-    setFile(null);
-    setForm({ title: "", category: "Competition", description: "", year: new Date().getFullYear(), url: "", folder: "" });
-    setUploading(false);
-    setUploadPct(null);
-    load();
   }
 
   async function submitFolder() {
@@ -229,38 +224,59 @@ export default function HubMedia() {
     const totalBytes = dirFiles.reduce((s, f) => s + (f.size || 0), 0);
     let doneBytes = 0;
     let ok = 0, fail = 0;
-    for (let i = 0; i < dirFiles.length; i++) {
-      const f = dirFiles[i];
-      const url = await uploadMediaFile(f, "team-media", {
-        onProgress: (d, t) => {
-          if (!t) return;
-          doneBytes = doneBytes - (t) + (d); // replace this file's contribution as it uploads
+    try {
+      for (let i = 0; i < dirFiles.length; i++) {
+        const f = dirFiles[i];
+        let url = null;
+        let lastProgress = 0;
+        try {
+          url = await uploadMediaFile(f, "team-media", {
+            onProgress: (d, t) => {
+              if (!t) return;
+              const delta = d - lastProgress;
+              doneBytes += delta;
+              lastProgress = d;
+              setUploadPct(totalBytes ? Math.round((doneBytes / totalBytes) * 100) : null);
+            },
+          });
+        } catch (e) {
+          url = null;
+        }
+        if (lastProgress === 0) {
+          doneBytes += f.size || 0;
+        } else if (lastProgress < (f.size || 0)) {
+          doneBytes += (f.size || 0) - lastProgress;
+        }
+        if (!url) {
+          fail++;
           setUploadPct(totalBytes ? Math.round((doneBytes / totalBytes) * 100) : null);
-        },
-      });
-      doneBytes += f.size || 0;
-      if (!url) { fail++; continue; }
-      const isVideo = f.type.startsWith("video");
-      try {
-        await hubProxy("hub_media", "insert", {
-          title: titleFromName(f.name),
-          category: form.category,
-          description: "",
-          year: form.year,
-          url,
-          type: isVideo ? "video" : "image",
-          folder: targetFolder || "",
-        });
-        ok++;
-      } catch { fail++; }
+          continue;
+        }
+        const isVideo = f.type.startsWith("video");
+        try {
+          await hubProxy("hub_media", "insert", {
+            title: titleFromName(f.name),
+            category: form.category,
+            description: "",
+            year: form.year,
+            url,
+            type: isVideo ? "video" : "image",
+            folder: targetFolder || "",
+          });
+          ok++;
+        } catch { fail++; }
+      }
+      showToast(`Uploaded ${ok} item${ok !== 1 ? "s" : ""}${fail ? ` · ${fail} failed` : ""}.`);
+    } catch (e) {
+      showToast("Upload failed: " + (e.message || e));
+    } finally {
+      setAddModal(false);
+      setDirFiles(null);
+      setTargetFolder("");
+      setUploading(false);
+      setUploadPct(null);
+      load();
     }
-    showToast(`Uploaded ${ok} item${ok !== 1 ? "s" : ""}${fail ? ` · ${fail} failed` : ""}.`);
-    setAddModal(false);
-    setDirFiles(null);
-    setTargetFolder("");
-    setUploading(false);
-    setUploadPct(null);
-    load();
   }
 
   async function deleteItem(id) {

@@ -149,19 +149,35 @@ export default function HubCalendar() {
   async function saveEvent() {
     if (!form.title || !form.date) return;
     setSaving(true);
-    const payload = { ...form };
-    if (!payload.end_date) delete payload.end_date;
-    if (!payload.time) delete payload.time;
-    if (!payload.end_time) delete payload.end_time;
-    if (!payload.description) delete payload.description;
-    if (modal.mode === "add") {
-      await hubProxy("hub_calendar", "insert", payload);
-      showToast("Event added!");
-    } else {
-      await hubProxy("hub_calendar", "update", { id: modal.event.id, updates: payload });
-      showToast("Event updated!");
+    try {
+      const payload = { ...form };
+      payload.all_day = form.all_day ? 1 : 0;
+      if (!payload.end_date) payload.end_date = null;
+      if (!payload.description) payload.description = null;
+      if (form.all_day) {
+        payload.time = null;
+        payload.end_time = null;
+      } else {
+        if (!payload.time) payload.time = null;
+        if (!payload.end_time) payload.end_time = null;
+      }
+      const toSend = modal.mode === "add"
+        ? Object.fromEntries(Object.entries(payload).filter(([_, v]) => v != null && v !== ""))
+        : payload;
+      if (modal.mode === "add") {
+        await hubProxy("hub_calendar", "insert", toSend);
+        showToast("Event added!");
+      } else {
+        await hubProxy("hub_calendar", "update", { id: modal.event.id, updates: toSend });
+        showToast("Event updated!");
+      }
+      setModal(null);
+      loadData();
+    } catch (e) {
+      showToast("Save failed: " + (e.message || e), "#ef4444");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false); setModal(null); loadData();
   }
 
   async function deleteEvent(id) {

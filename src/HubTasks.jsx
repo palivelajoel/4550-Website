@@ -11,6 +11,8 @@ const priorityColor = { Low: "#22c55e", Medium: "#f59e0b", High: "#ef4444", Crit
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
 const startOfWeek = d => { const r = new Date(d); r.setDate(r.getDate() - r.getDay()); return r; };
+const todayLocal = () => new Date().toLocaleDateString('en-CA');
+const nowLocal = () => new Date().toTimeString().slice(0,5);
 
 export default function HubTasks() {
   const [authed] = useState(isAuthed());
@@ -21,7 +23,7 @@ export default function HubTasks() {
   const [filterTeam, setFilterTeam] = useState("All");
   const [filterMember, setFilterMember] = useState("");
   const [viewMode, setViewMode] = useState("board");
-  const [form, setForm] = useState({ title: "", description: "", subteam: "General", assigned_to: "", assigned_name: "", start_date: "", start_time: "", due_date: "", due_time: "18:00", priority: "Medium", status: "To Do" });
+  const [form, setForm] = useState({ title: "", description: "", subteam: "General", assigned_to: "", assigned_name: "", start_date: todayLocal(), start_time: nowLocal(), due_date: "", due_time: "18:00", priority: "Medium", status: "To Do" });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
   const [dragId, setDragId] = useState(null);
@@ -64,7 +66,7 @@ export default function HubTasks() {
     if (m) setMembers(m);
   }
 
-  function openAdd(status = "To Do") {    if (!canEdit) return;    setForm({ title: "", description: "", subteam: "General", assigned_to: "", assigned_name: "", start_date: "", start_time: "", due_date: "", due_time: "18:00", priority: "Medium", status });
+  function openAdd(status = "To Do") {    if (!canEdit) return;    setForm({ title: "", description: "", subteam: "General", assigned_to: "", assigned_name: "", start_date: todayLocal(), start_time: nowLocal(), due_date: "", due_time: "18:00", priority: "Medium", status });
     setModal({ mode: "add" });
   }
 
@@ -367,7 +369,7 @@ export default function HubTasks() {
               <div style={{ display: "flex", gap: 10 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 10, color: C.dim, marginBottom: 3, fontFamily: "monospace" }}>Start Date</div>
-                  <input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} style={inputStyle} />
+                  <input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value, start_time: e.target.value && !form.start_time ? nowLocal() : form.start_time })} style={inputStyle} />
                   <input type="time" value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} style={{ ...inputStyle, marginTop: 4 }} />
                 </div>
                 <div style={{ flex: 1 }}>
