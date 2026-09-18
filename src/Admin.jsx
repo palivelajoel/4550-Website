@@ -1686,9 +1686,7 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }
     setUploading(true);
     const url = await uploadFile(logoFile);
     if (!url) { showToast("Upload failed.", "#ef4444"); setUploading(false); return; }
-    const existing = await sbFetch("site_config?key=eq.logo_url&select=key");
-    if (existing?.length) await adminProxy("site_config", "update", { id: existing[0].id, updates: { value: url } });
-    else await adminProxy("site_config", "insert", { key: "logo_url", value: url });
+    await adminProxy("site_config", "upsert", { key: "logo_url", value: url });
     setLogoUrl(url); setLogoFile(null); setUploading(false); reload(); showToast("✅ Logo updated!");
   }
 
@@ -1865,9 +1863,7 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }
         <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: 8, marginBottom: 14 }}>
           <button onClick={async () => {
             const order = effOrder.join(",");
-            const existing = (await sbFetch("site_config?key=eq.site_section_order&select=key")) || [];
-            if (existing?.length) await adminProxy("site_config", "update", { id: existing[0].id, updates: { value: order } });
-            else await adminProxy("site_config", "insert", { key: "site_section_order", value: order });
+            await adminProxy("site_config", "upsert", { key: "site_section_order", value: order });
             reload(); showToast("✅ Site order saved.");
           }} style={S.btnPrimary}>Save Order</button>
           <button onClick={() => setSiteOrder([])} style={S.btnGhost}>Reset to Default</button>
@@ -1908,17 +1904,13 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }
           <button onClick={async () => {
             setTileSaving(true);
             const order = tileOrder.length ? tileOrder : HUB_TILES.map(t => t.id);
-            const existing = (await sbFetch("site_config?key=eq.hub_tile_order&select=key")) || [];
-            if (existing?.length) await adminProxy("site_config", "update", { id: existing[0].id, updates: { value: order.join(",") } });
-            else await adminProxy("site_config", "insert", { key: "hub_tile_order", value: order.join(",") });
+            await adminProxy("site_config", "upsert", { key: "hub_tile_order", value: order.join(",") });
             setTileSaving(false); reload(); showToast("✅ Tile order saved.");
           }} disabled={tileSaving} style={{ ...S.btnPrimary, opacity: tileSaving ? 0.6 : 1 }}>{tileSaving ? "Saving..." : "Save Order"}</button>
           <button onClick={async () => {
             setHiddenSaving(true);
             const val = hiddenTiles.join(",");
-            const existing = (await sbFetch("site_config?key=eq.hub_tiles_hidden&select=key")) || [];
-            if (existing?.length) await adminProxy("site_config", "update", { id: existing[0].id, updates: { value: val } });
-            else await adminProxy("site_config", "insert", { key: "hub_tiles_hidden", value: val });
+            await adminProxy("site_config", "upsert", { key: "hub_tiles_hidden", value: val });
             setHiddenSaving(false); reload(); showToast("✅ Tile visibility saved.");
           }} disabled={hiddenSaving} style={{ ...S.btnPrimary, opacity: hiddenSaving ? 0.6 : 1 }}>{hiddenSaving ? "Saving..." : "Save Visibility"}</button>
           <button onClick={() => {
