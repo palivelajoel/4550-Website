@@ -113,7 +113,68 @@ function Card3D({ children, style: s, className, ...rest }) {
 }
 
 // Text that progressively reveals characters as you scroll through it
-function ScrollTypewriter({ text, style: styleProp, speed = 22, initialReveal = 0.4 }) {
+function shortenUrl(url) {
+  try {
+    const u = new URL(url);
+    let s = (u.hostname.replace(/^www\./, "") + u.pathname).replace(/\/$/, "");
+    if (s.length > 28) s = s.slice(0, 28) + "…";
+    return s;
+  } catch {
+    return url.replace(/^https?:\/\//, "").replace(/^www\./, "").slice(0, 28);
+  }
+}
+function renderWithLinks(str) {
+  // Supports plain https:// URLs and markdown [label](https://url)
+  const mdRe = /\[([^\]]+)\]\((https?:\/\/[^\)\s]+)\)/g;
+  const urlRe = /(https?:\/\/[^\s]+)/g;
+  const parts = [];
+  let lastIdx = 0;
+  // First, handle markdown links to preserve labels
+  const mdSegments = [];
+  let m;
+  while ((m = mdRe.exec(str)) !== null) {
+    mdSegments.push({ idx: m.index, end: m.index + m[0].length, label: m[1], url: m[2] });
+  }
+  // Build a version where markdown is replaced with placeholder to avoid double-matching
+  let plain = str;
+  // We'll walk the string and emit nodes
+  const tokens = [];
+  let i = 0;
+  while (i < str.length) {
+    // Check for markdown at i
+    const md = mdSegments.find(s => s.idx === i);
+    if (md) {
+      tokens.push({ type: "link", label: md.label, url: md.url });
+      i = md.end;
+      continue;
+    }
+    // Check forplain URL at i
+    urlRe.lastIndex = i;
+    const um = urlRe.exec(str);
+    if (um && um.index === i) {
+      let url = um[0];
+      // Trim trailing punctuation that is not part of URL
+      const trail = url.match(/[.,;:!?)\]]+$/);
+      let suffix = "";
+      if (trail) { suffix = trail[0]; url = url.slice(0, -suffix.length); }
+      tokens.push({ type: "link", label: shortenUrl(url), url });
+      if (suffix) tokens.push({ type: "text", text: suffix });
+      i = um.index + um[0].length;
+      continue;
+    }
+    // Otherwise consume until next special
+    const nextMd = mdSegments.find(s => s.idx > i);
+    const nextUrlIdx = (() => { urlRe.lastIndex = i + 1; const n = urlRe.exec(str); return n ? n.index : Infinity; })();
+    const next = Math.min(nextMd ? nextMd.idx : Infinity, nextUrlIdx);
+    const end = isFinite(next) ? next : str.length;
+    // If next is i+1 but we already handled i, this will be at least 1 char
+    if (end <= i) { tokens.push({ type: "text", text: str[i] }); i++; }
+    else { tokens.push({ type: "text", text: str.slice(i, end) }); i = end; }
+  }
+  return tokens;
+}
+
+function ScrollTypewriter({ text, style: styleProp, speed = 12, initialReveal = 0.75 }) {
   const ref = useRef(null);
   const [count, setCount] = useState(0);
   const started = useRef(false);
@@ -135,14 +196,25 @@ function ScrollTypewriter({ text, style: styleProp, speed = 22, initialReveal = 
         };
         if (i < text.length) setTimeout(step, speed);
       }
-    }, { threshold: 0.2 });
+    }, { threshold: 0.35 });
     obs.observe(el);
     return () => obs.disconnect();
   }, [text, speed, initialReveal]);
 
+  const revealed = text.slice(0, count);
+  const nodes = renderWithLinks(revealed);
+
   return (
-    <span ref={ref} style={styleProp}>
-      {text.slice(0, count)}
+    <span ref={ref} style={{ ...styleProp, whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere" }}>
+      {nodes.map((n, idx) =>
+        n.type === "link" ? (
+          <a key={idx} href={n.url} target="_blank" rel="noreferrer" style={{ color: "#ef4444", fontWeight: 800, textDecoration: "underline", textDecorationColor: "rgba(239,68,68,0.5)", textUnderlineOffset: 3, wordBreak: "break-all" }}>
+            {n.label}
+          </a>
+        ) : (
+          <span key={idx}>{n.text}</span>
+        )
+      )}
       {count < text.length && text.length > 10 && (
         <span style={{ animation: "cursorBlink 0.7s step-end infinite", color: "#ef4444", fontWeight: 900, fontSize: "1.15em", textShadow: "0 0 8px rgba(239,68,68,0.6)" }}>|</span>
       )}
