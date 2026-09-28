@@ -1261,6 +1261,7 @@ const SITE_SECTIONS = [
   { id: "sponsors", icon: "🤝", label: "Sponsors + Ribbon" },
   { id: "donate", icon: "💸", label: "Make a Donation" },
   { id: "contact", icon: "✉️", label: "Contact" },
+  { id: "countdown", icon: "⏳", label: "Countdown" },
 ];
 
 // ── BANNER ROW (admin preview with crop-cut tiles) ──────
@@ -1681,6 +1682,11 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }
     reload(); showToast("✅ Flipped section saved.");
   }
 
+  async function saveCountdown() {
+    for (const k of ["countdown_enabled", "countdown_eyebrow", "countdown_title", "countdown_large_title", "countdown_subtitle", "countdown_target"]) await adminProxy("site_config", "upsert", { key: k, value: vals[k] ?? "" });
+    reload(); showToast("✅ Countdown section saved.");
+  }
+
   async function uploadLogo() {
     if (!logoFile) return;
     setUploading(true);
@@ -2027,6 +2033,39 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }
           </div>
           <div>
             <button onClick={saveFlip} style={S.btnPrimary}>Save</button>
+          </div>
+        </div>
+      </div>
+      <div style={S.card}>
+        <div style={S.cardTitle}>⏳ Countdown</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0" }}>
+            <input type="checkbox" checked={vals.countdown_enabled === "true"} onChange={e => setVals({ ...vals, countdown_enabled: e.target.checked ? "true" : "false" })} style={{ width: 16, height: 16, cursor: "pointer" }} />
+            Show on homepage
+          </label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ color: "#94a3b8", fontSize: 12, fontFamily: "monospace" }}>Eyebrow (// text)</label>
+            <input value={vals.countdown_eyebrow || ""} onChange={e => setVals({ ...vals, countdown_eyebrow: e.target.value })} style={{ ...S.input, width: "100%" }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ color: "#94a3b8", fontSize: 12, fontFamily: "monospace" }}>Title</label>
+            <input value={vals.countdown_title || ""} onChange={e => setVals({ ...vals, countdown_title: e.target.value })} style={{ ...S.input, width: "100%" }} />
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#e2e8f0" }}>
+            <input type="checkbox" checked={vals.countdown_large_title === "true"} onChange={e => setVals({ ...vals, countdown_large_title: e.target.checked ? "true" : "false" })} style={{ width: 16, height: 16, cursor: "pointer" }} />
+            Large title
+          </label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ color: "#94a3b8", fontSize: 12, fontFamily: "monospace" }}>Subtitle</label>
+            <textarea rows={3} value={vals.countdown_subtitle || ""} onChange={e => setVals({ ...vals, countdown_subtitle: e.target.value })} style={{ ...S.input, width: "100%", resize: "vertical", fontSize: 12, lineHeight: 1.6 }} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ color: "#94a3b8", fontSize: 12, fontFamily: "monospace" }}>Countdown target (date &amp; time)</label>
+            <input type="datetime-local" value={vals.countdown_target || ""} onChange={e => setVals({ ...vals, countdown_target: e.target.value })} style={S.input} />
+            <div style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace" }}>The clock ticks every second until this moment.</div>
+          </div>
+          <div>
+            <button onClick={saveCountdown} style={S.btnPrimary}>Save</button>
           </div>
         </div>
       </div>

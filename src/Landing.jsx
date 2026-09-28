@@ -490,8 +490,8 @@ export default function Landing() {
   const [menuOpen, setMenuOpen] = useState(false);
   const heroParallaxRef = useRef(null);
 
-  const SECTION_ORDER = ["banners","about","team","subteams","flip","outreach","media","articles","social","sponsors","donate","contact"];
-  const DEFAULT_ORDER = ["banners","about","team","subteams","flip","outreach","media","articles","social","sponsors","donate","contact"];
+  const SECTION_ORDER = ["banners","about","team","subteams","flip","countdown","outreach","media","articles","social","sponsors","donate","contact"];
+  const DEFAULT_ORDER = ["banners","about","team","subteams","flip","countdown","outreach","media","articles","social","sponsors","donate","contact"];
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
@@ -537,7 +537,8 @@ export default function Landing() {
 
   const banners = (() => { try { return JSON.parse(config.landing_banners || "[]"); } catch { return []; } })();
 
-  const siteOrder = (() => { try { const raw = (config.site_section_order || "").split(",").map(s => s.trim()).filter(Boolean); return raw.length ? raw : DEFAULT_ORDER; } catch { return DEFAULT_ORDER; } })();
+  let siteOrder = (() => { try { const raw = (config.site_section_order || "").split(",").map(s => s.trim()).filter(Boolean); return raw.length ? raw : [...DEFAULT_ORDER]; } catch { return [...DEFAULT_ORDER]; } })();
+  if (config.countdown_enabled === "true" && !siteOrder.includes("countdown")) siteOrder.push("countdown");
 
   const aboutMetrics = (() => {
     try {
@@ -823,6 +824,29 @@ export default function Landing() {
       </div></section>
       )
 
+      {/* COUNTDOWN */}
+      const countdownLarge = config.countdown_large_title === "true";
+      const countdownSection = config.countdown_enabled === "true" && (
+        <section id="countdown" style={{ background: "rgba(239,68,68,0.04)", borderTop: "1px solid rgba(239,68,68,0.1)", borderBottom: "1px solid rgba(239,68,68,0.1)" }}><div className="sec">
+
+          <ProgressSection>
+            <div style={{ textAlign: "center" }}>
+              <Eyebrow>{config.countdown_eyebrow || "// COUNTDOWN"}</Eyebrow>
+              <h2 style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: countdownLarge ? "clamp(30px,7vw,68px)" : "clamp(20px,4vw,36px)", color: "#f1f5f9", marginBottom: 16, animation: "glitch 18s ease-in-out infinite 1s" }}>
+                {config.countdown_title || "Something Big Is Coming"}
+              </h2>
+              {config.countdown_subtitle && (
+                <motion.p initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: "spring", stiffness: 100, damping: 18, delay: 0.1 }} style={{ color: "#94a3b8", maxWidth: 560, margin: "0 auto 34px", lineHeight: 1.8, fontSize: 15 }}>
+                  {config.countdown_subtitle}
+                </motion.p>
+              )}
+              <CountdownClock target={config.countdown_target} isMobile={isMobile} />
+            </div>
+          </ProgressSection>
+
+        </div></section>
+      )
+
       {/* FLIPPED / REVERSED STORY SECTION */}
       const flipSection = config.flip_enabled !== "false" && (
         <section id="flip" style={{ background: "rgba(255,255,255,0.015)" }}><div className="sec">
@@ -1026,6 +1050,7 @@ export default function Landing() {
           team: teamSection,
           subteams: subteamsSection,
           flip: flipSection,
+          countdown: countdownSection,
           outreach: outreachSection,
           media: mediaSection,
           articles: articlesSection,
@@ -1061,6 +1086,41 @@ export default function Landing() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function CountdownClock({ target, isMobile }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const parsed = target && !isNaN(new Date(target).getTime()) ? new Date(target).getTime() : null;
+  if (!parsed) {
+    return <div style={{ color: "#475569", fontFamily: "'Share Tech Mono', monospace", fontSize: 13, marginTop: 8 }}>no target set — add a date &amp; time in Settings</div>;
+  }
+  const diff = Math.max(0, parsed - now);
+  const total = Math.floor(diff / 1000);
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const mins = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  const pad = n => String(n).padStart(2, "0");
+  const units = [
+    { label: "Days", value: days > 99 ? String(days) : pad(days) },
+    { label: "Hrs", value: pad(hours) },
+    { label: "Min", value: pad(mins) },
+    { label: "Sec", value: pad(secs) },
+  ];
+  return (
+    <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ type: "spring", stiffness: 120, damping: 16, delay: 0.2 }} style={{ display: "inline-flex", gap: isMobile ? 10 : 18, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+      {units.map(u => (
+        <div key={u.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 14, minWidth: 84, padding: isMobile ? "16px 10px" : "22px 18px", textAlign: "center" }}>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 26 : 40, color: "#f1f5f9", textShadow: "0 0 22px rgba(239,68,68,0.55)", lineHeight: 1, fontVariantNumeric: "tabular-nums", animation: "glitch 15s ease-in-out infinite" }}>{u.value}</div>
+          <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, color: "#ef4444", letterSpacing: 2, marginTop: 8 }}>{u.label}</div>
+        </div>
+      ))}
+    </motion.div>
   );
 }
 
