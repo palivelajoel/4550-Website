@@ -20,6 +20,18 @@ export const canEditHub = () => isCaptainOrAbove();
 export const canEditInventory = () => isCaptainOrAbove() || getSubteam() === "Build";
 export const getToken = () => localStorage.getItem("hub_token");
 
+// Hide tasks assigned to captains from Member accounts. Captains/Admins see everything.
+export function visibleTasksForRole(tasks, members) {
+  if (isCaptainOrAbove()) return tasks;
+  const captainIds = new Set((members || []).filter(m => m.role === "Captain").map(m => m.id));
+  const captainNames = new Set((members || []).filter(m => m.role === "Captain").map(m => String(m.full_name || m.username).toLowerCase()));
+  return (tasks || []).filter(tk => {
+    if (tk.assigned_to && captainIds.has(tk.assigned_to)) return false;
+    if (tk.assigned_name && captainNames.has(String(tk.assigned_name).toLowerCase())) return false;
+    return true;
+  });
+}
+
 function decodeTokenPayload(token) {
   try { return JSON.parse(atob(token.split(".")[1])); } catch { return null; }
 }

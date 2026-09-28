@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from 'framer-motion'
-import { FONTS, C, sbFetch, isAuthed, canEditHub, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, canEditHub, visibleTasksForRole, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
 import HubBackground from "./HubBackground.jsx";
 
 const STATUSES = ["Backlog", "To Do", "In Progress", "Review", "Done"];
@@ -62,8 +62,8 @@ export default function HubTasks() {
       sbFetch("hub_tasks?select=*&order=created_at.desc"),
       sbFetch("members?select=id,username,full_name,role&order=full_name.asc"),
     ]);
-    if (t) setTasks(t);
     if (m) setMembers(m);
+    if (t) setTasks(visibleTasksForRole(t, m));
   }
 
   function openAdd(status = "To Do") {    if (!canEdit) return;    setForm({ title: "", description: "", subteam: "General", assigned_to: "", assigned_name: "", start_date: todayLocal(), start_time: nowLocal(), due_date: "", due_time: "18:00", priority: "Medium", status });

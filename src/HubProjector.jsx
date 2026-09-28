@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, visibleTasksForRole } from "./hubUtils.jsx";
 
 const SLIDE_DURATION = 12000; // ms per slide
 
@@ -42,16 +42,17 @@ export default function HubProjector() {
   }, [slide, paused]);
 
   async function load() {
-    const [ev, tk, an, cfg] = await Promise.all([
+    const [ev, tk, an, cfg, members] = await Promise.all([
       sbFetch("hub_calendar?select=*&order=date.asc"),
       sbFetch("hub_tasks?status=neq.Done&select=*&order=priority.desc,due_date.asc"),
       sbFetch("hub_announcements?select=*&order=pinned.desc,created_at.desc&limit=6"),
       sbFetch("site_config?key=eq.logo_url&select=value"),
+      sbFetch("members?select=id,username,full_name,role"),
     ]);
     const todayStr = new Date().toISOString().split("T")[0];
     setData({
       events: ev ? ev.filter(e => e.date >= todayStr).slice(0, 12) : [],
-      tasks: tk ? tk.slice(0, 20) : [],
+      tasks: visibleTasksForRole(tk, members).slice(0, 20),
       announcements: an || [],
     });
     if (cfg?.[0]) setLogoUrl(cfg[0].value);
