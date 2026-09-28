@@ -180,6 +180,7 @@ export default function Hub() {
     { id:"sponsor-tracker", icon:"🤝", label:"Sponsor Tracker", description:"Manage sponsors, contact info, and outreach status.", href:"/member-hub/sponsors", accent:"#0ea5e9" },
     { id:"advertisement", icon:"📢", label:"Advertisement", description:"Fullscreen outreach display — media, videos, robot & QR.", href:"/member-hub/advertisement", accent:"#ef4444" },
     { id:"articles", icon:"📝", label:"Articles", description:"Write and manage blog posts and outreach articles.", href:"/member-hub/articles", accent:"#a855f7" },
+    { id:"countdown", icon:"⏳", label:"Countdown", description:"Live ticking countdown to a target date & time.", href:"/member-hub/countdown", accent:"#ef4444" },
   ];
 
   // ── LOGIN ───────────────────────────────────────────────
