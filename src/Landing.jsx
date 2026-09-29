@@ -1115,8 +1115,8 @@ function CountdownClock({ target, isMobile }) {
   return (
     <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ type: "spring", stiffness: 120, damping: 16, delay: 0.2 }} style={{ display: "inline-flex", gap: isMobile ? 10 : 18, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
       {units.map(u => (
-        <div key={u.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 14, minWidth: 84, padding: isMobile ? "16px 10px" : "22px 18px", textAlign: "center" }}>
-          <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 26 : 40, color: "#f1f5f9", textShadow: "0 0 22px rgba(239,68,68,0.55)", lineHeight: 1, fontVariantNumeric: "tabular-nums", animation: "glitch 15s ease-in-out infinite" }}>{u.value}</div>
+        <div key={u.label} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 14, minWidth: 84, padding: isMobile ? "16px 10px" : "22px 18px", textAlign: "center", boxShadow: "0 0 28px rgba(239,68,68,0.15), inset 0 0 18px rgba(239,68,68,0.06)" }}>
+          <div style={{ fontFamily: "'Orbitron', sans-serif", fontWeight: 700, fontSize: isMobile ? 26 : 40, color: "#f1f5f9", textShadow: "0 0 30px rgba(239,68,68,0.6)", lineHeight: 1, fontVariantNumeric: "tabular-nums", animation: "glitch 15s ease-in-out infinite" }}>{u.value}</div>
           <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, color: "#ef4444", letterSpacing: 2, marginTop: 8 }}>{u.label}</div>
         </div>
       ))}

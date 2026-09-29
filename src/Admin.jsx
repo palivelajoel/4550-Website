@@ -1246,7 +1246,6 @@ const HUB_TILES = [
   { id:"sponsor-tracker", icon:"🤝", label:"Sponsor Tracker" },
   { id:"forms", icon:"📋", label:"Forms" },
   { id:"articles", icon:"📝", label:"Articles" },
-  { id:"countdown", icon:"⏳", label:"Countdown" },
 ];
 
 const SITE_SECTIONS = [

@@ -20,7 +20,6 @@ import Privacy from './Privacy.jsx'
 import Terms from './Terms.jsx'
 import HubArticles from './HubArticles.jsx'
 import ArticleView from './ArticleView.jsx'
-import HubCountdown from './HubCountdown.jsx'
 
 const path = window.location.pathname
 
@@ -39,7 +38,6 @@ const Page =
   : path === '/member-hub/forms'               ? HubForms
   : path === '/member-hub/inventory'           ? HubInventory
   : path === '/member-hub/articles'            ? HubArticles
-  : path === '/member-hub/countdown'            ? HubCountdown
   : path === '/article'                        ? ArticleView
   : path === '/media'                          ? PublicMedia
   : path === '/privacy'                        ? Privacy
