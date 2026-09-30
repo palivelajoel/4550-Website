@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { FONTS, C, ROLE_COLORS, SUBTEAM_COLORS, TEAM_PASSWORD, sbFetch, isAdmin, isCaptainOrAbove, getRole, getUsername } from "./hubUtils.jsx";
+import { FONTS, C, ROLE_COLORS, SUBTEAM_COLORS, TEAM_PASSWORD, sbFetch, isAdmin, getRole, getUsername } from "./hubUtils.jsx";
 
 import Starfield from "./Starfield.jsx";
 import HubBackground from "./HubBackground.jsx";
@@ -72,7 +72,6 @@ export default function Hub() {
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [memberName, setMemberName] = useState("");
   const [taskCount, setTaskCount] = useState(0);
-  const [pendingForms, setPendingForms] = useState(0);
   const [role, setRole] = useState("Member");
   const [subteam, setSubteam] = useState("General");
   const [loginLoading, setLoginLoading] = useState(false);
@@ -120,14 +119,6 @@ export default function Hub() {
     }
     const t = await sbFetch("hub_tasks?status=neq.Done&select=id");
     if (t) setTaskCount(t.length);
-    if (u && !isCaptainOrAbove()) {
-      const allF = await sbFetch("hub_forms?select=id,visibility");
-      const myS = await sbFetch(`hub_form_submissions?submitted_by=eq.${encodeURIComponent(u)}&select=form_id`);
-      if (allF && myS) {
-        const submittedIds = new Set(myS.map(s => s.form_id));
-        setPendingForms(allF.filter(f => f.visibility !== "draft" && !submittedIds.has(f.id)).length);
-      }
-    }
   }
 
   async function handleLogin(e) {
@@ -307,16 +298,9 @@ export default function Hub() {
           ))}
         </div>
 
-        {/* Forms card — hidden if forms is hidden */}
-        {!hiddenTiles.includes("forms") && (
+        {/* Forms card — captains/admins only. Hidden for members. */}
+        {isCaptain && !hiddenTiles.includes("forms") && (
         <div style={{ marginTop: 20, position: "relative" }}>
-          {pendingForms > 0 && (
-            <div style={{ position: "absolute", inset: 0, border: `2px solid ${C.red}`, borderRadius: 14, zIndex: 2, pointerEvents: "none" }}>
-              <div style={{ position: "absolute", top: -1, right: 24, background: C.bg, padding: "0 8px", fontFamily: "'Orbitron',sans-serif", fontSize: 10, fontWeight: 700, color: C.red, letterSpacing: 1 }}>
-                {pendingForms} PENDING FORM{pendingForms !== 1 ? "S" : ""}
-              </div>
-            </div>
-          )}
           <a href="/member-hub/forms" style={{ textDecoration: "none", display: "block" }}>
             <div style={{ background: "linear-gradient(135deg,rgba(34,211,238,0.1),rgba(168,85,247,0.07))", border: `1px solid rgba(34,211,238,0.3)`, borderRadius: 14, padding: isMobile ? "18px 16px" : "22px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, cursor: "pointer", transition: "all 0.25s", flexWrap: "wrap" }}
               onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(34,211,238,0.7)"}

@@ -78,8 +78,8 @@ export default function HubTasks() {
   async function save() {
     if (!form.title) return;
     setSaving(true);
-    const member = members.find(m => m.id === form.assigned_to);
-    const payload = { ...form, assigned_name: member ? member.full_name || member.username : form.assigned_name };
+    const payload = { ...form, assigned_name: form.assigned_name.trim() || null };
+    delete payload.assigned_to;
     if (!payload.start_date) { payload.start_date = null; delete payload.start_date; payload.start_time = null; delete payload.start_time; }
     if (!payload.due_date) { payload.due_date = null; delete payload.due_date; payload.due_time = null; delete payload.due_time; }
     if (!payload.start_time) delete payload.start_time;
@@ -141,7 +141,7 @@ export default function HubTasks() {
     return tasks.filter(t => {
       if (t.status !== status) return false;
       if (filterTeam !== "All" && t.subteam !== filterTeam && t.subteam !== "All") return false;
-      if (filterMember && t.assigned_to !== filterMember) return false;
+      if (filterMember && !String(t.assigned_name || "").toLowerCase().includes(filterMember.trim().toLowerCase())) return false;
       return true;
     });
   }
@@ -231,10 +231,7 @@ export default function HubTasks() {
         <select value={filterTeam} onChange={e => setFilterTeam(e.target.value)} style={{ ...selectStyle, width: "auto" }}>
           {["All", "General", "Build", "Programming", "Marketing & Outreach"].map(s => <option key={s}>{s}</option>)}
         </select>
-        <select value={filterMember} onChange={e => setFilterMember(e.target.value)} style={{ ...selectStyle, width: "auto" }}>
-          <option value="">All Members</option>
-          {members.map(m => <option key={m.id} value={m.id}>{m.full_name || m.username}</option>)}
-        </select>
+        <input placeholder="Filter by person…" value={filterMember} onChange={e => setFilterMember(e.target.value)} style={{ ...selectStyle, width: "auto" }} />
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={exportCSV} style={{ ...ghostBtn, fontSize: 10, padding: "4px 8px" }}>Export</button>
           {canEdit && <button onClick={() => { setImportModal("upload"); setImportCsv(""); setImportParsed([]); }} style={{ ...ghostBtn, fontSize: 10, padding: "4px 8px" }}>Import</button>}
@@ -245,7 +242,7 @@ export default function HubTasks() {
       </div>
 
       {viewMode === "gantt" ? (
-        <GanttChart tasks={tasks.filter(t => filterTeam === "All" || t.subteam === filterTeam || t.subteam === "All").filter(t => !filterMember || t.assigned_to === filterMember)} {...{ priorityColor, statusColor, openEdit, isOverdue }} />
+        <GanttChart tasks={tasks.filter(t => filterTeam === "All" || t.subteam === filterTeam || t.subteam === "All").filter(t => !filterMember || String(t.assigned_name || "").toLowerCase().includes(filterMember.trim().toLowerCase()))} {...{ priorityColor, statusColor, openEdit, isOverdue }} />
       ) : (
         /* Board */
         <div style={{ overflowX: "auto", padding: "20px" }}>
@@ -362,10 +359,7 @@ export default function HubTasks() {
                 <option value="All">All Sub-Teams</option>
                 {["Build", "Programming", "Marketing & Outreach"].map(s => <option key={s}>{s}</option>)}
               </select>
-              <select value={form.assigned_to} onChange={e => setForm({ ...form, assigned_to: e.target.value })} style={selectStyle}>
-                <option value="">Unassigned</option>
-                {members.map(m => <option key={m.id} value={m.id}>{m.full_name || m.username}</option>)}
-              </select>
+              <input placeholder="Assigned to (any name)" value={form.assigned_name} onChange={e => setForm({ ...form, assigned_name: e.target.value, assigned_to: "" })} style={inputStyle} />
               <div style={{ display: "flex", gap: 10 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 10, color: C.dim, marginBottom: 3, fontFamily: "monospace" }}>Start Date</div>

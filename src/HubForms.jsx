@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from 'framer-motion'
-import { FONTS, C, sbFetch, isAuthed, canEditHub, getUsername, getToken, HubHeader, FormHeader, toastStyle, inputStyle, selectStyle, addBtnStyle, ghostBtn, hubProxy, getVisibleQuestions } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, canEditHub, getUsername, getToken, HubHeader, FormHeader, toastStyle, inputStyle, selectStyle, addBtnStyle, ghostBtn, hubProxy, overlayStyle, getVisibleQuestions } from "./hubUtils.jsx";
 import HubBackground from "./HubBackground.jsx";
 
 export default function HubForms() {
@@ -13,12 +13,14 @@ export default function HubForms() {
   const [fillForm, setFillForm] = useState(null);
   const [responsesForm, setResponsesForm] = useState(null);
   const [shareId, setShareId] = useState(null);
+  const [gimport, setGimport] = useState(null);
   const [toast, setToast] = useState("");
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(""), 3000); }
 
   useEffect(() => {
     if (!authed) { window.location.href = "/member-hub"; return; }
+    if (!canEditHub()) { window.location.href = "/member-hub"; return; }
     document.title = "Forms · Team 4550";
     loadData();
   }, []);
@@ -86,6 +88,7 @@ export default function HubForms() {
           }}
           onResponses={f => { setResponsesForm(f); setView("responses"); }}
           onNew={() => { setEditForm({ title: "", description: "", questions: [] }); setView("edit"); }}
+          onImport={() => setGimport(true)}
           loadData={loadData}
         />
       )}
@@ -158,6 +161,18 @@ export default function HubForms() {
           onBack={() => setView("list")}
         />
       )}
+
+      {gimport && (
+        <GFormImport
+          onClose={() => setGimport(null)}
+          onImported={(form, newId) => {
+            setGimport(null);
+            loadData();
+            if (form.visibility === "public") { setShareId(newId); setView("share"); }
+            else { setEditForm({ ...form, id: newId }); setView("edit"); }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -169,7 +184,7 @@ function qTypeLabel(t) {
   return { text: "Short Text", textarea: "Paragraph", select: "Dropdown", radio: "Multiple Choice", checkbox: "Checkboxes" }[t] || t;
 }
 
-function ListForms({ forms, submissions, canEdit, username, onFill, onEdit, onDelete, onResponses, onNew, onTestSheets }) {
+function ListForms({ forms, submissions, canEdit, username, onFill, onEdit, onDelete, onResponses, onNew, onImport, onTestSheets }) {
   const userSubmitted = formId => submissions.some(s => s.form_id === formId && s.submitted_by === username);
   const submissionCount = formId => submissions.filter(s => s.form_id === formId).length;
 
@@ -177,6 +192,7 @@ function ListForms({ forms, submissions, canEdit, username, onFill, onEdit, onDe
     <div style={{ maxWidth: 800, margin: "0 auto", padding: "24px 20px" }}>
       <div style={{ marginBottom: 24, display: "flex", justifyContent: "flex-end", gap: 8 }}>
         {canEdit && <button onClick={onTestSheets} style={ghostBtn}>Test Sheets</button>}
+        {canEdit && <button onClick={onImport} style={ghostBtn}>Import Google Form</button>}
         <button onClick={onNew} style={addBtnStyle}>+ Create Form</button>
       </div>
 
@@ -972,5 +988,140 @@ function TextCard({ label, responses }) {
         </div>
       )}
     </ChartCard>
+  );
+}
+
+function GFormImport({ onClose, onImported }) {
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+  const [preview, setPreview] = useState(null);
+
+  async function parse() {
+    setErr("");
+    if (!url.trim()) return setErr("Paste a Google Forms link first.");
+    setLoading(true);
+    try {
+      const res = await fetch("/api/parse-gform", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { setErr(j.error || `Import failed (HTTP ${res.status})`); setLoading(false); return; }
+      setPreview({
+        title: j.title || "",
+        description: j.description || "",
+        questions: (j.questions || []).map(q => ({
+          id: nextQid(),
+          type: q.type,
+          label: q.label,
+          required: !!q.required,
+          placeholder: q.placeholder || "",
+          options: ["select", "radio", "checkbox"].includes(q.type) ? ((q.options || []).slice()) : undefined,
+        })),
+      });
+    } catch (e) { setErr(e.message || "Parse failed."); }
+    setLoading(false);
+  }
+
+  function setQuestion(i, patch) {
+    setPreview(p => {
+      const qs = [...p.questions];
+      qs[i] = { ...qs[i], ...patch };
+      return { ...p, questions: qs };
+    });
+  }
+
+  async function importForm(vis) {
+    if (!preview) return;
+    setLoading(true);
+    setErr("");
+    try {
+      const res = await hubProxy("hub_forms", "insert", {
+        title: preview.title.trim() || "Imported Form",
+        description: preview.description.trim(),
+        questions: preview.questions.map(q => ({
+          id: q.id,
+          type: q.type,
+          label: q.label.trim(),
+          required: q.required,
+          placeholder: q.placeholder || "",
+          options: ["select", "radio", "checkbox"].includes(q.type) ? (q.options || []).filter(o => o && o.trim()) : undefined,
+        })),
+        created_by: getUsername(),
+        visibility: vis,
+      });
+      const newId = res?.data?.[0]?.id;
+      onImported({ ...preview, visibility: vis }, newId);
+    } catch (e) { setErr(e.message || "Import failed."); }
+    setLoading(false);
+  }
+
+  return (
+    <div style={overlayStyle} onClick={e => { if (e.target === e.currentTarget && !loading) onClose(); }}>
+      <div style={{ ...modalStyle, maxWidth: 720 }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>Import from Google Forms</div>
+        {!preview ? (
+          <>
+            <div style={{ fontSize: 11, color: C.dim, fontFamily: "monospace", marginBottom: 12 }}>
+              Paste the public link to a Google Form. It must be shared as "Anyone with the link" can respond.
+              Questions, options, and required flags are copied into a new team form.
+            </div>
+            <input
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && !loading) parse(); }}
+              placeholder="https://docs.google.com/forms/d/e/…/viewform"
+              style={{ ...inputStyle, fontSize: 12 }}
+            />
+            {err && <div style={{ color: C.red, fontSize: 11, fontFamily: "monospace", marginTop: 8 }}>{err}</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+              <button onClick={parse} disabled={loading} style={{ ...addBtnStyle, flex: 1, opacity: loading ? 0.6 : 1 }}>{loading ? "Reading form…" : "Read Questions"}</button>
+              <button onClick={onClose} style={{ ...ghostBtn, flex: 1 }}>Cancel</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 11, color: C.green, fontFamily: "monospace", marginBottom: 10 }}>
+              ✓ Found {preview.questions.length} question{preview.questions.length !== 1 ? "s" : ""} — edit as needed, then import.
+            </div>
+            <div style={{ maxHeight: 300, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+              {preview.questions.map((q, i) => (
+                <div key={q.id} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px" }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{ fontSize: 10, color: C.dim, fontFamily: "monospace", flexShrink: 0 }}>Q{i + 1}</span>
+                    <input value={q.label} onChange={e => setQuestion(i, { label: e.target.value })} style={{ ...inputStyle, flex: 1, fontSize: 12, padding: "6px 10px" }} />
+                    <select value={q.type} onChange={e => setQuestion(i, { type: e.target.value })} style={{ ...selectStyle, width: 150, fontSize: 11, padding: "6px 8px" }}>
+                      {qTypes().map(t => <option key={t} value={t}>{qTypeLabel(t)}</option>)}
+                    </select>
+                    <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.dim, fontFamily: "monospace", whiteSpace: "nowrap" }}>
+                      <input type="checkbox" checked={q.required} onChange={e => setQuestion(i, { required: e.target.checked })} style={{ cursor: "pointer" }} /> req
+                    </label>
+                  </div>
+                  {["select", "radio", "checkbox"].includes(q.type) && (
+                    <div style={{ marginTop: 8, paddingLeft: 22 }}>
+                      {(q.options || []).map((o, oi) => (
+                        <div key={oi} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+                          <span style={{ fontSize: 9, color: C.dim, width: 16 }}>{oi + 1}.</span>
+                          <input value={o} onChange={e => { const next = [...(q.options || [])]; next[oi] = e.target.value; setQuestion(i, { options: next }); }} style={{ ...inputStyle, flex: 1, fontSize: 11, padding: "4px 8px" }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {err && <div style={{ color: C.red, fontSize: 11, fontFamily: "monospace", marginBottom: 10 }}>{err}</div>}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button onClick={() => importForm("draft")} disabled={loading} style={ghostBtn}>Import as Draft</button>
+              <button onClick={() => importForm("team")} disabled={loading} style={{ ...addBtnStyle, opacity: loading ? 0.6 : 1 }}>{loading ? "Importing…" : "Import & Publish (Team)"}</button>
+              <button onClick={() => setPreview(null)} style={ghostBtn}>Back</button>
+              <button onClick={onClose} style={ghostBtn}>Cancel</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
