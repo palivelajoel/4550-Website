@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch, visibleTasksForRole } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, visibleTasksForRole, nameColor, nameInitials } from "./hubUtils.jsx";
 
 const SLIDE_DURATION = 12000; // ms per slide
 
@@ -8,7 +8,7 @@ const DAYS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const typeColor = { event: "#3b82f6", deadline: "#ef4444", meeting: "#22c55e", competition: "#f59e0b", other: "#a855f7" };
 const priorityColor = { Low: "#22c55e", Medium: "#f59e0b", High: "#ef4444", Critical: "#a855f7" };
-const statusColor = { Backlog: "#475569", "To Do": "#64748b", "In Progress": "#3b82f6", Review: "#f59e0b", Done: "#22c55e" };
+const statusColor = { "To Do": "#64748b", "In Progress": "#3b82f6", Review: "#f59e0b", Done: "#22c55e" };
 
 export default function HubProjector() {
   const [slide, setSlide] = useState(0);
@@ -272,14 +272,44 @@ function TaskColumn({ title, tasks, color }) {
         return (
           <div key={t.id} style={{ borderLeft: `3px solid ${priorityColor[t.priority] || C.dim}`, paddingLeft: 10, marginBottom: 10 }}>
             <div style={{ fontSize: "clamp(12px, 1.4vw, 14px)", fontWeight: 600, color: overdue ? C.red : C.text, lineHeight: 1.3 }}>{t.title}</div>
-            <div style={{ fontSize: 11, color: C.dim, fontFamily: "monospace", marginTop: 2 }}>
-              {t.subteam && t.subteam !== "All" ? `${t.subteam} · ` : ""}{t.assigned_name ? `${t.assigned_name}` : "Unassigned"}
-              {overdue ? ` · ⚠️ ${t.due_date}` : t.due_date ? ` · ${t.due_date}` : ""}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+              <AssigneePill name={t.assigned_name} />
+              {t.subteam && t.subteam !== "All" && (
+                <span style={{ fontSize: "clamp(10px, 1.1vw, 12px)", color: C.dim, fontFamily: "monospace" }}>{t.subteam}</span>
+              )}
+              {t.due_date && (
+                <span style={{ fontSize: "clamp(10px, 1.1vw, 12px)", color: overdue ? C.red : C.dim, fontFamily: "monospace", marginLeft: "auto" }}>
+                  {overdue ? "⚠ " : ""}{t.due_date}
+                </span>
+              )}
             </div>
           </div>
         );
       })}
     </div>
+  );
+}
+
+function AssigneePill({ name }) {
+  const c = nameColor(name);
+  if (!name) {
+    return (
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px dashed ${c}88`, color: C.dim, borderRadius: 999, padding: "2px 10px", fontSize: "clamp(10px, 1.1vw, 12px)", fontWeight: 700, letterSpacing: 0.5, whiteSpace: "nowrap" }}>
+        ○ Unassigned
+      </span>
+    );
+  }
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 6, background: `${c}26`, border: `1px solid ${c}`,
+      color: c, borderRadius: 999, padding: "2px 12px 2px 3px", boxShadow: `0 0 12px ${c}33`,
+      fontSize: "clamp(12px, 1.4vw, 15px)", fontWeight: 700, letterSpacing: 0.3, whiteSpace: "nowrap", maxWidth: "100%",
+    }}>
+      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "clamp(16px, 1.9vw, 20px)", height: "clamp(16px, 1.9vw, 20px)", borderRadius: "50%", background: c, color: "#05070a", fontSize: "clamp(8px, 0.9vw, 10px)", fontWeight: 900, flexShrink: 0 }}>
+        {nameInitials(name)}
+      </span>
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
+    </span>
   );
 }
 

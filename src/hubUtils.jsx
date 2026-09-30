@@ -9,6 +9,22 @@ export const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "Genera
 export const ROLE_COLORS = { Member: "#64748b", Captain: "#3b82f6", Admin: "#ef4444" };
 export const SUBTEAM_COLORS = { Build: "#f59e0b", Programming: "#3b82f6", "Marketing & Outreach": "#22c55e", General: "#64748b" };
 
+// Stable per-name color so the same person always looks the same everywhere.
+const NAME_COLORS = ["#22d3ee", "#f59e0b", "#22c55e", "#a855f7", "#ec4899", "#3b82f6", "#fb923c", "#14b8a6"];
+export function nameColor(name) {
+  const s = String(name || "").trim().toLowerCase();
+  if (!s) return "#64748b";
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return NAME_COLORS[h % NAME_COLORS.length];
+}
+export function nameInitials(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 // ── Auth ─────────────────────────────────────────────────
 export const isAuthed = () => localStorage.getItem("hub_authed") === "true";
 export const getUsername = () => localStorage.getItem("hub_username") || "";

@@ -3,10 +3,10 @@ import { motion } from 'framer-motion'
 import { FONTS, C, sbFetch, isAuthed, canEditHub, visibleTasksForRole, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
 import HubBackground from "./HubBackground.jsx";
 
-const STATUSES = ["Backlog", "To Do", "In Progress", "Review", "Done"];
+const STATUSES = ["To Do", "In Progress", "Review", "Done"];
 const PRIORITIES = ["Low", "Medium", "High", "Critical"];
 
-const statusColor = { Backlog: "#475569", "To Do": "#64748b", "In Progress": "#3b82f6", Review: "#f59e0b", Done: "#22c55e" };
+const statusColor = { "To Do": "#64748b", "In Progress": "#3b82f6", Review: "#f59e0b", Done: "#22c55e" };
 const priorityColor = { Low: "#22c55e", Medium: "#f59e0b", High: "#ef4444", Critical: "#a855f7" };
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
@@ -63,7 +63,13 @@ export default function HubTasks() {
       sbFetch("members?select=id,username,full_name,role&order=full_name.asc"),
     ]);
     if (m) setMembers(m);
-    if (t) setTasks(visibleTasksForRole(t, m));
+    if (t) {
+      // Backlog was removed — fold any legacy rows into "To Do" and clean them up in D1.
+      const legacy = t.filter(x => x.status === "Backlog");
+      const fixed = t.map(x => (x.status === "Backlog" ? { ...x, status: "To Do" } : x));
+      setTasks(visibleTasksForRole(fixed, m));
+      legacy.forEach(x => { hubProxy("hub_tasks", "update", { id: x.id, updates: { status: "To Do" } }).catch(() => {}); });
+    }
   }
 
   function openAdd(status = "To Do") {    if (!canEdit) return;    setForm({ title: "", description: "", subteam: "General", assigned_to: "", assigned_name: "", start_date: todayLocal(), start_time: nowLocal(), due_date: "", due_time: "18:00", priority: "Medium", status });
@@ -71,7 +77,7 @@ export default function HubTasks() {
   }
 
   function openEdit(task) {
-    setForm({ title: task.title, description: task.description || "", subteam: task.subteam || "All", assigned_to: task.assigned_to || "", assigned_name: task.assigned_name || "", start_date: task.start_date || "", start_time: task.start_time || "", due_date: task.due_date || "", due_time: task.due_time || "", priority: task.priority, status: task.status });
+    setForm({ title: task.title, description: task.description || "", subteam: task.subteam || "All", assigned_to: task.assigned_to || "", assigned_name: task.assigned_name || "", start_date: task.start_date || "", start_time: task.start_time || "", due_date: task.due_date || "", due_time: task.due_time || "", priority: task.priority, status: task.status === "Backlog" ? "To Do" : task.status });
     setModal({ mode: "edit", task });
   }
 
@@ -139,7 +145,8 @@ export default function HubTasks() {
 
   function filteredTasks(status) {
     return tasks.filter(t => {
-      if (t.status !== status) return false;
+      const s = t.status === "Backlog" ? "To Do" : t.status; // legacy fold
+      if (s !== status) return false;
       if (filterTeam !== "All" && t.subteam !== filterTeam && t.subteam !== "All") return false;
       if (filterMember && !String(t.assigned_name || "").toLowerCase().includes(filterMember.trim().toLowerCase())) return false;
       return true;
@@ -183,6 +190,8 @@ export default function HubTasks() {
     for (const item of importParsed) {
       try {
         const payload = { ...item };
+        if (payload.status === "Backlog") payload.status = "To Do";
+        if (!payload.status) payload.status = "To Do";
         if (!payload.start_date) { payload.start_date = null; delete payload.start_date; payload.start_time = null; delete payload.start_time; }
         if (!payload.due_date) { payload.due_date = null; delete payload.due_date; payload.due_time = null; delete payload.due_time; }
         if (!payload.start_time) delete payload.start_time;

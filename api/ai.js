@@ -152,10 +152,10 @@ async function parseCSV(req, res) {
   if (!csv) return res.status(400).json({ error: 'CSV content required' });
 
   const calendarSchema = 'title (required), type (event/deadline/meeting/competition/other), date (YYYY-MM-DD required), end_date, time (HH:MM), end_time, description, all_day (true/false)';
-  const tasksSchema = 'title (required), description, status (Backlog/To Do/In Progress/Review/Done), priority (Low/Medium/High/Critical), start_date (YYYY-MM-DD), start_time (HH:MM), due_date (YYYY-MM-DD), due_time (HH:MM), assigned_name, subteam';
+  const tasksSchema = 'title (required), description, status (To Do/In Progress/Review/Done), priority (Low/Medium/High/Critical), start_date (YYYY-MM-DD), start_time (HH:MM), due_date (YYYY-MM-DD), due_time (HH:MM), assigned_name, subteam';
 
   const schema = type === 'calendar' ? calendarSchema : tasksSchema;
-  const systemPrompt = `You parse CSV data into FRC team management tool JSON. Return ONLY a JSON array of objects. Schema: ${schema}. Parse the CSV headers and map each row. Correct any common issues: "todo" → "To Do", "inprogress" → "In Progress", "high priority" → "High", date formats like "5/24/2026" → "2026-05-24". Skip malformed rows. No markdown, no backticks, just raw JSON array.`;
+  const systemPrompt = `You parse CSV data into FRC team management tool JSON. Return ONLY a JSON array of objects. Schema: ${schema}. Parse the CSV headers and map each row. Correct any common issues: "todo" → "To Do", "inprogress" → "In Progress", "backlog" → "To Do", "high priority" → "High", date formats like "5/24/2026" → "2026-05-24". Skip malformed rows. No markdown, no backticks, just raw JSON array.`;
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'GROQ_API_KEY not configured' });
