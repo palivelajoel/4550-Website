@@ -10,8 +10,31 @@
 // SECURITY: this endpoint is READ-ONLY (select). All writes must go through the
 // authenticated /api/hub-proxy / /api/admin-proxy layer (JWT role gating), which is
 // the RLS-equivalent boundary now that D1 has no per-row security.
+//
+// Reads are anonymous by design (public site pages need them), so anything a
+// respondent must not see is redacted here rather than in the client: quiz answer
+// keys are stripped from hub_forms unless the caller presents a Captain/Admin JWT,
+// and form responses are refused outright without one. Unverifiable tokens are
+// treated as anonymous (fail closed), so the data is never exposed by accident.
 
 import { d1Select, coerceRow } from './_gateway.js';
+import { verifyToken, getTokenFromRequest } from './_shared.js';
+
+const STAFF_ROLES = new Set(["Captain", "Admin"]);
+
+function isStaff(req) {
+  const t = verifyToken(getTokenFromRequest(req));
+  return !!t && STAFF_ROLES.has(t.role);
+}
+
+// Drop the `correct` answer key from every question so respondents can't read
+// answers out of the network tab / devtools on a public form.
+function stripAnswerKeys(rows) {
+  return rows.map(r => {
+    if (!Array.isArray(r.questions)) return r;
+    return { ...r, questions: r.questions.map(({ correct, ...q }) => q) };
+  });
+}
 
 const READ_TABLES = new Set([
   "members", "suggestions", "sponsors", "sponsor_notes", "captains", "site_config",
@@ -146,6 +169,13 @@ export default async function handler(req, res) {
   // `path` column and 500.
   query.delete("path");
   const { filters, order, limit, embeds } = parseQuery(query);
+  const staff = isStaff(req);
+
+  // Responses can identify members (submitted_by) and carry survey answers.
+  // Nothing outside the hub reads them, so require a Captain/Admin JWT.
+  if (table === "hub_form_submissions" && !staff) {
+    return err(res, 403, "Forbidden: captain or admin role required");
+  }
 
   try {
     let rows;
@@ -155,6 +185,7 @@ export default async function handler(req, res) {
       rows = await d1Select(table, { filters, order, limit });
       rows = rows.map(r => coerceRow(table, r));
     }
+    if (table === "hub_forms" && !staff) rows = stripAnswerKeys(rows);
     return res.status(200).json(rows);
   } catch (e) {
     console.error("[d1] select error", e);

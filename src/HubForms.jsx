@@ -551,8 +551,8 @@ function FormBuilder({ form: initial, onSave, onCancel }) {
       </div>
 
       {visibility === "public" && questions.some(q => q.correct !== undefined && (!Array.isArray(q.correct) || q.correct.length > 0)) && (
-        <div style={{ color: "#f59e0b", fontSize: 11, fontFamily: "monospace", marginBottom: 12 }}>
-          ⚠ Correct answers are stored with the form and viewable in the page source by anyone on a public form.
+        <div style={{ color: C.dim, fontSize: 11, fontFamily: "monospace", marginBottom: 12 }}>
+          ✓ Correct answers are hidden from respondents — only captains/admins can read them.
         </div>
       )}
 
