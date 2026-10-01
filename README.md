@@ -28,7 +28,7 @@ The landing page (`/`) includes:
 - **Outreach section** with community impact highlights
 - **Media Gallery** (`/media`) — browsable photo/video grid filtered by category
 - **Sponsors section** with tiered sponsor display
-- **Contact form** with Discord webhook integration
+- **Contact form** for outreach and general inquiries
 - **Footer** with quick links and legal pages
 
 Supporting pages:
@@ -121,7 +121,6 @@ All API routes are serverless functions in `/api/`:
 | `/api/admin-proxy` | Authenticated writes to D1 (admin tables) |
 | `/api/public-form-submit` | Public form submission (no auth required) |
 | `/api/sheets-sync` | Append form submissions to Google Sheets |
-| `/api/announce-to-discord` | Post task-completion notifications to Discord |
 | `/api/identify-item` | AI-powered inventory item identification |
 | `/api/extract-brands` | AI brand extraction from text |
 | `/api/lookup` | General AI lookup utility |
@@ -138,7 +137,6 @@ All API routes are serverless functions in `/api/`:
 │   ├── sheets.js           # Google Sheets sync
 │   ├── public-form-submit.js
 │   ├── ai.js               # AI-powered features
-│   └── discord/            # Discord integrations
 ├── src/
 │   ├── Landing.jsx         # Public landing page
 │   ├── Hub.jsx             # Member hub dashboard
@@ -172,8 +170,6 @@ Optional:
 GOOGLE_SERVICE_ACCOUNT_EMAIL   # For Google Sheets sync
 GOOGLE_PRIVATE_KEY             # For Google Sheets sync
 GOOGLE_SHEET_ID                # Target spreadsheet for form responses
-DISCORD_WEBHOOK_URL            # For task/Discord notifications
-DISCORD_BOT_TOKEN              # For Discord integration
 GROQ_API_KEY                   # For AI features
 ANTHROPIC_API_KEY              # For AI features
 ```

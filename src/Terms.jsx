@@ -64,7 +64,6 @@ const FALLBACK = `...
           <li>YouTube (video embedding)</li>
           <li>Instagram (social media linking)</li>
           <li>Google Calendar / iCal (calendar subscriptions)</li>
-          <li>Discord (task notifications)</li>
           <li>Groq AI (CSV data parsing)</li>
         </ul>
         <p>We are not responsible for the content, privacy practices, or terms of these third-party services. Your use of these services is subject to their respective terms and policies.</p>
