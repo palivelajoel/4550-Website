@@ -550,12 +550,6 @@ function FormBuilder({ form: initial, onSave, onCancel }) {
         ))}
       </div>
 
-      {visibility === "public" && questions.some(q => q.correct !== undefined && (!Array.isArray(q.correct) || q.correct.length > 0)) && (
-        <div style={{ color: C.dim, fontSize: 11, fontFamily: "monospace", marginBottom: 12 }}>
-          ✓ Correct answers are hidden from respondents — only captains/admins can read them.
-        </div>
-      )}
-
       <div style={{ display: "flex", gap: 10, marginTop: 24, flexWrap: "wrap" }}>
         <button onClick={onCancel} style={ghostBtn}>Cancel</button>
         <button onClick={handleSave} style={addBtnStyle}>Save</button>
