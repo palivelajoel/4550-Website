@@ -306,9 +306,9 @@ function TaskColumn({ title, tasks, color }) {
 }
 
 function AssigneePill({ name }) {
-  // Meeting projector: one fixed aqua for every assignee so names never compete
+  // Meeting projector: one fixed blue for every assignee so names never compete
   // with the status/priority colors on screen.
-  const c = "#22d3ee";
+  const c = "#3b82f6";
   if (!name) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px dashed ${c}88`, color: C.dim, borderRadius: 999, padding: "2px 10px", fontSize: "clamp(10px, 1.1vw, 12px)", fontWeight: 700, letterSpacing: 0.5, whiteSpace: "nowrap" }}>
