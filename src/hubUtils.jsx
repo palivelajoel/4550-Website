@@ -37,6 +37,21 @@ export const canEditHub = () => isCaptainOrAbove();
 export const canEditInventory = () => isCaptainOrAbove() || getSubteam() === "Build";
 export const getToken = () => localStorage.getItem("hub_token");
 
+// Task assignees are free text and may list several people at once, separated by
+// commas or "|". Returns a de-duplicated list of trimmed names.
+export function parseAssignees(value) {
+  return String(value || "")
+    .split(/[,|]/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .filter((s, i, arr) => arr.findIndex(x => x.toLowerCase() === s.toLowerCase()) === i);
+}
+
+// Canonical storage form for assigned_name ("Alice Smith, Bob Jones"), or null.
+export function normalizeAssignees(value) {
+  return parseAssignees(value).join(", ") || null;
+}
+
 // Hide tasks assigned to captains from Member accounts. Captains/Admins see everything.
 export function visibleTasksForRole(tasks, members) {
   if (isCaptainOrAbove()) return tasks;
@@ -44,7 +59,7 @@ export function visibleTasksForRole(tasks, members) {
   const captainNames = new Set((members || []).filter(m => m.role === "Captain").map(m => String(m.full_name || m.username).toLowerCase()));
   return (tasks || []).filter(tk => {
     if (tk.assigned_to && captainIds.has(tk.assigned_to)) return false;
-    if (tk.assigned_name && captainNames.has(String(tk.assigned_name).toLowerCase())) return false;
+    if (parseAssignees(tk.assigned_name).some(n => captainNames.has(n.toLowerCase()))) return false;
     return true;
   });
 }

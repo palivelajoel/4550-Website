@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from 'framer-motion'
-import { FONTS, C, sbFetch, isAuthed, canEditHub, visibleTasksForRole, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, canEditHub, normalizeAssignees, parseAssignees, visibleTasksForRole, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
 import HubBackground from "./HubBackground.jsx";
 
 const STATUSES = ["To Do", "In Progress", "Review", "Done"];
@@ -84,7 +84,7 @@ export default function HubTasks() {
   async function save() {
     if (!form.title) return;
     setSaving(true);
-    const payload = { ...form, assigned_name: form.assigned_name.trim() || null };
+    const payload = { ...form, assigned_name: normalizeAssignees(form.assigned_name) };
     delete payload.assigned_to;
     if (!payload.start_date) { payload.start_date = null; delete payload.start_date; payload.start_time = null; delete payload.start_time; }
     if (!payload.due_date) { payload.due_date = null; delete payload.due_date; payload.due_time = null; delete payload.due_time; }
@@ -129,7 +129,7 @@ export default function HubTasks() {
       const s = t.status === "Backlog" ? "To Do" : t.status; // legacy fold
       if (s !== status) return false;
       if (filterTeam !== "All" && t.subteam !== filterTeam && t.subteam !== "All") return false;
-      if (filterMember && !String(t.assigned_name || "").toLowerCase().includes(filterMember.trim().toLowerCase())) return false;
+      if (filterMember && !parseAssignees(t.assigned_name).some(n => n.toLowerCase().includes(filterMember.trim().toLowerCase()))) return false;
       return true;
     });
   }
@@ -232,50 +232,50 @@ export default function HubTasks() {
       </div>
 
       {viewMode === "gantt" ? (
-        <GanttChart tasks={tasks.filter(t => filterTeam === "All" || t.subteam === filterTeam || t.subteam === "All").filter(t => !filterMember || String(t.assigned_name || "").toLowerCase().includes(filterMember.trim().toLowerCase()))} {...{ priorityColor, statusColor, openEdit, isOverdue }} />
+        <GanttChart tasks={tasks.filter(t => filterTeam === "All" || t.subteam === filterTeam || t.subteam === "All").filter(t => !filterMember || parseAssignees(t.assigned_name).some(n => n.toLowerCase().includes(filterMember.trim().toLowerCase())))} {...{ priorityColor, statusColor, openEdit, isOverdue }} />
       ) : (
         /* Board */
         <div style={{ overflowX: "auto", padding: "20px" }}>
-        <div style={{ display: "flex", gap: 14, minWidth: "max-content", alignItems: "flex-start" }}>
-          {STATUSES.map(status => {
-            const col = filteredTasks(status);
-            return (
-              <div
-                key={status}
-                style={{ width: 260, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden", flexShrink: 0 }}
-                onDragOver={e => e.preventDefault()}
-                onDrop={e => { e.preventDefault(); if (dragId) moveTask(dragId, status); setDragId(null); }}
-              >
-                {/* Column header */}
-                <div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor[status] }} />
-                    <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1 }}>{status.toUpperCase()}</span>
-                    <span style={{ background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "1px 7px", fontSize: 11, color: C.dim }}>{col.length}</span>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+            {STATUSES.map(status => {
+              const col = filteredTasks(status);
+              return (
+                <div
+                  key={status}
+                  style={{ flex: "1 1 240px", minWidth: 240, background: "rgba(255,255,255,0.02)", border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" }}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => { e.preventDefault(); if (dragId) moveTask(dragId, status); setDragId(null); }}
+                >
+                  {/* Column header */}
+                  <div style={{ padding: "10px 12px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor[status] }} />
+                      <span style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, fontWeight: 700, color: C.muted, letterSpacing: 1 }}>{status.toUpperCase()}</span>
+                      <span style={{ background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "1px 7px", fontSize: 11, color: C.dim }}>{col.length}</span>
+                    </div>
+                    {canEdit && <button onClick={() => openAdd(status)} style={{ background: "transparent", border: "none", color: C.dim, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>+</button>}
                   </div>
-                  {canEdit && <button onClick={() => openAdd(status)} style={{ background: "transparent", border: "none", color: C.dim, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>+</button>}
-                </div>
 
-                {/* Cards */}
-                <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: 8, minHeight: 80 }}>
-                  {col.map(task => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      isOverdue={isOverdue(task)}
-                      onClick={() => openEdit(task)}
-                      onDragStart={() => setDragId(task.id)}
-                    />
-                  ))}
-                  {col.length === 0 && (
-                    <div style={{ color: C.dim, fontSize: 12, textAlign: "center", padding: "16px 0", fontFamily: "monospace" }}>Drop here</div>
-                  )}
+                  {/* Cards */}
+                  <div style={{ padding: "9px", display: "flex", flexDirection: "column", gap: 10, minHeight: 80 }}>
+                    {col.map(task => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        isOverdue={isOverdue(task)}
+                        onClick={() => openEdit(task)}
+                        onDragStart={() => setDragId(task.id)}
+                      />
+                    ))}
+                    {col.length === 0 && (
+                      <div style={{ color: C.dim, fontSize: 12, textAlign: "center", padding: "16px 0", fontFamily: "monospace" }}>Drop here</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
       )}
 
       {/* Import modal */}
@@ -349,7 +349,7 @@ export default function HubTasks() {
                 <option value="All">All Sub-Teams</option>
                 {["Build", "Programming", "Marketing & Outreach"].map(s => <option key={s}>{s}</option>)}
               </select>
-              <input placeholder="Assigned to (any name)" value={form.assigned_name} onChange={e => setForm({ ...form, assigned_name: e.target.value, assigned_to: "" })} style={inputStyle} />
+              <input placeholder="Assigned to — one or more names, separated by , or |" value={form.assigned_name} onChange={e => setForm({ ...form, assigned_name: e.target.value, assigned_to: "" })} style={inputStyle} />
               <div style={{ display: "flex", gap: 10 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 10, color: C.dim, marginBottom: 3, fontFamily: "monospace" }}>Start Date</div>
@@ -548,15 +548,15 @@ function TaskCard({ task, isOverdue, onClick, onDragStart }) {
     >
       <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 6, lineHeight: 1.4 }}>{task.title}</div>
       {task.description && <div style={{ fontSize: 11, color: C.dim, marginBottom: 7, lineHeight: 1.5, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{task.description}</div>}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", rowGap: 6 }}>
         {task.subteam && task.subteam !== "All" && (
           <span style={{ fontSize: 10, background: "rgba(59,130,246,0.15)", color: "#93c5fd", borderRadius: 4, padding: "1px 6px", fontFamily: "monospace" }}>{task.subteam}</span>
         )}
-        {task.assigned_name && (
-          <span style={{ fontSize: 10, color: C.dim, fontFamily: "monospace" }}>👤 {task.assigned_name.split(" ")[0]}</span>
-        )}
+        {parseAssignees(task.assigned_name).map(name => (
+          <span key={name} style={{ fontSize: 10, color: C.dim, fontFamily: "monospace", whiteSpace: "nowrap" }}>👤 {name.split(" ")[0]}</span>
+        ))}
         {task.due_date && (
-          <span style={{ fontSize: 10, color: isOverdue ? C.red : C.dim, fontFamily: "monospace", marginLeft: "auto" }}>
+          <span style={{ fontSize: 10, color: isOverdue ? C.red : C.dim, fontFamily: "monospace", marginLeft: "auto", whiteSpace: "nowrap", flexShrink: 0 }}>
             {isOverdue ? "⚠️ " : "📅 "}{task.due_date}{task.due_time ? ' ' + task.due_time.slice(0,5) : ''}
           </span>
         )}

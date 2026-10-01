@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch, isAuthed, visibleTasksForRole, nameColor, nameInitials } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, visibleTasksForRole, parseAssignees, nameColor, nameInitials } from "./hubUtils.jsx";
 
 const SLIDE_DURATION = 12000; // ms per slide
 
@@ -281,11 +281,14 @@ function TaskColumn({ title, tasks, color }) {
       {tasks.length === 0 && <div style={{ color: C.dim, fontSize: 13, fontFamily: "monospace" }}>None</div>}
       {tasks.map(t => {
         const overdue = t.due_date && new Date(t.due_date) < new Date();
+        const people = parseAssignees(t.assigned_name);
         return (
           <div key={t.id} style={{ borderLeft: `3px solid ${priorityColor[t.priority] || C.dim}`, paddingLeft: 10, marginBottom: 10 }}>
             <div style={{ fontSize: "clamp(12px, 1.4vw, 14px)", fontWeight: 600, color: overdue ? C.red : C.text, lineHeight: 1.3 }}>{t.title}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-              <AssigneePill name={t.assigned_name} />
+              {people.length === 0
+                ? <AssigneePill name="" />
+                : people.map(n => <AssigneePill key={n} name={n} />)}
               {t.subteam && t.subteam !== "All" && (
                 <span style={{ fontSize: "clamp(10px, 1.1vw, 12px)", color: C.dim, fontFamily: "monospace" }}>{t.subteam}</span>
               )}
