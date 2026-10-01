@@ -484,7 +484,6 @@ export default function Landing() {
   const isMobile = useDeviceSize();
   const [config, setConfig] = useState({});
   const [captains, setCaptains] = useState([]);
-  const [sponsors, setSponsors] = useState([]);
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [articles, setArticles] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -505,7 +504,6 @@ export default function Landing() {
     if (obj.logo_url) setLogoUrl(obj.logo_url);
     });
     sbFetch("captains?select=*&order=sort_order.asc").then(r => { if (r) setCaptains(r); });
-    sbFetch("sponsors?select=company,logo_url,tier,email&order=company.asc&status=not.eq.Declined").then(r => { if (r) setSponsors(r); });
     sbFetch("articles?select=id,title,excerpt,image_url,author,created_at&published=eq.true&order=created_at.desc&limit=4").then(r => { if (r) setArticles(r); });
   }, []);
 

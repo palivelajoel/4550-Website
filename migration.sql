@@ -88,23 +88,6 @@ DROP POLICY IF EXISTS "Public select hub_calendar" ON public.hub_calendar;
 CREATE POLICY "Public select hub_calendar" ON public.hub_calendar FOR SELECT USING (true);
 
 -- ============================================================
--- 6. HUB ANNOUNCEMENTS
--- ============================================================
-CREATE TABLE IF NOT EXISTS public.hub_announcements (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT,
-    body TEXT,
-    tag TEXT DEFAULT 'General' CHECK (tag IN ('General', 'Build', 'Programming', 'Marketing & Outreach', 'Competition', 'Reminder', 'Urgent')),
-    pinned BOOLEAN DEFAULT false,
-    author TEXT DEFAULT 'Discord',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.hub_announcements ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Public select hub_announcements" ON public.hub_announcements;
-CREATE POLICY "Public select hub_announcements" ON public.hub_announcements FOR SELECT USING (true);
-
--- ============================================================
 -- 7. HUB RESOURCES
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.hub_resources (

@@ -15,7 +15,7 @@ const FALLBACK = `...
         <p>FRC Team 4550 provides the following services through the Site:</p>
         <ul>
           <li><strong>Public Website:</strong> Information about the team, its history, sponsors, media gallery, and contact information.</li>
-              <li><strong>Member Hub:</strong> A password-protected portal for team members to manage tasks, calendar events, announcements, media, resources, and inventory.</li>
+              <li><strong>Member Hub:</strong> A password-protected portal for team members to manage tasks, calendar events, media, resources, and inventory.</li>
           <li><strong>Sponsor Tracker:</strong> A password-protected tool for managing sponsor relationships and outreach.</li>
           <li><strong>Public Media Gallery:</strong> A publicly accessible gallery of team photos and videos.</li>
         </ul>
@@ -43,7 +43,7 @@ const FALLBACK = `...
         </ul>
 
         <h2>5. User-Generated Content</h2>
-        <p>Users of the Member Hub may post content such as task descriptions, announcements, comments, and uploaded media. By posting content:</p>
+        <p>Users of the Member Hub may post content such as task descriptions, comments, and uploaded media. By posting content:</p>
         <ul>
           <li>You retain ownership of your content but grant us a non-exclusive, royalty-free license to store, display, and use it for team purposes.</li>
           <li>You represent that your content does not violate any third-party rights or applicable laws.</li>
@@ -64,7 +64,7 @@ const FALLBACK = `...
           <li>YouTube (video embedding)</li>
           <li>Instagram (social media linking)</li>
           <li>Google Calendar / iCal (calendar subscriptions)</li>
-          <li>Discord (announcement notifications)</li>
+          <li>Discord (task notifications)</li>
           <li>Groq AI (CSV data parsing)</li>
         </ul>
         <p>We are not responsible for the content, privacy practices, or terms of these third-party services. Your use of these services is subject to their respective terms and policies.</p>

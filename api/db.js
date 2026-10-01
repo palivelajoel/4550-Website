@@ -11,16 +11,23 @@
 // authenticated /api/hub-proxy / /api/admin-proxy layer (JWT role gating), which is
 // the RLS-equivalent boundary now that D1 has no per-row security.
 //
-// Reads are anonymous by design (public site pages need them), so anything a
-// respondent must not see is redacted here rather than in the client: quiz answer
-// keys are stripped from hub_forms unless the caller presents a Captain/Admin JWT,
-// and form responses are refused outright without one. Unverifiable tokens are
-// treated as anonymous (fail closed), so the data is never exposed by accident.
+// Reads are anonymous by design (public site pages need them), so anything that must
+// stay internal is gated here rather than in the client. Unverifiable tokens are
+// treated as anonymous (fail closed), so data is never exposed by accident.
 
 import { d1Select, coerceRow } from './_gateway.js';
 import { verifyToken, getTokenFromRequest } from './_shared.js';
 
 const STAFF_ROLES = new Set(["Captain", "Admin"]);
+
+// Tables that require a Captain/Admin JWT to read at all:
+//   members             - holds password hashes and contact details
+//   sponsors/sponsor_notes - the sponsorship pipeline (emails, contact notes, deals)
+//   hub_tasks           - internal task assignments and deadlines
+//   hub_form_submissions - survey responses that identify who submitted them
+const STAFF_TABLES = new Set([
+  "members", "sponsors", "sponsor_notes", "hub_tasks", "hub_form_submissions",
+]);
 
 function isStaff(req) {
   const t = verifyToken(getTokenFromRequest(req));
@@ -38,7 +45,7 @@ function stripAnswerKeys(rows) {
 
 const READ_TABLES = new Set([
   "members", "suggestions", "sponsors", "sponsor_notes", "captains", "site_config",
-  "hub_tasks", "hub_calendar", "hub_announcements", "hub_media", "hub_resources",
+  "hub_tasks", "hub_calendar", "hub_media", "hub_resources",
   "hub_forms", "hub_form_submissions", "inventory_items", "inventory_transactions",
   "articles", "competitions",
 ]);
@@ -171,9 +178,9 @@ export default async function handler(req, res) {
   const { filters, order, limit, embeds } = parseQuery(query);
   const staff = isStaff(req);
 
-  // Responses can identify members (submitted_by) and carry survey answers.
-  // Nothing outside the hub reads them, so require a Captain/Admin JWT.
-  if (table === "hub_form_submissions" && !staff) {
+  // Members (password hashes), the sponsor pipeline, internal tasks and form
+  // responses are staff-only. Nothing outside the hub reads them.
+  if (STAFF_TABLES.has(table) && !staff) {
     return err(res, 403, "Forbidden: captain or admin role required");
   }
 

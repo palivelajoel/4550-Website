@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch, visibleTasksForRole, nameColor, nameInitials } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, visibleTasksForRole, nameColor, nameInitials } from "./hubUtils.jsx";
 
 const SLIDE_DURATION = 12000; // ms per slide
 
@@ -41,6 +41,9 @@ export default function HubProjector() {
   ];
 
   useEffect(() => {
+    // The projector shows internal task assignments, so it requires a logged-in
+    // member — same guard the other hub pages use.
+    if (!isAuthed()) { window.location.href = "/member-hub"; return; }
     document.title = "Meeting Projector · Team 4550";
     load();
     const clockInterval = setInterval(() => setNow(new Date()), 1000);
@@ -100,6 +103,8 @@ export default function HubProjector() {
   }, []);
 
   const progress = !paused ? ((Date.now() % SLIDE_DURATION) / SLIDE_DURATION) * 100 : 0;
+
+  if (!isAuthed()) return null;
 
   return (
     <div ref={containerRef} style={{ minHeight: "100vh", background: "#050709", color: C.text, fontFamily: "'Exo 2', sans-serif", display: "flex", flexDirection: "column", overflow: "hidden" }}>

@@ -1,4 +1,5 @@
 import { d1Select } from './_gateway.js';
+import { verifyToken, getTokenFromRequest } from './_shared.js';
 
 function icalEscape(text) {
   return (text || '')
@@ -72,9 +73,19 @@ function buildICS(events, tasks) {
 
 export default async function handler(req, res) {
   try {
+    // Calendar events stay public so the subscription keeps working, but tasks are
+    // internal (titles, assignees, deadlines) and are only included for a caller
+    // with a valid hub token — via header, or ?token= for calendar clients that
+    // can't set headers.
+    const queryToken = new URL(req.url, 'http://localhost').searchParams.get('token');
+    const token = getTokenFromRequest(req) || queryToken;
+    const authed = !!verifyToken(token);
+
     const [events, tasks] = await Promise.all([
       d1Select('hub_calendar', { order: [{ col: 'date', asc: true }] }),
-      d1Select('hub_tasks', { filters: [{ col: 'due_date', op: 'not.is', value: null }], order: [{ col: 'due_date', asc: true }] }),
+      authed
+        ? d1Select('hub_tasks', { filters: [{ col: 'due_date', op: 'not.is', value: null }], order: [{ col: 'due_date', asc: true }] })
+        : Promise.resolve([]),
     ]);
 
     const ics = buildICS(events || [], tasks || []);

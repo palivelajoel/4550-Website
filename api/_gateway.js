@@ -6,8 +6,6 @@
 // authenticated with a Bearer token (D1_GATEWAY_TOKEN) at D1_GATEWAY_URL.
 
 const BOOL_COLUMNS = new Set([
-  // hub_announcements
-  "pinned",
   // hub_calendar
   "all_day",
   // articles

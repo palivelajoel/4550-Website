@@ -1,7 +1,6 @@
 C:\Users\joelp\Documents\GitHub\4550-Website\src\Admin.jsx
 C:\Users\joelp\Documents\GitHub\4550-Website\src\App.jsx
 C:\Users\joelp\Documents\GitHub\4550-Website\src\Hub.jsx
-C:\Users\joelp\Documents\GitHub\4550-Website\src\HubAnnouncements.jsx
 C:\Users\joelp\Documents\GitHub\4550-Website\src\HubCalendar.jsx
 C:\Users\joelp\Documents\GitHub\4550-Website\src\HubInventory.jsx
 C:\Users\joelp\Documents\GitHub\4550-Website\src\HubMedia.jsx

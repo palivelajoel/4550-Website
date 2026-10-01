@@ -52,7 +52,6 @@ Authenticated member portal (`/member-hub`) with role-based access (Admin → Ca
 | **Dashboard** | `/member-hub` | Welcome screen with stat cards and feature grid |
 | **Calendar** | `/member-hub/calendar` | Team events and deadlines |
 | **Tasks** | `/member-hub/tasks` | Kanban board for task management |
-| **Announcements** | `/member-hub/announcements` | Team-wide updates from captains |
 | **Media Gallery** | `/member-hub/media` | Upload and browse team photos/videos |
 | **Resources** | `/member-hub/resources` | CAD files, documents, team guides |
 | **Inventory** | `/member-hub/inventory` | Parts tracking with AI item identification |
@@ -64,7 +63,7 @@ Authenticated member portal (`/member-hub`) with role-based access (Admin → Ca
 ### Permissions
 
 - **Admin** — Full access to all features + Admin Panel
-- **Captain** — Can manage tasks, calendar, announcements, forms, inventory, and all hub content
+- **Captain** — Can manage tasks, calendar, forms, inventory, and all hub content
 - **Member** — Can view content, submit forms, check out inventory, upload media
 - **Build subteam** — Can manage inventory items and transactions
 
@@ -122,8 +121,7 @@ All API routes are serverless functions in `/api/`:
 | `/api/admin-proxy` | Authenticated writes to D1 (admin tables) |
 | `/api/public-form-submit` | Public form submission (no auth required) |
 | `/api/sheets-sync` | Append form submissions to Google Sheets |
-| `/api/announce-to-discord` | Post announcements to Discord via webhook |
-| `/api/discord-to-announcement` | Pull Discord messages into announcements |
+| `/api/announce-to-discord` | Post task-completion notifications to Discord |
 | `/api/identify-item` | AI-powered inventory item identification |
 | `/api/extract-brands` | AI brand extraction from text |
 | `/api/lookup` | General AI lookup utility |
@@ -174,7 +172,7 @@ Optional:
 GOOGLE_SERVICE_ACCOUNT_EMAIL   # For Google Sheets sync
 GOOGLE_PRIVATE_KEY             # For Google Sheets sync
 GOOGLE_SHEET_ID                # Target spreadsheet for form responses
-DISCORD_WEBHOOK_URL            # For announcement posting
+DISCORD_WEBHOOK_URL            # For task/Discord notifications
 DISCORD_BOT_TOKEN              # For Discord integration
 GROQ_API_KEY                   # For AI features
 ANTHROPIC_API_KEY              # For AI features

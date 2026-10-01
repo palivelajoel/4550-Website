@@ -160,10 +160,9 @@ export default function Hub() {
   const isOutreach = currentSubteam === "Marketing & Outreach";
 
   const FEATURES = [
-    { id:"projector", icon:"📡", label:"Meeting Projector", description:"Live rotating display — calendar, tasks & announcements. Fullscreen.", href:"/member-hub/projector", accent:"#ef4444", featured:true },
+    { id:"projector", icon:"📡", label:"Meeting Projector", description:"Live rotating display — calendar and tasks. Fullscreen.", href:"/member-hub/projector", accent:"#ef4444", featured:true },
     { id:"calendar", icon:"📅", label:"Team Calendar", description:"Events, deadlines, and meetings.", href:"/member-hub/calendar", accent:"#3b82f6" },
     { id:"tasks", icon:"✅", label:"Task Board", description:"Kanban board. View, update, and complete your assigned tasks.", href:"/member-hub/tasks", accent:"#22c55e" },
-    { id:"announcements", icon:"📣", label:"Announcements", description:"Team-wide updates from captains.", href:"/member-hub/announcements", accent:"#f59e0b" },
     { id:"media", icon:"📸", label:"Media Gallery", description:"Photos and videos from events.", href:"/member-hub/media", accent:"#ec4899" },
     { id:"resources", icon:"📁", label:"Resources", description:"CAD files, documents, and team guides.", href:"/member-hub/resources", accent:"#64748b" },
     { id:"inventory", icon:"📦", label:"Inventory", description:"Track parts, tools, and supplies with AI identification.", href:"/member-hub/inventory", accent:"#22d3ee" },
@@ -275,7 +274,7 @@ export default function Hub() {
               <div style={{ fontSize:isMobile?28:38, animation:"float 2.5s ease-in-out infinite" }}>📡</div>
               <div>
                 <div style={{ fontFamily:"'Orbitron',sans-serif", fontSize:isMobile?13:15, fontWeight:700, color:C.red, letterSpacing:2, marginBottom:3 }}>MEETING PROJECTOR</div>
-                <div style={{ color:C.muted, fontSize:isMobile?12:13 }}>Live rotating display — calendar, tasks & announcements.</div>
+                <div style={{ color:C.muted, fontSize:isMobile?12:13 }}>Live rotating display — calendar and tasks.</div>
               </div>
             </div>
             <div style={{ background:C.red, color:"#fff", padding:isMobile?"8px 16px":"10px 22px", borderRadius:6, fontFamily:"'Orbitron',sans-serif", fontSize:12, fontWeight:700, letterSpacing:2, flexShrink:0 }}>OPEN →</div>

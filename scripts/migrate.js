@@ -25,7 +25,6 @@ const JSON_COLUMNS = new Set([
 
 // All boolean columns in the schema -> stored as INTEGER 0/1.
 const BOOL_TABLES = {
-  hub_announcements: ['pinned'],
   hub_calendar: ['all_day'],
   articles: ['published'],
   competitions: ['attending'],
@@ -38,7 +37,7 @@ const EXCLUDE_COLUMNS = {
 
 const TABLES = [
   'members', 'suggestions', 'sponsors', 'sponsor_notes', 'captains', 'site_config',
-  'hub_tasks', 'hub_calendar', 'hub_announcements', 'hub_media', 'hub_resources',
+  'hub_tasks', 'hub_calendar', 'hub_media', 'hub_resources',
   'hub_forms', 'hub_form_submissions', 'inventory_items', 'inventory_transactions',
   'articles', 'competitions',
 ];

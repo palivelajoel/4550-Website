@@ -8,7 +8,6 @@ import Hub from './Hub.jsx'
 import HubCalendar from './HubCalendar.jsx'
 import HubTasks from './HubTasks.jsx'
 import HubMedia from './HubMedia.jsx'
-import HubAnnouncements from './HubAnnouncements.jsx'
 import HubResources from './HubResources.jsx'
 import HubProjector from './HubProjector.jsx'
 import HubAdvertisement from './HubAdvertisement.jsx'
@@ -31,7 +30,6 @@ const Page =
   : path === '/member-hub/calendar'            ? HubCalendar
   : path === '/member-hub/tasks'               ? HubTasks
   : path === '/member-hub/media'               ? HubMedia
-  : path === '/member-hub/announcements'       ? HubAnnouncements
   : path === '/member-hub/resources'           ? HubResources
   : path === '/member-hub/projector'           ? HubProjector
   : path === '/member-hub/advertisement'       ? HubAdvertisement

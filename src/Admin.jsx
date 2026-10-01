@@ -82,7 +82,6 @@ export default function Admin() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 760);
   const [forms, setForms] = useState([]);
   const [formSubmissions, setFormSubmissions] = useState([]);
-  const [announcements, setAnnouncements] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [media, setMedia] = useState([]);
 
@@ -112,7 +111,7 @@ export default function Admin() {
   function showToast(msg, color = "#22c55e") { setToast({ msg, color }); setTimeout(() => setToast(""), 3000); }
 
   async function loadAll() {
-    const [m, t, cals, sg, sp, cap, comp, cfg, fm, fs, an, inv, md] = await Promise.all([
+    const [m, t, cals, sg, sp, cap, comp, cfg, fm, fs, inv, md] = await Promise.all([
       sbFetch("members?select=*&order=created_at.asc"),
       sbFetch("hub_tasks?select=*&order=created_at.desc"),
       sbFetch("hub_calendar?select=*&order=date.asc"),
@@ -123,7 +122,6 @@ export default function Admin() {
       sbFetch("site_config?select=key,value"),
       sbFetch("hub_forms?select=*&order=created_at.desc"),
       sbFetch("hub_form_submissions?select=*&order=created_at.desc"),
-      sbFetch("hub_announcements?select=*&order=created_at.desc"),
       sbFetch("inventory_items?select=*&order=created_at.desc"),
       sbFetch("hub_media?select=*&order=created_at.desc"),
     ]);
@@ -136,7 +134,6 @@ export default function Admin() {
     if (comp) setCompetitions(comp);
     if (fm) setForms(fm);
     if (fs) setFormSubmissions(fs);
-    if (an) setAnnouncements(an);
     if (inv) setInventory(inv);
     if (md) setMedia(md);
     if (cfg) {
@@ -276,7 +273,7 @@ export default function Admin() {
       </aside>
 
       <main className="admin-main" style={{ ...S.main, ...(isMobile ? { marginLeft: 0, padding: "calc(60px + env(safe-area-inset-top, 0px)) 10px 18px" } : {}) }}>
-        {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} events={hubCalendar} overdue={overdue} competitions={competitions} captains={captains} forms={forms} formSubmissions={formSubmissions} announcements={announcements} inventory={inventory} media={media} isMobile={isMobile} />}
+        {page === "overview" && <Overview members={members} tasks={tasks} suggestions={suggestions} sponsors={sponsors} events={hubCalendar} overdue={overdue} competitions={competitions} captains={captains} forms={forms} formSubmissions={formSubmissions} inventory={inventory} media={media} isMobile={isMobile} />}
         {page === "accounts" && <Accounts members={members} reload={loadAll} showToast={showToast} adminProxy={adminProxy} isMobile={isMobile} />}
         {page === "hub-tasks" && <Tasks tasks={tasks} members={members} reload={loadAll} showToast={showToast} isMobile={isMobile} />}
         {page === "hub-calendar" && <HubCalendarAdmin events={hubCalendar} reload={loadAll} showToast={showToast} isMobile={isMobile} />}
@@ -291,7 +288,7 @@ export default function Admin() {
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────
-function Overview({ members, tasks, suggestions, sponsors, events, overdue, competitions, captains, forms, formSubmissions, announcements, inventory, media, isMobile }) {
+function Overview({ members, tasks, suggestions, sponsors, events, overdue, competitions, captains, forms, formSubmissions, inventory, media, isMobile }) {
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
   const openTasks = tasks.filter(t => t.status !== "Done");
@@ -305,7 +302,6 @@ function Overview({ members, tasks, suggestions, sponsors, events, overdue, comp
   const attendingComps = competitions.filter(c => c.attending).length;
   const lowStock = inventory.filter(i => i.low_stock).length;
   const totalSubmissions = formSubmissions.length;
-  const pendingAnnouncements = announcements.filter(a => !a.pinned).length;
   const membersBySubteam = {};
   members.forEach(m => { const st = m.subteam || "General"; membersBySubteam[st] = (membersBySubteam[st] || 0) + 1; });
   const taskPriority = { high: openTasks.filter(t => t.priority === "High").length, medium: openTasks.filter(t => t.priority === "Medium").length, low: openTasks.filter(t => t.priority === "Low").length };
@@ -321,7 +317,6 @@ function Overview({ members, tasks, suggestions, sponsors, events, overdue, comp
     { label: "Captains", val: captains.length, color: "#06b6d4" },
     { label: "Forms", val: forms.length, color: "#22d3ee" },
     { label: "Form Responses", val: totalSubmissions, color: "#14b8a6" },
-    { label: "Announcements", val: announcements.length, color: "#f97316" },
     { label: "Media Items", val: media.length, color: "#ec4899" },
     { label: "Low Stock", val: lowStock, color: lowStock > 0 ? "#ef4444" : "#22c55e" },
     { label: "Completion", val: `${taskCompletion}%`, color: taskCompletion >= 70 ? "#22c55e" : taskCompletion >= 40 ? "#f59e0b" : "#ef4444" },
@@ -1166,7 +1161,7 @@ const TERMS_FALLBACK = `...
         <p>FRC Team 4550 provides the following services through the Site:</p>
         <ul>
           <li><strong>Public Website:</strong> Information about the team, its history, sponsors, media gallery, and contact information.</li>
-              <li><strong>Member Hub:</strong> A password-protected portal for team members to manage tasks, calendar events, announcements, media, resources, and inventory.</li>
+              <li><strong>Member Hub:</strong> A password-protected portal for team members to manage tasks, calendar events, media, resources, and inventory.</li>
           <li><strong>Sponsor Tracker:</strong> A password-protected tool for managing sponsor relationships and outreach.</li>
           <li><strong>Public Media Gallery:</strong> A publicly accessible gallery of team photos and videos.</li>
         </ul>
@@ -1191,7 +1186,7 @@ const TERMS_FALLBACK = `...
           <li>Scraping, crawling, or mining the Site without permission</li>
         </ul>
         <h2>5. User-Generated Content</h2>
-        <p>Users of the Member Hub may post content such as task descriptions, announcements, comments, and uploaded media. By posting content:</p>
+        <p>Users of the Member Hub may post content such as task descriptions, comments, and uploaded media. By posting content:</p>
         <ul>
           <li>You retain ownership of your content but grant us a non-exclusive, royalty-free license to store, display, and use it for team purposes.</li>
           <li>You represent that your content does not violate any third-party rights or applicable laws.</li>
@@ -1209,7 +1204,7 @@ const TERMS_FALLBACK = `...
           <li>YouTube (video embedding)</li>
           <li>Instagram (social media linking)</li>
           <li>Google Calendar / iCal (calendar subscriptions)</li>
-          <li>Discord (announcement notifications)</li>
+          <li>Discord (task notifications)</li>
           <li>Groq AI (CSV data parsing)</li>
         </ul>
         <p>We are not responsible for the content, privacy practices, or terms of these third-party services. Your use of these services is subject to their respective terms and policies.</p>
@@ -1239,7 +1234,6 @@ const HUB_TILES = [
   { id:"projector", icon:"📡", label:"Meeting Projector" },
   { id:"calendar", icon:"📅", label:"Team Calendar" },
   { id:"tasks", icon:"✅", label:"Task Board" },
-  { id:"announcements", icon:"📣", label:"Announcements" },
   { id:"media", icon:"📸", label:"Media Gallery" },
   { id:"resources", icon:"📁", label:"Resources" },
   { id:"inventory", icon:"📦", label:"Inventory" },
@@ -1909,13 +1903,13 @@ function SiteConfig({ config, logoUrl, setLogoUrl, reload, showToast, isMobile }
         <div style={{ display: "flex", flexDirection: isMobile ? 'column' : 'row', gap: 8, marginBottom: 14 }}>
           <button onClick={async () => {
             setTileSaving(true);
-            const order = tileOrder.length ? tileOrder : HUB_TILES.map(t => t.id);
+            const order = (tileOrder.length ? tileOrder : HUB_TILES.map(t => t.id)).filter(id => HUB_TILES.some(t => t.id === id));
             await adminProxy("site_config", "upsert", { key: "hub_tile_order", value: order.join(",") });
             setTileSaving(false); reload(); showToast("✅ Tile order saved.");
           }} disabled={tileSaving} style={{ ...S.btnPrimary, opacity: tileSaving ? 0.6 : 1 }}>{tileSaving ? "Saving..." : "Save Order"}</button>
           <button onClick={async () => {
             setHiddenSaving(true);
-            const val = hiddenTiles.join(",");
+            const val = hiddenTiles.filter(id => HUB_TILES.some(t => t.id === id)).join(",");
             await adminProxy("site_config", "upsert", { key: "hub_tiles_hidden", value: val });
             setHiddenSaving(false); reload(); showToast("✅ Tile visibility saved.");
           }} disabled={hiddenSaving} style={{ ...S.btnPrimary, opacity: hiddenSaving ? 0.6 : 1 }}>{hiddenSaving ? "Saving..." : "Save Visibility"}</button>

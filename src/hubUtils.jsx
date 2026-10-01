@@ -101,9 +101,10 @@ export async function sbFetch(path, opts = {}) {
   if (opts.method && opts.method !== "GET" && opts.method !== "OPTIONS") {
     throw new Error("sbFetch is read-only; use hubProxy/adminProxy for writes.");
   }
-  // Attach the JWT when we have one: /api/d1 is anonymous by default and redacts
-  // staff-only data (form answer keys, responses) for callers it can't verify.
-  const token = getToken();
+  // Attach the JWT when we have one: /api/d1 is anonymous by default and refuses
+  // staff-only tables (members, sponsors, hub_tasks, responses) to callers it
+  // can't verify. Admins log in with a separate token, so fall back to it.
+  const token = getToken() || localStorage.getItem("admin_token");
   const res = await fetch(`/api/d1/${path}`, {
     headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...opts.headers },
     ...opts,
