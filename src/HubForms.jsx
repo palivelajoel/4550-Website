@@ -420,8 +420,33 @@ function FormBuilder({ form: initial, onSave, onCancel }) {
         </div>
       </div>
 
-      <div style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
         <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 13, fontWeight: 700, color: C.muted, letterSpacing: 1 }}>Questions</div>
+        {questions.length > 0 && (() => {
+          const allReq = questions.every(q => q.required);
+          const noneReq = questions.every(q => !q.required);
+          const label = allReq ? "All required" : noneReq ? "All optional" : "Mixed";
+          const on = !allReq;
+          return (
+            <button
+              type="button"
+              onClick={() => setQuestions(questions.map(q => ({ ...q, required: on })))}
+              title={on ? "Clear the required flag on every question" : "Mark every question required"}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                background: on ? "rgba(239,68,68,0.08)" : "transparent",
+                border: `1px solid ${on ? "rgba(239,68,68,0.4)" : C.border}`,
+                borderRadius: 4, cursor: "pointer", padding: "5px 10px", fontSize: 10,
+                fontFamily: "monospace", letterSpacing: 1, color: on ? C.red : C.muted,
+              }}
+            >
+              <span style={{ position: "relative", width: 26, height: 14, borderRadius: 7, flexShrink: 0, background: on ? "rgba(239,68,68,0.35)" : "rgba(255,255,255,0.12)", transition: "background 0.2s" }}>
+                <span style={{ position: "absolute", top: 2, left: on ? 14 : 2, width: 10, height: 10, borderRadius: "50%", background: on ? "#ef4444" : "#94a3b8", transition: "left 0.2s, background 0.2s" }} />
+              </span>
+              {label.toUpperCase()}
+            </button>
+          );
+        })()}
       </div>
 
       {questions.length === 0 && (
