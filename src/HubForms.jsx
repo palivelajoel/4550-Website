@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from 'framer-motion'
 import { FONTS, C, sbFetch, isAuthed, canEditHub, getUsername, getToken, HubHeader, FormHeader, toastStyle, inputStyle, selectStyle, addBtnStyle, ghostBtn, hubProxy, overlayStyle, getVisibleQuestions } from "./hubUtils.jsx";
 import HubBackground from "./HubBackground.jsx";
@@ -745,6 +745,16 @@ function FormResponses({ form, submissions, canSync, onReload, onToast }) {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState("");
   const [syncErr, setSyncErr] = useState(false);
+  // "submissionId:questionId" keys currently expanded to full height.
+  const [expanded, setExpanded] = useState({});
+
+  const graded = isTestForm(questions);
+  const scoreOf = useMemo(
+    () => Object.fromEntries(submissions.map(s => [s.id, gradeSubmission(questions, s.answers)])),
+    [submissions, questions]
+  );
+
+  const toggleCell = key => setExpanded(e => ({ ...e, [key]: !e[key] }));
 
   async function syncWithSheets() {
     if (!window.confirm("Sync with Google Sheets? This may add/remove rows and can DELETE responses in the sheets that don't match the member hub. Continue?")) return;
@@ -757,7 +767,8 @@ function FormResponses({ form, submissions, canSync, onReload, onToast }) {
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || res.status);
-      setSyncMsg(`✓ Sheets synced — ${j.pushed} pushed · ${j.imported} added · ${j.removed} removed · ${j.total} responses.`);
+      setSyncMsg(`✓ Sheets synced — ${j.pushed} pushed · ${j.imported} added · ${j.removed} removed · ${j.total} responses.`
+        + (j.scored ? ` ${j.scored} score${j.scored !== 1 ? "s" : ""} written.` : ""));
       if (onReload) onReload();
     } catch (e) {
       setSyncErr(true);
@@ -769,8 +780,9 @@ function FormResponses({ form, submissions, canSync, onReload, onToast }) {
 
   function downloadCSV() {
     if (!hasSubmissions) return;
-    const header = ["#", ...questions.map(q => q.label), "Submitted By", "Date"];
+    const header = ["#", ...questions.map(q => q.label), "Submitted By", "Date", ...(graded ? ["Score"] : [])];
     const rows = submissions.map((s, si) => {
+      const sc = scoreOf[s.id];
       return [
         si + 1,
         ...questions.map(q => {
@@ -779,6 +791,7 @@ function FormResponses({ form, submissions, canSync, onReload, onToast }) {
         }),
         s.submitted_by || "",
         s.created_at ? new Date(s.created_at).toLocaleDateString() : "",
+        ...(graded ? [`${sc.percent}% (${sc.score}/${sc.maxScore})`] : []),
       ];
     });
     const csvContent = [header, ...rows]
@@ -813,6 +826,12 @@ function FormResponses({ form, submissions, canSync, onReload, onToast }) {
         .form-response-scroll::-webkit-scrollbar-track{background:#0d1117;border-radius:6px;}
         .form-response-scroll::-webkit-scrollbar-thumb{background:#ef4444;border-radius:6px;}
         .form-response-scroll::-webkit-scrollbar-thumb:hover{background:#f87171;}
+        .fr-cell{line-height:1.5;cursor:zoom-in;}
+        .fr-cell .fr-inner{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+        .fr-cell.is-open{background:rgba(34,211,238,0.06);}
+        .fr-cell.is-open .fr-inner{-webkit-line-clamp:unset;overflow:visible;white-space:pre-wrap;word-break:break-word;}
+        .fr-cell:hover{background:rgba(255,255,255,0.05);}
+        .fr-more{display:block;margin-top:3px;font-size:9px;letter-spacing:1px;color:#22d3ee;opacity:.85;}
       `}</style>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
         <a href="/member-hub/forms" style={{ ...ghostBtn, fontSize: 12 }}>← Back</a>
@@ -843,6 +862,9 @@ function FormResponses({ form, submissions, canSync, onReload, onToast }) {
       {answerKey.length > 0 && (
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 11, fontFamily: "monospace", color: "#22c55e" }}>
           ✓ Answer key — {answerKey.join(" · ")}
+          <div style={{ color: C.dim, marginTop: 6 }}>
+            Test form — scored out of {hasSubmissions ? submissions.filter(s => scoreOf[s.id]?.maxScore > 0).length : 0} of {submissions.length} response{submissions.length !== 1 ? "s" : ""} · click any answer to expand
+          </div>
         </div>
       )}
 
@@ -870,6 +892,7 @@ function FormResponses({ form, submissions, canSync, onReload, onToast }) {
                 ))}
                 <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: `1px solid ${C.border}`, color: C.muted }}>Submitted By</th>
                 <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: `1px solid ${C.border}`, color: C.muted, whiteSpace: "nowrap" }}>Date</th>
+                {graded && <th style={{ textAlign: "left", padding: "10px 12px", borderBottom: `1px solid ${C.border}`, color: C.muted, whiteSpace: "nowrap" }}>Score</th>}
                 {canSync && <th style={{ width: 1 }}></th>}
                 </tr>
             </thead>
@@ -880,12 +903,38 @@ function FormResponses({ form, submissions, canSync, onReload, onToast }) {
                   {questions.map(q => {
                     const ans = s.answers?.[q.id];
                     const display = Array.isArray(ans) ? ans.join(", ") : (ans || "-");
-                    return <td key={q.id} style={{ padding: "10px 12px", borderBottom: `1px solid ${C.border}`, color: C.text }}>{display}</td>;
+                    const key = `${s.id}:${q.id}`;
+                    const open = !!expanded[key];
+                    // Cheap overflow test: only offer the click target when the text
+                    // is plausibly longer than the two clamped lines.
+                    const long = display.length > 34 || (Array.isArray(ans) && ans.length > 1);
+                    return (
+                      <td key={q.id} style={{ padding: "10px 12px", borderBottom: `1px solid ${C.border}`, minWidth: 140, maxWidth: 260, verticalAlign: "top" }}>
+                        <div
+                          className={`fr-cell${open ? " is-open" : ""}`}
+                          onClick={long ? () => toggleCell(key) : undefined}
+                          title={open ? "Click to collapse" : long ? "Click to expand" : undefined}
+                        >
+                          <div className="fr-inner">{display}</div>
+                          {long && <span className="fr-more">{open ? "▲ CLICK TO COLLAPSE" : "▼ CLICK TO EXPAND"}</span>}
+                        </div>
+                      </td>
+                    );
                   })}
                   <td style={{ padding: "10px 12px", borderBottom: `1px solid ${C.border}`, color: C.dim }}>{s.submitted_by}</td>
                   <td style={{ padding: "10px 12px", borderBottom: `1px solid ${C.border}`, color: C.dim, whiteSpace: "nowrap" }}>
                     {new Date(s.created_at).toLocaleDateString()}
                   </td>
+                  {graded && (() => {
+                    const sc = scoreOf[s.id];
+                    const col = sc.percent === 100 ? "#22c55e" : sc.percent >= 50 ? "#22c55e" : "#f59e0b";
+                    return (
+                      <td style={{ padding: "10px 12px", borderBottom: `1px solid ${C.border}`, whiteSpace: "nowrap", verticalAlign: "top" }}>
+                        <span style={{ color: col, fontWeight: 700, fontSize: 13 }}>{sc.percent}%</span>
+                        <span style={{ color: C.dim, fontSize: 10 }}> {sc.score}/{sc.maxScore}</span>
+                      </td>
+                    );
+                  })()}
                   {canSync && (
                     <td style={{ padding: "10px 12px", borderBottom: `1px solid ${C.border}`, textAlign: "right", whiteSpace: "nowrap" }}>
                       <button
