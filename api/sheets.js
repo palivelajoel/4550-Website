@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { d1Select, d1SelectOne, d1Insert, d1Update, d1Delete } from './_gateway.js';
 import { verifyToken, getTokenFromRequest } from './_shared.js';
+import { isTestForm, scoreCell } from './_grade.js';
 
 function getAuth() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
@@ -47,29 +48,26 @@ async function ensureTab(sheets, sheetId, tname) {
   }
 }
 
-// Write the canonical header (Date, ...answer columns, Submission ID, Submitted By) unless
-// the tab already has a matching/current header. Upgrades the old Date+answers header in place.
+// Write the canonical header (Date, ...answer columns, Submission ID, Submitted By,
+// Score) unless the tab already matches it. Rewrites from the first differing cell
+// onward, so tabs created before the Score column existed pick it up in place and
+// columns the user added to the right are left alone.
 async function ensureHeader(sheets, sheetId, tname, header, qCount) {
   const { created, firstRow } = await ensureTab(sheets, sheetId, tname);
   const n = header.length;
-  if (created || !firstRow) {
+  const write = async start => {
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
-      range: `'${tname}'!A1:${excelCol(n)}1`,
+      range: `'${tname}'!${excelCol(start + 1)}1:${excelCol(n)}1`,
       valueInputOption: 'RAW',
-      requestBody: { values: [header] },
+      requestBody: { values: [header.slice(start)] },
     });
-    return;
-  }
-  const plainOld = firstRow.length === 1 + qCount && firstRow[0] === 'Date' && !firstRow.includes('Submission ID');
-  if (plainOld) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: sheetId,
-      range: `'${tname}'!A1:${excelCol(n)}1`,
-      valueInputOption: 'RAW',
-      requestBody: { values: [header] },
-    });
-  }
+  };
+  if (created || !firstRow) return write(0);
+  // Only rewrite when our canonical columns are actually missing or misnamed.
+  // Extra user columns to the right are preserved untouched.
+  const firstDiff = header.findIndex((h, i) => String(firstRow[i] ?? '') !== h);
+  if (firstDiff >= 0) await write(firstDiff);
 }
 
 function answerCells(questions, answers) {
@@ -95,7 +93,9 @@ async function fullSync(req, res, sheetId, sheets, body) {
 
   const questions = Array.isArray(clientQuestions) && clientQuestions.length ? clientQuestions : (form.questions || []);
   const labels = questions.map(q => q.label);
-  const header = ['Date', ...labels, ...META];
+  // Score only appears for tests; forms without an answer key keep their old header.
+  const graded = isTestForm(questions);
+  const header = ['Date', ...labels, ...META, ...(graded ? ['Score'] : [])];
   const tname = tabName(form.title);
 
   let subs = await d1Select('hub_form_submissions', { filters: [{ col: 'form_id', op: 'eq', value: String(formId) }], order: [{ col: 'created_at', asc: true }] });
@@ -163,6 +163,7 @@ async function fullSync(req, res, sheetId, sheets, body) {
       ...answerCells(questions, s.answers),
       s.id,
       s.submitted_by || '',
+      ...(graded ? [scoreCell(questions, s.answers)] : []),
     ]);
     await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId,
@@ -203,7 +204,33 @@ async function fullSync(req, res, sheetId, sheets, body) {
     }
   }
 
-  // 4) Persist the now-known sheet ids as the deletion-detection baseline for the next sync.
+  // 4) Backfill the Score column for rows that already existed before this form
+  //    became a test, or that were edited/imported without a score. Only fills
+  //    empty cells so a hand-edited score in the sheet is never overwritten.
+  let scored = 0;
+  if (graded) {
+    const scoreCol = header.indexOf('Score');
+    const byId = new Map();
+    for (const r of dataRows) {
+      const id = String(r.cells[idCol] ?? '').trim();
+      if (id) byId.set(id, r.rowIdx);
+    }
+    for (const s of keptSubs) {
+      const rowIdx = byId.get(s.id);
+      if (!rowIdx) continue;
+      const cells = dataRows.find(r => r.rowIdx === rowIdx)?.cells || [];
+      if (String(cells[scoreCol] ?? '').trim()) continue;
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: sheetId,
+        range: `'${tname}'!${excelCol(scoreCol + 1)}${rowIdx}`,
+        valueInputOption: 'RAW',
+        requestBody: { values: [[scoreCell(questions, s.answers)]] },
+      }).catch(() => {});
+      scored++;
+    }
+  }
+
+  // 5) Persist the now-known sheet ids as the deletion-detection baseline for the next sync.
   const nextIds = JSON.stringify([...curIds, ...toPush.map(s => s.id), ...inserted.map(x => x.newId)]);
   const existingState = await d1SelectOne('site_config', { filters: [{ col: 'key', op: 'eq', value: stateKey }] });
   if (existingState) {
@@ -212,7 +239,7 @@ async function fullSync(req, res, sheetId, sheets, body) {
     await d1Insert('site_config', { key: stateKey, value: nextIds });
   }
 
-  return res.status(200).json({ ok: true, formId, total: keptSubs.length - removed.length + inserted.length, pushed, imported: inserted.length, removed: removed.length });
+  return res.status(200).json({ ok: true, formId, total: keptSubs.length - removed.length + inserted.length, pushed, imported: inserted.length, removed: removed.length, scored });
 }
 
 export default async function handler(req, res) {
@@ -240,14 +267,27 @@ export default async function handler(req, res) {
     if (!formTitle || !answers) return res.status(400).json({ error: 'Missing formTitle or answers' });
 
     const tname = tabName(formTitle);
-    const qs = Array.isArray(questions) ? questions : [];
-    const header = ['Date', ...qs.map(q => q.label), ...META];
+    let qs = Array.isArray(questions) ? questions : [];
+    // Public submitters receive questions with the answer key stripped, so grading
+    // from the client payload yields nothing. Reload the authoritative questions
+    // (matched by question id) from D1 when a formId is supplied. The key is only
+    // ever used to compute the score cell — it is never returned to the caller.
+    if (body.formId && !isTestForm(qs)) {
+      const form = await d1SelectOne('hub_forms', { filters: [{ col: 'id', op: 'eq', value: String(body.formId) }] });
+      const auth = Array.isArray(form?.questions) ? form.questions : null;
+      if (auth && auth.length) {
+        qs = qs.length ? qs.map(q => auth.find(a => a.id === q.id) || q) : auth;
+      }
+    }
+    const graded = isTestForm(qs);
+    const header = ['Date', ...qs.map(q => q.label), ...META, ...(graded ? ['Score'] : [])];
 
     const row = [
       new Date(timestamp || Date.now()).toISOString().slice(0, 10),
       ...answerCells(qs, answers),
       submissionId || '',
       submittedBy || '',
+      ...(graded ? [scoreCell(qs, answers)] : []),
     ];
 
     await ensureHeader(sheets, sheetId, tname, header, qs.length);

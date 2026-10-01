@@ -80,6 +80,7 @@ export default function PublicFormFill() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          formId: form.id,
           formTitle: form.title,
           questions: form.questions || [],
           answers: payload,

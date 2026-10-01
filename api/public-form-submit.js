@@ -1,47 +1,5 @@
 import { d1SelectOne, d1Insert } from './_gateway.js';
-
-const norm = v => String(v == null ? '' : v).trim().toLowerCase();
-
-// Score a submission against the form's answer key. Only questions that actually
-// have a correct answer marked are graded, so a form without an answer key reports
-// no percentage at all. `correct` holds an option index (radio/select) or an array
-// of option indexes (checkbox); public answers arrive as option text.
-function gradeSubmission(questions, answers) {
-  let score = 0;
-  let maxScore = 0;
-
-  for (const q of Array.isArray(questions) ? questions : []) {
-    const correct = q.correct;
-    if (correct === undefined || correct === null) continue;
-
-    const options = Array.isArray(q.options) ? q.options : [];
-    const answer = answers ? answers[q.id] : undefined;
-    const blank = answer === undefined || answer === null
-      || (Array.isArray(answer) && answer.length === 0)
-      || norm(answer) === '';
-    if (blank) {
-      // A missed required question counts against the score; a skipped optional
-      // one is left out of the denominator entirely.
-      if (q.required) maxScore++;
-      continue;
-    }
-
-    const correctTexts = (Array.isArray(correct) ? correct : [correct])
-      .map(i => options[Number(i)])
-      .filter(t => typeof t === 'string' && t.trim());
-    if (correctTexts.length === 0) continue;
-
-    maxScore++;
-    if (Array.isArray(answer)) {
-      const picked = answer.map(norm);
-      if (picked.length === correctTexts.length && correctTexts.every(t => picked.includes(norm(t)))) score++;
-    } else if (correctTexts.some(t => norm(t) === norm(answer))) {
-      score++;
-    }
-  }
-
-  return { score, maxScore, percent: maxScore > 0 ? Math.round((score / maxScore) * 100) : null };
-}
+import { gradeSubmission } from './_grade.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

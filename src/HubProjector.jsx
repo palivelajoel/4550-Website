@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch, isAuthed, isOverdueTask, visibleTasksForRole, parseAssignees, nameColor, nameInitials } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, isOverdueTask, visibleTasksForRole, parseAssignees, nameInitials } from "./hubUtils.jsx";
 
 const SLIDE_DURATION = 12000; // ms per slide
 
@@ -306,7 +306,9 @@ function TaskColumn({ title, tasks, color }) {
 }
 
 function AssigneePill({ name }) {
-  const c = nameColor(name);
+  // Meeting projector: one fixed aqua for every assignee so names never compete
+  // with the status/priority colors on screen.
+  const c = "#22d3ee";
   if (!name) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px dashed ${c}88`, color: C.dim, borderRadius: 999, padding: "2px 10px", fontSize: "clamp(10px, 1.1vw, 12px)", fontWeight: 700, letterSpacing: 0.5, whiteSpace: "nowrap" }}>

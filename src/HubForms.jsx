@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from 'framer-motion'
 import { FONTS, C, sbFetch, isAuthed, canEditHub, getUsername, getToken, HubHeader, FormHeader, toastStyle, inputStyle, selectStyle, addBtnStyle, ghostBtn, hubProxy, overlayStyle, getVisibleQuestions } from "./hubUtils.jsx";
 import HubBackground from "./HubBackground.jsx";
+import { gradeSubmission, isTestForm } from "../api/_grade.js";
 
 export default function HubForms() {
   const [authed] = useState(isAuthed());
@@ -136,6 +137,7 @@ export default function HubForms() {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
+                  formId: fillForm.id,
                   formTitle: fillForm.title,
                   questions: fillForm.questions || [],
                   answers,
