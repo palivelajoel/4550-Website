@@ -306,9 +306,12 @@ function TaskColumn({ title, tasks, color }) {
 }
 
 function AssigneePill({ name }) {
-  // Meeting projector: one fixed blue for every assignee so names never compete
-  // with the status/priority colors on screen.
-  const c = "#3b82f6";
+  // Meeting projector: one fixed, muted blue for every assignee so names never
+  // compete with the status/priority colors on screen. c drives the borders and
+  // fills; text is a lighter tint of the same hue so it stays legible from the back
+  // of a room once the pill is desaturated.
+  const c = "#2f6bb5";
+  const text = "#7aa9dc";
   if (!name) {
     return (
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6, border: `1px dashed ${c}88`, color: C.dim, borderRadius: 999, padding: "2px 10px", fontSize: "clamp(10px, 1.1vw, 12px)", fontWeight: 700, letterSpacing: 0.5, whiteSpace: "nowrap" }}>
@@ -318,11 +321,11 @@ function AssigneePill({ name }) {
   }
   return (
     <span style={{
-      display: "inline-flex", alignItems: "center", gap: 6, background: `${c}26`, border: `1px solid ${c}`,
-      color: c, borderRadius: 999, padding: "2px 12px 2px 3px", boxShadow: `0 0 12px ${c}33`,
+      display: "inline-flex", alignItems: "center", gap: 6, background: `${c}24`, border: `1px solid ${c}b0`,
+      color: text, borderRadius: 999, padding: "2px 12px 2px 3px", boxShadow: `0 0 12px ${c}26`,
       fontSize: "clamp(12px, 1.4vw, 15px)", fontWeight: 700, letterSpacing: 0.3, whiteSpace: "nowrap", maxWidth: "100%",
     }}>
-      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "clamp(16px, 1.9vw, 20px)", height: "clamp(16px, 1.9vw, 20px)", borderRadius: "50%", background: c, color: "#05070a", fontSize: "clamp(8px, 0.9vw, 10px)", fontWeight: 900, flexShrink: 0 }}>
+      <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "clamp(16px, 1.9vw, 20px)", height: "clamp(16px, 1.9vw, 20px)", borderRadius: "50%", background: `${c}b0`, color: "#eaf2fb", fontSize: "clamp(8px, 0.9vw, 10px)", fontWeight: 900, flexShrink: 0 }}>
         {nameInitials(name)}
       </span>
       <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
