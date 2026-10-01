@@ -10,7 +10,8 @@ export const ROLE_COLORS = { Member: "#64748b", Captain: "#3b82f6", Admin: "#ef4
 export const SUBTEAM_COLORS = { Build: "#f59e0b", Programming: "#3b82f6", "Marketing & Outreach": "#22c55e", General: "#64748b" };
 
 // Stable per-name color so the same person always looks the same everywhere.
-const NAME_COLORS = ["#22d3ee", "#f59e0b", "#22c55e", "#a855f7", "#ec4899", "#3b82f6", "#fb923c", "#14b8a6"];
+// Deliberately avoids orange/amber so it never reads as a priority indicator.
+const NAME_COLORS = ["#ef4444", "#22d3ee", "#22c55e", "#a855f7", "#ec4899", "#3b82f6", "#f43f5e", "#14b8a6"];
 export function nameColor(name) {
   const s = String(name || "").trim().toLowerCase();
   if (!s) return "#64748b";

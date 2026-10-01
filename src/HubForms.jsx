@@ -29,8 +29,12 @@ export default function HubForms() {
     const f = await sbFetch("hub_forms?select=*&order=created_at.desc");
     const s = await sbFetch("hub_form_submissions?select=*&order=created_at.desc");
     if (f === null || s === null) { showToast("Failed to load forms — check RLS policies on hub_forms."); return; }
-    setForms(f);
+    // Team-only forms are retired — every form is public/link-based now.
+    const legacy = f.filter(x => x.visibility === "team");
+    const fixed = f.map(x => (x.visibility === "team" ? { ...x, visibility: "public" } : x));
+    setForms(fixed);
     setSubmissions(s);
+    legacy.forEach(x => { hubProxy("hub_forms", "update", { id: x.id, updates: { visibility: "public" } }).catch(() => {}); });
   }
 
   const username = getUsername();
@@ -240,9 +244,6 @@ function ListForms({ forms, submissions, canEdit, username, onFill, onEdit, onDe
                   {f.visibility === "draft" && (
                     <span style={{ fontSize: 10, color: "#f59e0b", background: "rgba(245,158,11,0.12)", padding: "2px 8px", borderRadius: 6 }}>📝 Draft</span>
                   )}
-                  {f.visibility === "team" && (
-                    <span style={{ fontSize: 10, color: C.muted, background: `${C.surface}`, padding: "2px 8px", borderRadius: 6 }}>🔒 Team</span>
-                  )}
                 </div>
               </div>
             );
@@ -383,7 +384,7 @@ function FormBuilder({ form: initial, onSave, onCancel }) {
   }
 
   function handleSave() { saveWithVisibility(visibility); }
-  function handlePublish() { saveWithVisibility("team"); }
+  function handlePublish() { saveWithVisibility("public"); }
 
   return (
     <div style={{ maxWidth: 700, margin: "0 auto", padding: "24px 20px" }}>
@@ -406,16 +407,12 @@ function FormBuilder({ form: initial, onSave, onCancel }) {
           <button onClick={() => setVisibility("draft")} style={{ ...ghostBtn, flex: 1, padding: "10px 14px", fontSize: 12, borderColor: visibility === "draft" ? "#f59e0b" : C.border, color: visibility === "draft" ? "#f59e0b" : C.muted, background: visibility === "draft" ? "rgba(245,158,11,0.07)" : "transparent" }}>
             📝 Draft
           </button>
-          <button onClick={() => setVisibility("team")} style={{ ...ghostBtn, flex: 1, padding: "10px 14px", fontSize: 12, borderColor: visibility === "team" ? C.accent : C.border, color: visibility === "team" ? C.accent : C.muted, background: visibility === "team" ? `${C.accent}11` : "transparent" }}>
-            🔒 Team Only
-          </button>
           <button onClick={() => setVisibility("public")} style={{ ...ghostBtn, flex: 1, padding: "10px 14px", fontSize: 12, borderColor: visibility === "public" ? "#22c55e" : C.border, color: visibility === "public" ? "#22c55e" : C.muted, background: visibility === "public" ? "rgba(34,197,94,0.07)" : "transparent" }}>
             🌐 Public Link
           </button>
         </div>
         <div style={{ fontSize: 10, color: C.dim, fontFamily: "monospace", marginTop: 6 }}>
-          {visibility === "draft" && "Only you and captains/admins can see this form."}
-          {visibility === "team" && "All logged-in hub members can access this form."}
+          {visibility === "draft" && "Only you and captains/admins can see this form until you publish it."}
           {visibility === "public" && "Anyone with the link can submit — you'll get a share link after saving."}
         </div>
       </div>
@@ -1115,7 +1112,7 @@ function GFormImport({ onClose, onImported }) {
             {err && <div style={{ color: C.red, fontSize: 11, fontFamily: "monospace", marginBottom: 10 }}>{err}</div>}
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button onClick={() => importForm("draft")} disabled={loading} style={ghostBtn}>Import as Draft</button>
-              <button onClick={() => importForm("team")} disabled={loading} style={{ ...addBtnStyle, opacity: loading ? 0.6 : 1 }}>{loading ? "Importing…" : "Import & Publish (Team)"}</button>
+              <button onClick={() => importForm("public")} disabled={loading} style={{ ...addBtnStyle, opacity: loading ? 0.6 : 1 }}>{loading ? "Importing…" : "Import & Publish (Public Link)"}</button>
               <button onClick={() => setPreview(null)} style={ghostBtn}>Back</button>
               <button onClick={onClose} style={ghostBtn}>Cancel</button>
             </div>

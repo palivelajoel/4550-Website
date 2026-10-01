@@ -13,7 +13,7 @@ const statusColor = { "To Do": "#64748b", "In Progress": "#3b82f6", Review: "#f5
 export default function HubProjector() {
   const [slide, setSlide] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
-  const [data, setData] = useState({ events: [], tasks: [], announcements: [] });
+  const [data, setData] = useState({ events: [], tasks: [] });
   const [logoUrl, setLogoUrl] = useState("/logo.jpg");
   const [now, setNow] = useState(new Date());
   const [transitioning, setTransitioning] = useState(false);
@@ -24,8 +24,20 @@ export default function HubProjector() {
 
   const SLIDES = [
     { id: "calendar", label: "📅 Upcoming Events" },
-    { id: "tasks", label: "✅ Open Tasks" },
-    { id: "announcements", label: "📣 Announcements" },
+    {
+      id: "doing", label: "🔧 To Do & In Progress",
+      columns: [
+        { title: "IN PROGRESS", match: t => t.status === "In Progress", color: statusColor["In Progress"] },
+        { title: "TO DO", match: t => t.status === "To Do" || t.status === "Backlog", color: statusColor["To Do"] },
+      ],
+    },
+    {
+      id: "finished", label: "✅ Review & Done",
+      columns: [
+        { title: "REVIEW", match: t => t.status === "Review", color: statusColor.Review },
+        { title: "DONE", match: t => t.status === "Done", color: statusColor.Done },
+      ],
+    },
   ];
 
   useEffect(() => {
@@ -42,18 +54,16 @@ export default function HubProjector() {
   }, [slide, paused]);
 
   async function load() {
-    const [ev, tk, an, cfg, members] = await Promise.all([
+    const [ev, tk, cfg, members] = await Promise.all([
       sbFetch("hub_calendar?select=*&order=date.asc"),
-      sbFetch("hub_tasks?status=neq.Done&select=*&order=priority.desc,due_date.asc"),
-      sbFetch("hub_announcements?select=*&order=pinned.desc,created_at.desc&limit=6"),
+      sbFetch("hub_tasks?select=*&order=priority.desc,due_date.asc"),
       sbFetch("site_config?key=eq.logo_url&select=value"),
       sbFetch("members?select=id,username,full_name,role"),
     ]);
     const todayStr = new Date().toISOString().split("T")[0];
     setData({
       events: ev ? ev.filter(e => e.date >= todayStr).slice(0, 12) : [],
-      tasks: visibleTasksForRole(tk, members).slice(0, 20),
-      announcements: an || [],
+      tasks: visibleTasksForRole(tk, members),
     });
     if (cfg?.[0]) setLogoUrl(cfg[0].value);
   }
@@ -142,8 +152,7 @@ export default function HubProjector() {
         className={transitioning ? "" : "projector-slide"}
       >
         {SLIDES[slide].id === "calendar" && <CalendarSlide events={data.events} now={now} />}
-        {SLIDES[slide].id === "tasks" && <TasksSlide tasks={data.tasks} />}
-        {SLIDES[slide].id === "announcements" && <AnnouncementsSlide items={data.announcements} />}
+        {SLIDES[slide].columns && <TasksSlide tasks={data.tasks} columns={SLIDES[slide].columns} />}
         {/* Clock overlay on all slides */}
         <div style={{ position: "absolute", top: 12, right: 16, fontFamily: "'Orbitron', sans-serif", fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: 2, textShadow: "0 0 20px rgba(0,0,0,0.8)", opacity: 0.7, lineHeight: 1.2, textAlign: "right" }}>
           <div>{now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</div>
@@ -157,7 +166,7 @@ export default function HubProjector() {
           {now.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
         </div>
         <div style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 11, color: "#334155" }}>
-          {data.events.length} upcoming · {data.tasks.length} open tasks · {data.announcements.length} announcements
+          {data.events.length} upcoming · {data.tasks.length} tasks
         </div>
       </div>
     </div>
@@ -232,18 +241,17 @@ function CalendarSlide({ events, now }) {
 }
 
 // ── TASKS SLIDE ──────────────────────────────────────────────────────────
-function TasksSlide({ tasks }) {
-  const active = tasks.filter(t => t.status === "In Progress");
-  const todo = tasks.filter(t => t.status === "To Do" || t.status === "Backlog");
-  const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date());
+function TasksSlide({ tasks, columns }) {
+  const groups = columns.map(c => ({ ...c, items: tasks.filter(c.match) }));
+  const open = tasks.filter(t => t.status !== "Done");
+  const overdue = open.filter(t => t.due_date && new Date(t.due_date) < new Date());
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Stats row */}
       <div style={{ display: "flex", gap: 14 }}>
         {[
-          { label: "TOTAL OPEN", val: tasks.length, color: C.blue },
-          { label: "IN PROGRESS", val: active.length, color: C.amber },
+          ...groups.map(g => ({ label: g.title, val: g.items.length, color: g.color })),
           { label: "OVERDUE", val: overdue.length, color: C.red },
         ].map(s => (
           <div key={s.label} style={{ background: `${s.color}12`, border: `1px solid ${s.color}33`, borderRadius: 8, padding: "10px 20px", textAlign: "center", flex: 1 }}>
@@ -255,8 +263,7 @@ function TasksSlide({ tasks }) {
 
       {/* Task columns */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, flex: 1, overflow: "hidden" }}>
-        <TaskColumn title="IN PROGRESS" tasks={active} color={C.amber} />
-        <TaskColumn title="UP NEXT" tasks={todo.slice(0, 8)} color={C.blue} />
+        {groups.map(g => <TaskColumn key={g.title} title={g.title} tasks={g.items.slice(0, 8)} color={g.color} />)}
       </div>
     </div>
   );
@@ -310,43 +317,5 @@ function AssigneePill({ name }) {
       </span>
       <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
     </span>
-  );
-}
-
-// ── ANNOUNCEMENTS SLIDE ──────────────────────────────────────────────────
-function AnnouncementsSlide({ items }) {
-  const tagColor = { General: "#64748b", Build: "#f59e0b", Programming: "#3b82f6", "Marketing & Outreach": "#22c55e", Competition: "#ef4444", Reminder: "#a855f7", Urgent: "#ef4444" };
-
-  function timeAgo(ts) {
-    const diff = Date.now() - new Date(ts).getTime();
-    const hrs = Math.floor(diff / 3600000);
-    if (hrs < 1) return "just now";
-    if (hrs < 24) return `${hrs}h ago`;
-    return `${Math.floor(hrs / 24)}d ago`;
-  }
-
-  return (
-    <div style={{ height: "100%", overflow: "hidden" }}>
-      <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: "clamp(16px, 2.5vw, 24px)", fontWeight: 700, color: C.text, marginBottom: 20 }}>
-        Team Announcements
-      </div>
-      {items.length === 0 && <div style={{ color: C.dim, fontFamily: "monospace", fontSize: 14 }}>No announcements.</div>}
-      <div style={{ display: "grid", gridTemplateColumns: items.length > 2 ? "1fr 1fr" : "1fr", gap: 14 }}>
-        {items.slice(0, 4).map(item => (
-          <div key={item.id} style={{ background: item.pinned ? "rgba(239,68,68,0.07)" : "rgba(255,255,255,0.03)", border: `1px solid ${item.pinned ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.07)"}`, borderRadius: 10, padding: "16px 18px" }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
-              {item.pinned && <span style={{ fontSize: 11, color: C.red, fontFamily: "monospace" }}>📌</span>}
-              <span style={{ fontSize: 10, background: `${tagColor[item.tag] || "#64748b"}22`, color: tagColor[item.tag] || "#64748b", borderRadius: 10, padding: "2px 8px", fontFamily: "monospace" }}>{item.tag}</span>
-              <span style={{ fontSize: 10, color: C.dim, fontFamily: "monospace", marginLeft: "auto" }}>{timeAgo(item.created_at)}</span>
-            </div>
-            <div style={{ fontWeight: 700, fontSize: "clamp(13px, 1.8vw, 16px)", color: C.text, marginBottom: 6 }}>{item.title}</div>
-            <div style={{ fontSize: "clamp(11px, 1.2vw, 13px)", color: C.muted, lineHeight: 1.6, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}>
-              {item.body}
-            </div>
-            {item.author && <div style={{ fontSize: 10, color: C.dim, fontFamily: "monospace", marginTop: 8 }}>— {item.author}</div>}
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
