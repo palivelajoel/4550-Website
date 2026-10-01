@@ -292,7 +292,7 @@ function FormBuilder({ form: initial, onSave, onCancel }) {
   const [dragOverQi, setDragOverQi] = useState(null);
 
   function addQuestion() {
-    setQuestions([...questions, { id: nextQid(), type: "text", label: "", required: false, placeholder: "", options: [""] }]);
+    setQuestions([...questions, { id: nextQid(), type: "radio", label: "", required: false, placeholder: "", options: ["", "", "", ""] }]);
   }
 
   function updateQuestion(id, patch) {

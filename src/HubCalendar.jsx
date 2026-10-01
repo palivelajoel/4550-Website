@@ -51,13 +51,21 @@ export default function HubCalendar() {
 
   function showToast(msg) { setToast(msg); setTimeout(() => setToast(""), 3000); }
 
+  // sbFetch resolves to null on a failed read instead of throwing, so report back
+  // which legs came back empty - callers need to tell "saved but not refreshed"
+  // apart from "saved and refreshed".
   async function loadData() {
-    const [evRes, taskRes] = await Promise.all([
-      sbFetch("hub_calendar?select=*&order=date.asc"),
-      sbFetch("hub_tasks?select=id,title,status,priority,due_date,due_time,start_date,start_time,assigned_name,subteam&order=due_date.asc¬=due_date.is.null"),
-    ]);
-    if (evRes) setRawEvents(evRes);
-    if (taskRes) setTasks(taskRes);
+    try {
+      const [evRes, taskRes] = await Promise.all([
+        sbFetch("hub_calendar?select=*&order=date.asc"),
+        sbFetch("hub_tasks?select=id,title,status,priority,due_date,due_time,start_date,start_time,assigned_name,subteam&order=due_date.asc¬=due_date.is.null"),
+      ]);
+      if (evRes) setRawEvents(evRes);
+      if (taskRes) setTasks(taskRes);
+      return { events: !!evRes, tasks: !!taskRes };
+    } catch {
+      return { events: false, tasks: false };
+    }
   }
 
   // ── Merge events + tasks ──
@@ -147,7 +155,8 @@ export default function HubCalendar() {
   }
 
   async function saveEvent() {
-    if (!form.title || !form.date) return;
+    if (!form.title.trim()) return showToast("Event title is required.", "#ef4444");
+    if (!form.date) return showToast("Start date is required.", "#ef4444");
     setSaving(true);
     try {
       const payload = { ...form };
@@ -172,7 +181,8 @@ export default function HubCalendar() {
         showToast("Event updated!");
       }
       setModal(null);
-      loadData();
+      const refreshed = await loadData();
+      if (refreshed && !refreshed.events) showToast("Saved, but the calendar could not refresh - reloading may show stale data.", "#ef4444");
     } catch (e) {
       showToast("Save failed: " + (e.message || e), "#ef4444");
     } finally {
@@ -263,6 +273,17 @@ export default function HubCalendar() {
     color: view === v ? C.red : C.muted, borderRadius: 4,
   });
 
+  // "deadline" is never offered for new events (task deadlines are injected
+  // client-side), but an existing row can already be one - CSV import and Admin
+  // both write type: "deadline". Without a matching <option> the controlled
+  // select renders blank and the event's type silently mismatches on save.
+  const typeOptions = (() => {
+    const base = EVENT_TYPES.filter(t => t.value !== "deadline");
+    if (!form.type || base.some(t => t.value === form.type)) return base;
+    const current = EVENT_TYPES.find(t => t.value === form.type);
+    return [...base, current || { value: form.type, label: form.type, color: "#64748b" }];
+  })();
+
   if (!authed) return null;
 
   return (
@@ -331,7 +352,7 @@ export default function HubCalendar() {
                 </div>
               )}
               <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} style={selectStyle}>
-                {EVENT_TYPES.filter(t => t.value !== "deadline").map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                {typeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
               <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
                 style={{ ...inputStyle, minHeight: 60, resize: "vertical" }} />

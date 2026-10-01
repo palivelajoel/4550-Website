@@ -11,6 +11,7 @@ export default function PublicFormFill() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [result, setResult] = useState(null);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -74,6 +75,7 @@ export default function PublicFormFill() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Submit failed");
       setSubmitted(true);
+      setResult(data);
       fetch("/api/sheets-sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -125,7 +127,17 @@ export default function PublicFormFill() {
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>✓</div>
             <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 20, fontWeight: 700, marginBottom: 8, color: "#22c55e" }}>Submitted!</div>
-            <div style={{ fontSize: 13, color: "#64748b", fontFamily: "monospace" }}>Thank you for your response.</div>
+            <div style={{ fontSize: 13, color: "#64748b", fontFamily: "monospace", marginBottom: result?.percent != null ? 20 : 0 }}>Thank you for your response.</div>
+            {result?.percent != null && (
+              <div style={{ display: "inline-block", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.35)", borderRadius: 12, padding: "18px 32px" }}>
+                <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 42, fontWeight: 900, lineHeight: 1, color: result.percent === 100 ? "#22c55e" : result.percent >= 50 ? "#22c55e" : "#f59e0b" }}>
+                  {result.percent}%
+                </div>
+                <div style={{ fontSize: 11, color: "#64748b", fontFamily: "monospace", marginTop: 8, letterSpacing: 1 }}>
+                  {result.score} of {result.maxScore} CORRECT
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

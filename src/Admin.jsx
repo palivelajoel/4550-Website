@@ -594,7 +594,7 @@ function Tasks({ tasks, members, reload, showToast, isMobile }) {
   async function createTask() {
     if (!form.title) return;
     const member = members.find(m => m.id === form.assigned_to);
-    await adminProxy('hub_tasks', 'insert', { ...form, assigned_name: member ? member.full_name || member.username : "" });
+    await adminProxy('hub_tasks', 'insert', { ...form, assigned_name: member ? member.full_name || member.username : "", created_at: new Date().toISOString() });
     setForm({ title: "", description: "", assigned_to: "", assigned_name: "", due_date: "", priority: "Medium", status: "To Do", subteam: "General" });
     reload(); showToast("✅ Task created.");
   }

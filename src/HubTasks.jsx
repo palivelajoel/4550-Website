@@ -37,14 +37,18 @@ export default function HubTasks() {
   // Auto-delete completed tasks older than 24 hours
   useEffect(() => {
     const cleanup = async () => {
+      let cleared = 0;
       try {
         const r = await sbFetch("hub_tasks?select=id,status,created_at&status=eq.Done");
         if (!r) return;
         const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-        await Promise.all(r.filter(t => t.created_at && new Date(t.created_at).getTime() < cutoff).map(t =>
-          hubProxy("hub_tasks", "delete", { id: t.id }).catch(() => {})
-        ));
+        await Promise.all(r.map(async t => {
+          const ts = t.created_at ? new Date(t.created_at).getTime() : NaN;
+          if (Number.isNaN(ts) || ts >= cutoff) return;
+          if (await hubProxy("hub_tasks", "delete", { id: t.id }).then(() => true).catch(() => false)) cleared++;
+        }));
       } catch {}
+      if (cleared > 0) { load(); showToast(`Cleared ${cleared} completed task(s).`); }
     };
     cleanup();
     const interval = setInterval(cleanup, 60 * 60 * 1000);
@@ -88,7 +92,7 @@ export default function HubTasks() {
     if (!payload.due_time) delete payload.due_time;
     try {
       if (modal.mode === "add") {
-        await hubProxy("hub_tasks", "insert", payload);
+        await hubProxy("hub_tasks", "insert", { ...payload, created_at: new Date().toISOString() });
         showToast("Task created.");
       } else {
         await hubProxy("hub_tasks", "update", { id: modal.task.id, updates: payload });
