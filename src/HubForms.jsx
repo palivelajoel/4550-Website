@@ -290,9 +290,12 @@ function FormBuilder({ form: initial, onSave, onCancel }) {
   const [errors, setErrors] = useState("");
   const dragFrom = useRef(null);
   const [dragOverQi, setDragOverQi] = useState(null);
+  const lastQRef = useRef(null);
 
   function addQuestion() {
     setQuestions([...questions, { id: nextQid(), type: "radio", label: "", required: false, placeholder: "", options: ["", "", "", ""] }]);
+    // Bring the new question into view so you can keep typing without scrolling back up.
+    requestAnimationFrame(() => lastQRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
   }
 
   function updateQuestion(id, patch) {
@@ -417,9 +420,8 @@ function FormBuilder({ form: initial, onSave, onCancel }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+      <div style={{ marginBottom: 14 }}>
         <div style={{ fontFamily: "'Orbitron',sans-serif", fontSize: 13, fontWeight: 700, color: C.muted, letterSpacing: 1 }}>Questions</div>
-        <button onClick={addQuestion} style={{ ...ghostBtn, fontSize: 11, padding: "6px 14px" }}>+ Add Question</button>
       </div>
 
       {questions.length === 0 && (
@@ -430,7 +432,7 @@ function FormBuilder({ form: initial, onSave, onCancel }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {questions.map((q, qi) => (
-          <div key={q.id} onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverQi(qi); }} onDragLeave={() => { if (dragOverQi === qi) setDragOverQi(null); }} onDrop={e => { e.preventDefault(); finishDrag(qi); }}
+          <div key={q.id} ref={qi === questions.length - 1 ? lastQRef : null} onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverQi(qi); }} onDragLeave={() => { if (dragOverQi === qi) setDragOverQi(null); }} onDrop={e => { e.preventDefault(); finishDrag(qi); }}
             style={{ background: C.surface, border: `1px solid ${dragOverQi === qi ? "#22d3ee" : C.border}`, borderRadius: 10, padding: "16px 18px", transition: "border-color 0.15s", boxShadow: dragOverQi === qi ? "0 0 0 1px rgba(34,211,238,0.25)" : "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -549,6 +551,8 @@ function FormBuilder({ form: initial, onSave, onCancel }) {
           </div>
         ))}
       </div>
+
+      <button onClick={addQuestion} style={{ ...ghostBtn, fontSize: 11, padding: "8px 14px", width: "100%", marginTop: 14, borderStyle: "dashed" }}>+ Add Question</button>
 
       <div style={{ display: "flex", gap: 10, marginTop: 24, flexWrap: "wrap" }}>
         <button onClick={onCancel} style={ghostBtn}>Cancel</button>
