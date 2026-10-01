@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from 'framer-motion'
-import { FONTS, C, sbFetch, isAuthed, canEditHub, normalizeAssignees, parseAssignees, visibleTasksForRole, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, canEditHub, isOverdueTask, normalizeAssignees, parseAssignees, visibleTasksForRole, SUBTEAMS, HubHeader, toastStyle, inputStyle, selectStyle, overlayStyle, modalStyle, addBtnStyle, ghostBtn, dangerBtn, hubProxy } from "./hubUtils.jsx";
 import HubBackground from "./HubBackground.jsx";
 
 const STATUSES = ["To Do", "In Progress", "Review", "Done"];
@@ -130,7 +130,7 @@ export default function HubTasks() {
     });
   }
 
-  const isOverdue = t => t.due_date && t.status !== "Done" && new Date(t.due_date) < new Date();
+  const isOverdue = t => isOverdueTask(t);
 
   // ── Export ──
   function exportCSV() {

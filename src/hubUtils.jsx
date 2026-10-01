@@ -52,6 +52,20 @@ export function normalizeAssignees(value) {
   return parseAssignees(value).join(", ") || null;
 }
 
+// A task is only overdue once its deadline moment has actually passed. When a due
+// time is set we compare against that exact moment; a date-only deadline stays
+// amber for the whole due day and only tips over at 11:59:59 PM.
+export function isOverdueTask(t, now = new Date()) {
+  if (!t || !t.due_date || t.status === "Done") return false;
+  const [y, m, d] = String(t.due_date).split("-").map(Number);
+  if (!y || !m || !d) return false;
+  const hm = /^(\d{1,2}):(\d{2})/.exec(String(t.due_time || ""));
+  const deadline = hm
+    ? new Date(y, m - 1, d, Number(hm[1]), Number(hm[2]))
+    : new Date(y, m - 1, d, 23, 59, 59);
+  return now > deadline;
+}
+
 // Hide tasks assigned to captains from Member accounts. Captains/Admins see everything.
 export function visibleTasksForRole(tasks, members) {
   if (isCaptainOrAbove()) return tasks;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { FONTS, C, sbFetch, isAuthed, visibleTasksForRole, parseAssignees, nameColor, nameInitials } from "./hubUtils.jsx";
+import { FONTS, C, sbFetch, isAuthed, isOverdueTask, visibleTasksForRole, parseAssignees, nameColor, nameInitials } from "./hubUtils.jsx";
 
 const SLIDE_DURATION = 12000; // ms per slide
 
@@ -249,7 +249,7 @@ function CalendarSlide({ events, now }) {
 function TasksSlide({ tasks, columns }) {
   const groups = columns.map(c => ({ ...c, items: tasks.filter(c.match) }));
   const open = tasks.filter(t => t.status !== "Done");
-  const overdue = open.filter(t => t.due_date && new Date(t.due_date) < new Date());
+  const overdue = open.filter(t => isOverdueTask(t));
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -280,7 +280,7 @@ function TaskColumn({ title, tasks, color }) {
       <div style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 11, color, letterSpacing: 2, marginBottom: 10 }}>{title} ({tasks.length})</div>
       {tasks.length === 0 && <div style={{ color: C.dim, fontSize: 13, fontFamily: "monospace" }}>None</div>}
       {tasks.map(t => {
-        const overdue = t.due_date && new Date(t.due_date) < new Date();
+        const overdue = isOverdueTask(t);
         const people = parseAssignees(t.assigned_name);
         return (
           <div key={t.id} style={{ borderLeft: `3px solid ${priorityColor[t.priority] || C.dim}`, paddingLeft: 10, marginBottom: 10 }}>

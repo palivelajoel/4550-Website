@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Starfield from "./Starfield.jsx";
 import QRCode from "qrcode";
 
-import { CaptainPhoto, sbFetch, uploadFile, uploadLargeFile, needsLargeUpload, getLastUploadError } from './hubUtils.jsx';
+import { CaptainPhoto, sbFetch, uploadFile, uploadLargeFile, needsLargeUpload, getLastUploadError, isOverdueTask } from './hubUtils.jsx';
 
 const ROLES = ["Member", "Captain", "Admin"];
 const SUBTEAMS = ["Build", "Programming", "Marketing & Outreach", "General"];
@@ -189,7 +189,7 @@ export default function Admin() {
     );
   }
 
-  const overdue = tasks.filter(t => t.due_date && t.status !== "Done" && new Date(t.due_date) < new Date()).length;
+  const overdue = tasks.filter(t => isOverdueTask(t)).length;
 
   return (
     <div className="admin-layout" style={{ ...S.layout, overflow:"hidden" }}>
@@ -397,7 +397,7 @@ function Overview({ members, tasks, suggestions, sponsors, events, overdue, comp
               {dueTasks.map(t => (
                 <div key={t.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12 }}>
                   <span style={{ color: "#e2e8f0", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, marginRight: 8 }}>{t.title}</span>
-                  <span style={{ color: t.due_date < todayStr ? "#ef4444" : "#64748b", fontFamily: "monospace", fontSize: 11, flexShrink: 0 }}>{t.due_date}</span>
+                  <span style={{ color: isOverdueTask(t) ? "#ef4444" : "#64748b", fontFamily: "monospace", fontSize: 11, flexShrink: 0 }}>{t.due_date}</span>
                 </div>
               ))}
             </div>
@@ -612,7 +612,7 @@ function Tasks({ tasks, members, reload, showToast, isMobile }) {
   const groups = { "To Do": [], "In Progress": [], Done: [] };
   tasks.forEach(t => { if (groups[t.status]) groups[t.status].push(t); });
   const pColor = { Low: "#22c55e", Medium: "#f59e0b", High: "#ef4444" };
-  const isOverdue = t => t.due_date && t.status !== "Done" && new Date(t.due_date) < new Date();
+  const isOverdue = t => isOverdueTask(t);
 
   return (
     <div>
