@@ -132,7 +132,7 @@ export default function HubTasks() {
 
   const isOverdue = t => t.due_date && t.status !== "Done" && new Date(t.due_date) < new Date();
 
-  // ── Import / Export ──
+  // ── Export ──
   function exportCSV() {
     const headers = "title,description,status,priority,start_date,start_time,due_date,due_time,assigned_name,subteam";
     const rows = tasks.map(t =>
